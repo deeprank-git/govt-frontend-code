@@ -1,14 +1,20 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { Bell, LogOut, Search } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/site/DashboardSidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import * as authService from "@/services/authService";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardLayout,
@@ -18,16 +24,9 @@ function DashboardLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { data: isAdmin } = useQuery({
-    queryKey: ["is-admin", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user!.id);
-      return data?.some((r) => r.role === "admin") ?? false;
-    },
-  });
+  const isAdmin = user?.role === "admin";
 
-  const name = user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? "Aspirant";
+  const name = user?.name ?? user?.email?.split("@")[0] ?? "Aspirant";
   const initials = name.slice(0, 2).toUpperCase();
 
   return (
@@ -39,7 +38,10 @@ function DashboardLayout() {
             <SidebarTrigger />
             <div className="relative hidden md:flex flex-1 max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search exams, tests, topics…" className="pl-9 bg-muted/40 border-transparent" />
+              <Input
+                placeholder="Search exams, tests, topics…"
+                className="pl-9 bg-muted/40 border-transparent"
+              />
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
@@ -50,16 +52,24 @@ function DashboardLayout() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-muted">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.user_metadata?.avatar_url} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">{initials}</AvatarFallback>
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className="hidden sm:inline text-sm font-medium">{name.split(" ")[0]}</span>
+                    <span className="hidden sm:inline text-sm font-medium">
+                      {name.split(" ")[0]}
+                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      authService.logout();
+                      navigate({ to: "/" });
+                    }}
+                  >
                     <LogOut className="mr-2 h-4 w-4" /> Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
