@@ -1,17 +1,27 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { Clock, Pause, Flag, ChevronLeft, ChevronRight, Bookmark, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Clock, Bookmark, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
+import * as testService from "@/services/testService";
+import * as questionService from "@/services/questionService";
+import * as testAttemptService from "@/services/testAttemptService";
+import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
+import type { ApiError } from "@/api/axiosClient";
 import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/test/$testId")({
@@ -20,151 +30,171 @@ export const Route = createFileRoute("/_authenticated/test/$testId")({
 
 type Q = {
   id: string;
-  section: string;
-  question_number: number;
-  question_text: string;
+  questionText: string;
   options: { key: string; text: string }[];
-  marks: number;
-  negative_marks: number;
+  marks?: number;
+  negativeMarks?: number;
 };
+
+type TestLite = {
+  title: string;
+  totalQuestions?: number;
+  totalMarks?: number;
+};
+
+type AttemptLite = {
+  _id?: string;
+  id?: string;
+  expiresAt?: string;
+};
+
+type AttemptQuestionLite = {
+  selectedOption?: string;
+  answer?: string;
+};
+
+function qid(q: { _id?: string; id?: string } | undefined): string {
+  return (q?._id ?? q?.id)!;
+}
 
 function TestEngine() {
   const { testId } = Route.useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { data: test } = useQuery({
+  const { data: testRaw } = useQuery({
     queryKey: ["test", testId],
-    queryFn: async () => (await supabase.from("mock_tests").select("*").eq("id", testId).maybeSingle()).data,
+    queryFn: async () => unwrapItem<TestLite>(await testService.getTestById(testId)),
   });
+  const test = testRaw;
 
-  const { data: rawQs = [] } = useQuery({
+  const { data: questionsRaw = [] } = useQuery({
     queryKey: ["test-qs", testId],
-    queryFn: async () =>
-      (await (supabase.from as any)("questions_public").select("*").eq("test_id", testId).order("question_number")).data ?? [],
+    queryFn: async () => unwrapList(await questionService.getQuestions(testId)),
   });
-  const questions = rawQs as unknown as Q[];
+  const questions = questionsRaw as unknown as Q[];
 
-  const { data: attemptRow } = useQuery({
-    queryKey: ["active-attempt", testId, user?.id],
-    enabled: !!user?.id,
-    queryFn: async () =>
-      (await supabase
-        .from("attempts")
-        .select("*")
-        .eq("user_id", user!.id)
-        .eq("test_id", testId)
-        .eq("status", "in_progress")
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()).data,
+  // Starting an attempt is safe to call every time this page mounts: the
+  // backend resumes an existing in-progress attempt instead of duplicating it.
+  const { data: attemptRaw } = useQuery({
+    queryKey: ["attempt-start", testId],
+    queryFn: async () => unwrapItem<AttemptLite>(await testAttemptService.startAttempt(testId)),
+    retry: false,
   });
+  const attempt = attemptRaw;
+  const attemptId: string | undefined = attempt?._id ?? attempt?.id;
+  const expiresAt: string | undefined = attempt?.expiresAt;
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [marked, setMarked] = useState<Set<string>>(new Set());
   const [visited, setVisited] = useState<Set<string>>(new Set());
   const [activeIdx, setActiveIdx] = useState(0);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [time, setTime] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [expired, setExpired] = useState(false);
 
-  // Hydrate attempt state
+  const active = questions[activeIdx];
+
+  // Fetches the active question through the attempt (not the plain question
+  // list) because this is the endpoint that: (a) returns the student's
+  // previously saved answer for pre-fill, and (b) runs the backend's lazy
+  // expiry check on every touch — a 400 here means the attempt is over.
+  const { data: attemptQuestionRaw, error: questionError } = useQuery({
+    queryKey: ["attempt-question", attemptId, activeIdx],
+    enabled: !!attemptId && !!active,
+    queryFn: async () =>
+      unwrapItem<AttemptQuestionLite>(
+        await testAttemptService.getQuestionByIndex(attemptId!, activeIdx),
+      ),
+    retry: false,
+  });
+
   useEffect(() => {
-    if (attemptRow) {
-      setAnswers((attemptRow.answers as Record<string, string>) ?? {});
-      setMarked(new Set(((attemptRow.marked_for_review as string[]) ?? [])));
-      setVisited(new Set(((attemptRow.visited as string[]) ?? [])));
+    const err = questionError as ApiError | null;
+    if (err && err.status === 400) setExpired(true);
+  }, [questionError]);
+
+  useEffect(() => {
+    const payload = attemptQuestionRaw;
+    const prevAnswer = payload?.selectedOption ?? payload?.answer;
+    if (active && prevAnswer) {
+      setAnswers((a) => ({ ...a, [qid(active)]: prevAnswer }));
     }
-  }, [attemptRow?.id]);
+  }, [attemptQuestionRaw, active]);
 
-  // Timer
   useEffect(() => {
-    if (!test || !attemptRow) return;
-    const start = new Date(attemptRow.started_at).getTime();
-    const total = (test.duration_minutes ?? 60) * 60;
+    if (active) setVisited((v) => new Set(v).add(qid(active)));
+  }, [active]);
+
+  const submit = async () => {
+    if (!attemptId || submitting) return;
+    setSubmitting(true);
+    try {
+      await testAttemptService.submitAttempt(attemptId);
+      navigate({ to: "/result/$attemptId", params: { attemptId } });
+    } catch (err) {
+      toast.error((err as ApiError).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Timer — driven by expiresAt from the start-attempt response. A 400 from
+  // any test-attempt call is treated as authoritative and wins over the local
+  // clock (the server may finalize slightly before/after our countdown hits 0).
+  useEffect(() => {
+    if (!expiresAt) return;
+    const end = new Date(expiresAt).getTime();
     const tick = () => {
-      const elapsed = Math.floor((Date.now() - start) / 1000);
-      const left = Math.max(0, total - elapsed);
+      const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
       setTime(left);
-      if (left === 0) submit();
+      if (left === 0) setExpired(true);
     };
     tick();
     const i = setInterval(tick, 1000);
     return () => clearInterval(i);
+  }, [expiresAt]);
+
+  useEffect(() => {
+    if (!expired || submitting) return;
+    submit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [test, attemptRow]);
-
-  const sections = useMemo(() => Array.from(new Set(questions.map((q) => q.section))), [questions]);
-  useEffect(() => {
-    if (!activeSection && sections.length) setActiveSection(sections[0]);
-  }, [sections, activeSection]);
-
-  const sectionQs = useMemo(
-    () => questions.filter((q) => q.section === activeSection),
-    [questions, activeSection]
-  );
-  const active = sectionQs[activeIdx];
-
-  useEffect(() => {
-    if (active) setVisited((v) => new Set(v).add(active.id));
-  }, [active?.id]);
-
-  // Autosave
-  useEffect(() => {
-    if (!attemptRow) return;
-    const t = setTimeout(() => {
-      supabase
-        .from("attempts")
-        .update({
-          answers,
-          marked_for_review: Array.from(marked),
-          visited: Array.from(visited),
-        })
-        .eq("id", attemptRow.id)
-        .then(() => {});
-    }, 600);
-    return () => clearTimeout(t);
-  }, [answers, marked, visited, attemptRow?.id]);
+  }, [expired]);
 
   const choose = (key: string) => {
-    if (!active) return;
-    setAnswers((a) => ({ ...a, [active.id]: key }));
+    if (!active || !attemptId) return;
+    const questionId = qid(active);
+    setAnswers((a) => ({ ...a, [questionId]: key }));
+    testAttemptService
+      .saveAnswer({ attemptId, questionId, selectedOption: key })
+      .catch((err: ApiError) => toast.error(err.message));
   };
-  const clear = () => active && setAnswers((a) => { const { [active.id]: _, ...rest } = a; return rest; });
+
+  // Note: the backend has no documented "unset answer" endpoint, so clearing
+  // only affects local state — a previously saved answer will reappear if the
+  // student revisits this question after a refresh.
+  const clear = () =>
+    active &&
+    setAnswers((a) => {
+      const { [qid(active)]: _, ...rest } = a;
+      return rest;
+    });
   const toggleMark = () => {
     if (!active) return;
-    setMarked((m) => { const n = new Set(m); n.has(active.id) ? n.delete(active.id) : n.add(active.id); return n; });
-  };
-
-  const goto = (i: number) => setActiveIdx(Math.max(0, Math.min(sectionQs.length - 1, i)));
-
-  const submit = async () => {
-    if (!attemptRow || submitting) return;
-    setSubmitting(true);
-    const timeTaken = test ? ((test.duration_minutes ?? 60) * 60) - (time ?? 0) : 0;
-
-    await supabase
-      .from("attempts")
-      .update({
-        answers,
-        marked_for_review: Array.from(marked),
-        visited: Array.from(visited),
-      })
-      .eq("id", attemptRow.id);
-
-    const { error } = await (supabase.rpc as any)("submit_attempt", {
-      _attempt_id: attemptRow.id,
-      _answers: answers,
-      _time_taken_seconds: timeTaken,
+    const id = qid(active);
+    setMarked((m) => {
+      const n = new Set(m);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
     });
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    navigate({ to: "/result/$attemptId", params: { attemptId: attemptRow.id } });
   };
 
+  const goto = (i: number) => setActiveIdx(Math.max(0, Math.min(questions.length - 1, i)));
+
+  if (expired) return <div className="p-8">Time's up — submitting your test…</div>;
   if (!test) return <div className="p-8">Loading test…</div>;
-  if (!attemptRow) return <div className="p-8">Starting attempt…</div>;
+  if (!attemptId) return <div className="p-8">Starting attempt…</div>;
   if (questions.length === 0) return <div className="p-8">No questions in this test.</div>;
 
   const mins = time !== null ? Math.floor(time / 60) : 0;
@@ -174,19 +204,23 @@ function TestEngine() {
   const notVisited = questions.length - visited.size;
 
   const cellStatus = (q: Q) => {
-    if (answers[q.id] && marked.has(q.id)) return "ans-mark";
-    if (marked.has(q.id)) return "mark";
-    if (answers[q.id]) return "ans";
-    if (visited.has(q.id)) return "not-ans";
+    const id = qid(q);
+    if (answers[id] && marked.has(id)) return "ans-mark";
+    if (marked.has(id)) return "mark";
+    if (answers[id]) return "ans";
+    if (visited.has(id)) return "not-ans";
     return "not-vis";
   };
   const cellClass: Record<string, string> = {
-    "ans": "bg-success text-white",
+    ans: "bg-success text-white",
     "not-ans": "bg-destructive text-white",
-    "mark": "bg-purple-500 text-white",
+    mark: "bg-purple-500 text-white",
     "ans-mark": "bg-purple-500 text-white ring-2 ring-success",
     "not-vis": "bg-muted text-foreground",
   };
+
+  const totalQuestions = test.totalQuestions ?? questions.length;
+  const totalMarks = test.totalMarks ?? 0;
 
   return (
     <div className="min-h-screen bg-surface-muted">
@@ -194,71 +228,78 @@ function TestEngine() {
         <Logo compact />
         <div className="hidden md:block font-semibold text-sm truncate">{test.title}</div>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm"><Pause className="h-4 w-4 mr-1" />Pause</Button>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive font-display font-bold tabular-nums">
             <Clock className="h-4 w-4" />
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
             <span className="text-[10px] font-normal text-destructive/70 ml-1">Time Left</span>
           </div>
-          <Button size="sm" onClick={() => setConfirmOpen(true)}>Submit Test</Button>
+          <Button size="sm" onClick={() => setConfirmOpen(true)}>
+            Submit Test
+          </Button>
         </div>
       </header>
 
       <div className="grid lg:grid-cols-[260px_1fr_320px] gap-4 p-4 lg:p-6">
-        {/* Sections sidebar */}
+        {/* Overview */}
         <Card className="p-4 h-fit">
           <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4">
-            <div><div className="font-display font-bold">{test.total_questions}</div><div className="text-muted-foreground">Questions</div></div>
-            <div><div className="font-display font-bold">{test.total_marks}</div><div className="text-muted-foreground">Marks</div></div>
-            <div><div className="font-display font-bold">+{test.negative_marking}</div><div className="text-muted-foreground">Negative</div></div>
+            <div>
+              <div className="font-display font-bold">{totalQuestions}</div>
+              <div className="text-muted-foreground">Questions</div>
+            </div>
+            <div>
+              <div className="font-display font-bold">{totalMarks}</div>
+              <div className="text-muted-foreground">Marks</div>
+            </div>
+            <div>
+              <div className="font-display font-bold">{active?.negativeMarks ?? 0}</div>
+              <div className="text-muted-foreground">Negative</div>
+            </div>
           </div>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Sections</h4>
-          <div className="space-y-1">
-            {sections.map((s) => {
-              const total = questions.filter((q) => q.section === s).length;
-              const ans = questions.filter((q) => q.section === s && answers[q.id]).length;
-              return (
-                <button
-                  key={s}
-                  onClick={() => { setActiveSection(s); setActiveIdx(0); }}
-                  className={cn(
-                    "w-full text-left rounded-md px-3 py-2 text-sm flex items-center justify-between",
-                    activeSection === s ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
-                  )}
-                >
-                  <span className="truncate">{s}</span>
-                  <span className="text-xs text-muted-foreground">{ans}/{total}</span>
-                </button>
-              );
-            })}
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Progress
+          </h4>
+          <div className="text-sm text-muted-foreground">
+            {answeredCount} of {questions.length} answered
           </div>
         </Card>
 
         {/* Question */}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <Badge variant="outline">{activeSection}</Badge>
+            <Badge variant="outline">Question {activeIdx + 1}</Badge>
             <div className="flex items-center gap-2 text-xs">
-              <button onClick={toggleMark} className="flex items-center gap-1 text-muted-foreground hover:text-primary">
-                <Bookmark className={cn("h-4 w-4", active && marked.has(active.id) && "fill-primary text-primary")} />
+              <button
+                onClick={toggleMark}
+                className="flex items-center gap-1 text-muted-foreground hover:text-primary"
+              >
+                <Bookmark
+                  className={cn(
+                    "h-4 w-4",
+                    active && marked.has(qid(active)) && "fill-primary text-primary",
+                  )}
+                />
                 Mark for Review
               </button>
-              <button className="flex items-center gap-1 text-muted-foreground hover:text-destructive"><Flag className="h-4 w-4" />Report</button>
             </div>
           </div>
           {active && (
             <>
-              <div className="font-semibold mb-3">Q.{active.question_number}</div>
-              <p className="text-[15px] leading-7 mb-6">{active.question_text}</p>
-              <RadioGroup value={answers[active.id] ?? ""} onValueChange={choose} className="space-y-2.5">
-                {active.options.map((o) => {
-                  const checked = answers[active.id] === o.key;
+              <div className="font-semibold mb-3">Q.{activeIdx + 1}</div>
+              <p className="text-[15px] leading-7 mb-6">{active.questionText}</p>
+              <RadioGroup
+                value={answers[qid(active)] ?? ""}
+                onValueChange={choose}
+                className="space-y-2.5"
+              >
+                {active.options?.map((o) => {
+                  const checked = answers[qid(active)] === o.key;
                   return (
                     <Label
                       key={o.key}
                       className={cn(
                         "flex items-center gap-3 rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-muted/50",
-                        checked && "border-primary bg-primary/5"
+                        checked && "border-primary bg-primary/5",
                       )}
                     >
                       <RadioGroupItem value={o.key} className="border-primary" />
@@ -269,12 +310,21 @@ function TestEngine() {
                 })}
               </RadioGroup>
               <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
-                <Button variant="outline" onClick={() => goto(activeIdx - 1)} disabled={activeIdx === 0}>
-                  <ChevronLeft className="h-4 w-4 mr-1" />Previous
+                <Button
+                  variant="outline"
+                  onClick={() => goto(activeIdx - 1)}
+                  disabled={activeIdx === 0}
+                >
+                  Previous
                 </Button>
-                <Button variant="ghost" onClick={clear}>Clear Response</Button>
-                <Button onClick={() => goto(activeIdx + 1)} disabled={activeIdx === sectionQs.length - 1}>
-                  Save & Next <ChevronRight className="h-4 w-4 ml-1" />
+                <Button variant="ghost" onClick={clear}>
+                  Clear Response
+                </Button>
+                <Button
+                  onClick={() => goto(activeIdx + 1)}
+                  disabled={activeIdx === questions.length - 1}
+                >
+                  Save & Next
                 </Button>
               </div>
             </>
@@ -286,22 +336,26 @@ function TestEngine() {
           <h4 className="font-display font-bold text-sm mb-3">Question Palette</h4>
           <div className="grid grid-cols-4 gap-2 text-[11px] mb-4">
             <Legend color="bg-muted" label="Not Visited" value={notVisited} />
-            <Legend color="bg-destructive" label="Not Answered" value={questions.length - answeredCount - notVisited} />
+            <Legend
+              color="bg-destructive"
+              label="Not Answered"
+              value={questions.length - answeredCount - notVisited}
+            />
             <Legend color="bg-success" label="Answered" value={answeredCount} />
             <Legend color="bg-purple-500" label="Marked" value={markedCount} />
           </div>
           <div className="grid grid-cols-5 gap-2">
-            {sectionQs.map((q, i) => (
+            {questions.map((q, i) => (
               <button
-                key={q.id}
+                key={qid(q)}
                 onClick={() => setActiveIdx(i)}
                 className={cn(
                   "h-9 rounded-md text-sm font-semibold",
                   cellClass[cellStatus(q)],
-                  i === activeIdx && "ring-2 ring-primary ring-offset-1"
+                  i === activeIdx && "ring-2 ring-primary ring-offset-1",
                 )}
               >
-                {q.question_number}
+                {i + 1}
               </button>
             ))}
           </div>
@@ -314,14 +368,22 @@ function TestEngine() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-warning" />Submit Test?</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-warning" />
+              Submit Test?
+            </DialogTitle>
             <DialogDescription>
-              You have answered {answeredCount} of {questions.length} questions. Once submitted you cannot change your answers.
+              You have answered {answeredCount} of {questions.length} questions. Once submitted you
+              cannot change your answers.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Continue Test</Button>
-            <Button onClick={submit} disabled={submitting}>{submitting ? "Submitting…" : "Submit Now"}</Button>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Continue Test
+            </Button>
+            <Button onClick={submit} disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit Now"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -332,7 +394,14 @@ function TestEngine() {
 function Legend({ color, label, value }: { color: string; label: string; value: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className={cn("inline-block h-5 w-5 rounded grid place-items-center text-white text-[10px] font-bold", color)}>{value}</span>
+      <span
+        className={cn(
+          "inline-block h-5 w-5 rounded grid place-items-center text-white text-[10px] font-bold",
+          color,
+        )}
+      >
+        {value}
+      </span>
       <span className="text-muted-foreground leading-tight">{label}</span>
     </div>
   );

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "./Logo";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import * as authService from "@/services/authService";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,10 +36,7 @@ export function Navbar() {
     if (query.trim()) navigate({ to: "/exams", search: { q: query } as never });
   };
 
-  const initials = (user?.user_metadata?.full_name || user?.email || "U")
-    .split(/[\s@]/)[0]
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = (user?.name || user?.email || "U").split(/[\s@]/)[0].slice(0, 2).toUpperCase();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -57,7 +54,7 @@ export function Navbar() {
                   "px-3 py-2 text-sm font-medium rounded-md transition",
                   active
                     ? "text-primary"
-                    : "text-foreground/75 hover:text-foreground hover:bg-muted"
+                    : "text-foreground/75 hover:text-foreground hover:bg-muted",
                 )}
               >
                 {item.label}
@@ -87,19 +84,18 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-muted transition">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.user_metadata?.avatar_url} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden sm:inline text-sm font-medium">
-                      {user.user_metadata?.full_name?.split(" ")[0] ?? "Aspirant"}
+                      {user.name?.split(" ")[0] ?? "Aspirant"}
                     </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
-                    <p className="text-sm font-medium">{user.user_metadata?.full_name ?? "Aspirant"}</p>
+                    <p className="text-sm font-medium">{user.name ?? "Aspirant"}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -111,8 +107,8 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onSelect={async () => {
-                      await supabase.auth.signOut();
+                    onSelect={() => {
+                      authService.logout();
                       navigate({ to: "/" });
                     }}
                   >
@@ -123,10 +119,15 @@ export function Navbar() {
             </>
           ) : (
             <div className="hidden sm:flex items-center gap-2">
-              <Button variant="ghost" onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}>
+              <Button
+                variant="ghost"
+                onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}
+              >
                 Login
               </Button>
-              <Button onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}>
+              <Button
+                onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}
+              >
                 Sign Up
               </Button>
             </div>
@@ -159,10 +160,17 @@ export function Navbar() {
             ))}
             {!user && (
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}
+                >
                   Login
                 </Button>
-                <Button className="flex-1" onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}>
+                <Button
+                  className="flex-1"
+                  onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}
+                >
                   Sign Up
                 </Button>
               </div>
