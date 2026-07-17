@@ -1,12 +1,4 @@
-import { axiosClient } from "@/api/axiosClient";
-
-export type Category = {
-  id: string;
-  name: string;
-  description?: string;
-  isActive?: boolean;
-  [key: string]: unknown;
-};
+import axiosClient from "@/api/axiosClient";
 
 export async function getCategories() {
   const res = await axiosClient.get("/categories");
@@ -18,12 +10,12 @@ export async function getCategoryById(id: string) {
   return res.data;
 }
 
-export async function createCategory(data: Partial<Category>) {
+export async function createCategory(data: { name: string; description?: string; image?: string }) {
   const res = await axiosClient.post("/admin/categories", data);
   return res.data;
 }
 
-export async function updateCategory(id: string, data: Partial<Category>) {
+export async function updateCategory(id: string, data: Partial<{ name: string; description: string; image: string; isActive: boolean }>) {
   const res = await axiosClient.patch(`/admin/categories/${id}`, data);
   return res.data;
 }

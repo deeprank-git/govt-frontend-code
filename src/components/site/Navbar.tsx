@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "./Logo";
 import { useAuth } from "@/hooks/use-auth";
-import * as authService from "@/services/authService";
+import { clearAuth } from "@/lib/auth-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -36,7 +36,10 @@ export function Navbar() {
     if (query.trim()) navigate({ to: "/exams", search: { q: query } as never });
   };
 
-  const initials = (user?.name || user?.email || "U").split(/[\s@]/)[0].slice(0, 2).toUpperCase();
+  const initials = (user?.name || user?.email || "U")
+    .split(/[\s@]/)[0]
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -108,7 +111,7 @@ export function Navbar() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={() => {
-                      authService.logout();
+                      clearAuth();
                       navigate({ to: "/" });
                     }}
                   >

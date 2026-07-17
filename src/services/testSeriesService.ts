@@ -1,16 +1,6 @@
-import { axiosClient } from "@/api/axiosClient";
+import axiosClient from "@/api/axiosClient";
 
-export type TestSeries = {
-  id: string;
-  title: string;
-  category?: string;
-  isPublished?: boolean;
-  isActive?: boolean;
-  totalTests?: number;
-  [key: string]: unknown;
-};
-
-export async function getTestSeries(params?: { category?: string }) {
+export async function getTestSeries(params?: { category?: string; isActive?: boolean; isPublished?: boolean }) {
   const res = await axiosClient.get("/test-series", { params });
   return res.data;
 }
@@ -20,12 +10,12 @@ export async function getTestSeriesById(id: string) {
   return res.data;
 }
 
-export async function createTestSeries(data: Partial<TestSeries>) {
+export async function createTestSeries(data: Record<string, unknown>) {
   const res = await axiosClient.post("/admin/test-series", data);
   return res.data;
 }
 
-export async function updateTestSeries(id: string, data: Partial<TestSeries>) {
+export async function updateTestSeries(id: string, data: Record<string, unknown>) {
   const res = await axiosClient.patch(`/admin/test-series/${id}`, data);
   return res.data;
 }

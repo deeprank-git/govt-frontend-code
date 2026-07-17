@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -20,11 +19,17 @@ import {
   TrendingUp,
   Check,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
+
+// No backend endpoint exists yet for current affairs — this page stays on
+// static placeholder content until that resource is added to the API.
+const CA_ALL = [
+  { id: "c1", category: "Polity", title: "Parliament passes new labour codes", summary: "Key changes to labour law take effect nationwide.", published_at: new Date().toISOString(), is_featured: true, image_url: null as string | null },
+  { id: "c2", category: "Economy", title: "RBI keeps repo rate unchanged", summary: "Monetary policy committee holds rates steady for the third quarter.", published_at: new Date(Date.now() - 86400000).toISOString(), is_featured: true, image_url: null as string | null },
+  { id: "c3", category: "Science & Tech", title: "ISRO announces new satellite launch", summary: "Next launch scheduled for the upcoming quarter.", published_at: new Date(Date.now() - 2 * 86400000).toISOString(), is_featured: false, image_url: null as string | null },
+];
 
 export const Route = createFileRoute("/_authenticated/dashboard/current-affairs")({
   component: CADashboard,
@@ -54,39 +59,19 @@ function tintFor(cat: string) {
 }
 
 function CADashboard() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<"latest" | "oldest">("latest");
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [topIndex, setTopIndex] = useState(0);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
 
-  const { data: ca = [] } = useQuery({
-    queryKey: ["dash-ca-full"],
-    queryFn: async () =>
-      (await supabase.from("current_affairs").select("*").order("published_at", { ascending: false })).data ?? [],
-  });
+  const ca = CA_ALL;
+  const bookmarkSet = new Set(bookmarkedIds);
 
-  const { data: bookmarks = [] } = useQuery({
-    queryKey: ["ca-bookmarks", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () =>
-      (await supabase.from("bookmarks").select("item_id").eq("user_id", user!.id).eq("item_type", "current_affair")).data ?? [],
-  });
-  const bookmarkSet = new Set(bookmarks.map((b: any) => b.item_id));
-
-  const toggleBookmark = useMutation({
-    mutationFn: async (id: string) => {
-      if (!user?.id) throw new Error("Sign in required");
-      if (bookmarkSet.has(id)) {
-        await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("item_id", id).eq("item_type", "current_affair");
-      } else {
-        await supabase.from("bookmarks").insert({ user_id: user.id, item_id: id, item_type: "current_affair" });
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["ca-bookmarks", user?.id] }),
-  });
+  const toggleBookmark = {
+    mutate: (id: string) => setBookmarkedIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id])),
+  };
 
   const filtered = useMemo(() => {
     let list = ca;

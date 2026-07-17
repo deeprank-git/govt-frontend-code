@@ -1,9 +1,23 @@
-import { useSyncExternalStore } from "react";
-import { subscribeAuth, getAuthState, type AuthUser } from "@/lib/auth-store";
+import { useEffect, useState } from "react";
+import { getToken, getUser, type AuthUser } from "@/lib/auth-store";
 
-const SERVER_SNAPSHOT = { token: null, user: null };
+export function useAuth() {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export function useAuth(): { user: AuthUser | null; token: string | null; loading: boolean } {
-  const state = useSyncExternalStore(subscribeAuth, getAuthState, () => SERVER_SNAPSHOT);
-  return { user: state.user, token: state.token, loading: false };
+  useEffect(() => {
+    const sync = () => {
+      setUser(getToken() ? getUser() : null);
+      setLoading(false);
+    };
+    sync();
+    window.addEventListener("gp-auth-change", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("gp-auth-change", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  return { user, loading };
 }

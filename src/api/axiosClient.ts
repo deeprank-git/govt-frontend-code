@@ -1,9 +1,9 @@
 import axios from "axios";
 import { clearAuth, getToken } from "@/lib/auth-store";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "http://89.116.20.193:5000/api";
-
-export const axiosClient = axios.create({ baseURL });
+const axiosClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+});
 
 axiosClient.interceptors.request.use((config) => {
   const token = getToken();
@@ -14,29 +14,17 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 });
 
-export type ApiError = {
-  message: string;
-  status: number;
-};
-
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const status = error.response?.status ?? 0;
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
-      "Something went wrong";
-
-    if (status === 401) {
+    if (error.response?.status === 401) {
       clearAuth();
       if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
         window.location.assign("/auth?mode=login");
       }
     }
-
-    const normalized: ApiError = { message, status };
-    return Promise.reject(normalized);
+    return Promise.reject(error);
   },
 );
+
+export default axiosClient;

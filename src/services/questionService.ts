@@ -1,38 +1,26 @@
-import { axiosClient } from "@/api/axiosClient";
+import axiosClient from "@/api/axiosClient";
 
-export type Question = {
-  id: string;
-  test: string;
-  questionText: string;
-  options: { key: string; text: string }[];
-  correctAnswer?: string;
-  explanation?: string;
-  marks?: number;
-  negativeMarks?: number;
-  [key: string]: unknown;
-};
-
-export async function getQuestions(testId: string) {
+export async function getQuestionsByTest(testId: string) {
   const res = await axiosClient.get("/questions", { params: { test: testId } });
   return res.data;
 }
 
-export async function getQuestionsAdmin(testId: string) {
-  const res = await axiosClient.get("/admin/questions", { params: { test: testId } });
+export async function getQuestionsAdmin(testId?: string) {
+  const res = await axiosClient.get("/admin/questions", { params: testId ? { test: testId } : undefined });
   return res.data;
 }
 
-export async function createQuestion(data: Partial<Question>) {
+export async function createQuestion(data: Record<string, unknown>) {
   const res = await axiosClient.post("/admin/questions", data);
   return res.data;
 }
 
-export async function bulkCreateQuestions(dataArray: Partial<Question>[]) {
-  const res = await axiosClient.post("/admin/questions/bulk", dataArray);
+export async function bulkCreateQuestions(data: Record<string, unknown>[]) {
+  const res = await axiosClient.post("/admin/questions/bulk", data);
   return res.data;
 }
 
-export async function updateQuestion(id: string, data: Partial<Question>) {
+export async function updateQuestion(id: string, data: Record<string, unknown>) {
   const res = await axiosClient.patch(`/admin/questions/${id}`, data);
   return res.data;
 }

@@ -15,26 +15,33 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import * as testAttemptService from "@/services/testAttemptService";
+import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Dashboard,
 });
 
-function Stat({
-  icon: Icon,
-  value,
-  label,
-  sub,
-  tone = "primary",
-}: {
-  icon: any;
-  value: string;
-  label: string;
-  sub?: string;
-  tone?: string;
-}) {
+// No backend endpoint exists yet for PYQs, current affairs, answer keys or exam
+// alerts — these widgets stay on static placeholder content until those
+// resources are added to the API.
+const PYQS = [
+  { id: "p1", title: "SSC CGL Tier 1 2024", shift: "Shift 1", questions_count: 100, marks: 200, duration_minutes: 60 },
+  { id: "p2", title: "IBPS PO Prelims 2024", shift: "Shift 2", questions_count: 100, marks: 100, duration_minutes: 60 },
+];
+const CURRENT_AFFAIRS = [
+  { id: "c1", category: "Polity", title: "Parliament passes new labour codes", published_at: new Date().toISOString() },
+  { id: "c2", category: "Economy", title: "RBI keeps repo rate unchanged", published_at: new Date().toISOString() },
+];
+const ANSWER_KEYS = [
+  { id: "k1", title: "SSC CGL Tier 1 2024 Answer Key", released_on: new Date().toISOString() },
+];
+const ALERTS = [
+  { id: "a1", title: "SSC CGL Tier 2 Admit Card Released", alert_date: new Date().toISOString() },
+];
+
+function Stat({ icon: Icon, value, label, sub, tone = "primary" }: { icon: any; value: string; label: string; sub?: string; tone?: string }) {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-3">
@@ -54,77 +61,27 @@ function Stat({
 function Dashboard() {
   const { user } = useAuth();
 
-  const { data: attempts = [] } = useQuery({
-    queryKey: ["my-attempts", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () =>
-      (
-        await supabase
-          .from("attempts")
-          .select("*, mock_tests(title, total_marks)")
-          .eq("user_id", user!.id)
-          .order("started_at", { ascending: false })
-          .limit(10)
-      ).data ?? [],
+  const { data: attemptsRes } = useQuery({
+    queryKey: ["my-attempts"],
+    queryFn: () => testAttemptService.getMyAttempts(),
   });
-  const { data: pyqs = [] } = useQuery({
-    queryKey: ["dash-pyqs"],
-    queryFn: async () =>
-      (await supabase.from("pyqs").select("*").order("paper_date", { ascending: false }).limit(4))
-        .data ?? [],
-  });
-  const { data: ca = [] } = useQuery({
-    queryKey: ["dash-ca"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("current_affairs")
-          .select("*")
-          .order("published_at", { ascending: false })
-          .limit(4)
-      ).data ?? [],
-  });
-  const { data: keys = [] } = useQuery({
-    queryKey: ["dash-keys"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("answer_keys")
-          .select("*")
-          .order("released_on", { ascending: false })
-          .limit(4)
-      ).data ?? [],
-  });
-  const { data: alerts = [] } = useQuery({
-    queryKey: ["dash-alerts"],
-    queryFn: async () =>
-      (await supabase.from("notifications").select("*").order("alert_date").limit(4)).data ?? [],
-  });
+  const attempts = unwrapList<any>(attemptsRes).slice(0, 10);
 
-  const completed = attempts.filter((a) => a.status === "completed");
+  const completed = attempts.filter((a) => a.status === "completed" || a.status === "auto-submitted");
   const attempted = attempts.length;
+  const pct = (a: any) => (a.test?.totalMarks ? (Number(a.score) / Number(a.test.totalMarks)) * 100 : 0);
   const avgScore = completed.length
-    ? Math.round(
-        (completed.reduce(
-          (s, a) => s + (a.total_marks ? (Number(a.score) / Number(a.total_marks)) * 100 : 0),
-          0,
-        ) /
-          completed.length) *
-          10,
-      ) / 10
+    ? Math.round((completed.reduce((s, a) => s + pct(a), 0) / completed.length) * 10) / 10
     : 0;
-  const bestScore = completed.length
-    ? Math.round(
-        Math.max(
-          ...completed.map((a) =>
-            a.total_marks ? (Number(a.score) / Number(a.total_marks)) * 100 : 0,
-          ),
-        ) * 10,
-      ) / 10
-    : 0;
+  const bestScore = completed.length ? Math.round(Math.max(...completed.map(pct)) * 10) / 10 : 0;
   const accuracy = completed.length
     ? Math.round(
-        (completed.reduce((s, a) => s + Number(a.accuracy || 0), 0) / completed.length) * 10,
+        (completed.reduce((s, a) => {
+          const total = (a.correctCount ?? 0) + (a.wrongCount ?? 0);
+          return s + (total ? (a.correctCount / total) * 100 : 0);
+        }, 0) /
+          completed.length) *
+          10,
       ) / 10
     : 0;
 
@@ -161,33 +118,10 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat
-          icon={ClipboardList}
-          value={String(attempted)}
-          label="Tests Attempted"
-          sub="+12 this week"
-        />
-        <Stat
-          icon={Trophy}
-          value={`${avgScore}%`}
-          label="Average Score"
-          sub="+0.6% this week"
-          tone="warning"
-        />
-        <Stat
-          icon={BarChart3}
-          value={`${bestScore}%`}
-          label="Best Score"
-          sub="In SSC CGL Mock Test 06"
-          tone="success"
-        />
-        <Stat
-          icon={Target}
-          value={`${accuracy}%`}
-          label="Accuracy"
-          sub="+0.3% this week"
-          tone="info"
-        />
+        <Stat icon={ClipboardList} value={String(attempted)} label="Tests Attempted" />
+        <Stat icon={Trophy} value={`${avgScore}%`} label="Average Score" tone="warning" />
+        <Stat icon={BarChart3} value={`${bestScore}%`} label="Best Score" tone="success" />
+        <Stat icon={Target} value={`${accuracy}%`} label="Accuracy" tone="info" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-5">
@@ -205,19 +139,13 @@ function Dashboard() {
               </p>
             )}
             {attempts.slice(0, 4).map((a) => {
-              const score = a.total_marks
-                ? Math.round((Number(a.score) / Number(a.total_marks)) * 100)
-                : 0;
+              const score = Math.round(pct(a));
               return (
-                <div key={a.id} className="flex items-start gap-3">
+                <div key={a._id} className="flex items-start gap-3">
                   <FileText className="h-4 w-4 text-primary mt-1" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {a.mock_tests?.title ?? "Test"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Attempted on {new Date(a.started_at).toLocaleDateString()}
-                    </div>
+                    <div className="text-sm font-medium truncate">{a.test?.title ?? "Test"}</div>
+                    <div className="text-xs text-muted-foreground">Attempted on {new Date(a.startedAt).toLocaleDateString()}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-muted-foreground">Score</div>
@@ -238,11 +166,7 @@ function Dashboard() {
           </div>
           <div className="text-center py-4">
             <Trophy className="h-10 w-10 text-warning mx-auto" />
-            <div className="text-xs text-muted-foreground mt-2">Your All India Rank</div>
-            <div className="text-3xl font-display font-extrabold">12,846</div>
-            <Badge className="bg-success/15 text-success-foreground border-transparent mt-1">
-              Percentile 93.42%
-            </Badge>
+            <div className="text-xs text-muted-foreground mt-2">Take a test to see your rank on the leaderboard</div>
           </div>
         </Card>
 
@@ -257,7 +181,7 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {ca.map((a) => (
+            {CURRENT_AFFAIRS.map((a) => (
               <div key={a.id} className="flex items-start gap-2.5">
                 <Badge variant="outline" className="mt-0.5 text-[10px]">
                   {a.category}
@@ -289,7 +213,7 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {pyqs.map((p) => (
+            {PYQS.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">
@@ -299,9 +223,7 @@ function Dashboard() {
                     {p.questions_count} Qs · {p.marks} Marks · {p.duration_minutes} Min
                   </div>
                 </div>
-                <Button size="sm" variant="outline">
-                  Start Test
-                </Button>
+                <Button size="sm" variant="outline" disabled>Start Test</Button>
               </div>
             ))}
           </div>
@@ -318,17 +240,13 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {keys.map((k) => (
+            {ANSWER_KEYS.map((k) => (
               <div key={k.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{k.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Released {k.released_on ? new Date(k.released_on).toLocaleDateString() : "—"}
-                  </div>
+                  <div className="text-[11px] text-muted-foreground">Released {new Date(k.released_on).toLocaleDateString()}</div>
                 </div>
-                <Button size="sm" variant="ghost">
-                  View Answer Key
-                </Button>
+                <Button size="sm" variant="ghost" disabled>View Answer Key</Button>
               </div>
             ))}
           </div>
@@ -345,13 +263,11 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {alerts.map((a) => (
+            {ALERTS.map((a) => (
               <div key={a.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{a.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {a.alert_date ? new Date(a.alert_date).toLocaleDateString() : "Soon"}
-                  </div>
+                  <div className="text-[11px] text-muted-foreground">{new Date(a.alert_date).toLocaleDateString()}</div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>

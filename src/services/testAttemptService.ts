@@ -1,6 +1,6 @@
-import { axiosClient } from "@/api/axiosClient";
+import axiosClient from "@/api/axiosClient";
 
-export async function startAttempt(testId: string) {
+export async function startTest(testId: string) {
   const res = await axiosClient.post("/test-attempts/start", { testId });
   return res.data;
 }
@@ -10,16 +10,12 @@ export async function getQuestionByIndex(attemptId: string, index: number) {
   return res.data;
 }
 
-export async function saveAnswer(input: {
-  attemptId: string;
-  questionId: string;
-  selectedOption: string;
-}) {
-  const res = await axiosClient.post("/test-attempts/save-answer", input);
+export async function saveAnswer(data: { attemptId: string; questionId: string; selectedOption: number }) {
+  const res = await axiosClient.post("/test-attempts/save-answer", data);
   return res.data;
 }
 
-export async function submitAttempt(attemptId: string) {
+export async function submitTest(attemptId: string) {
   const res = await axiosClient.post("/test-attempts/submit", { attemptId });
   return res.data;
 }

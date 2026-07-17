@@ -1,20 +1,16 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Shield, Users, ClipboardList, FileText, BookOpen, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getUser } from "@/lib/auth-store";
+import { getToken, getUser, clearAuth } from "@/lib/auth-store";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
@@ -22,91 +18,69 @@ import * as testService from "@/services/testService";
 import * as questionService from "@/services/questionService";
 import * as userService from "@/services/userService";
 
-export const Route = createFileRoute("/_authenticated/admin")({
+export const Route = createFileRoute("/admin-dashboard")({
   beforeLoad: () => {
+    const token = getToken();
     const user = getUser();
-    if (user?.role !== "admin") {
-      throw redirect({ to: "/dashboard" });
+    if (!token || user?.role !== "admin") {
+      throw redirect({ to: "/admin-login" });
     }
   },
-  component: AdminPanel,
+  component: AdminDashboardPage,
 });
 
-function AdminPanel() {
-  const { data: categoriesRes } = useQuery({ queryKey: ["adm-categories"], queryFn: () => categoryService.getCategories() });
-  const { data: seriesRes } = useQuery({ queryKey: ["adm-series"], queryFn: () => testSeriesService.getTestSeries() });
-  const { data: testsRes } = useQuery({ queryKey: ["adm-tests"], queryFn: () => testService.getTests() });
-  const { data: usersRes } = useQuery({ queryKey: ["adm-users"], queryFn: () => userService.getAllUsers() });
+function AdminDashboardPage() {
+  const navigate = useNavigate();
+
+  const { data: categoriesRes } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
+  const { data: seriesRes } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
+  const { data: testsRes } = useQuery({ queryKey: ["ad-tests"], queryFn: () => testService.getTests() });
+  const { data: usersRes } = useQuery({ queryKey: ["ad-users"], queryFn: () => userService.getAllUsers() });
 
   const categories = unwrapList<any>(categoriesRes);
   const series = unwrapList<any>(seriesRes);
   const tests = unwrapList<any>(testsRes);
   const users = unwrapList<any>(usersRes);
 
+  const logOut = () => {
+    clearAuth();
+    navigate({ to: "/admin-login" });
+  };
+
   return (
-    <div className="min-h-screen bg-surface-muted">
-      <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6">
-        <Shield className="h-5 w-5 text-primary mr-2" />
-        <h1 className="font-display font-bold">Admin Panel</h1>
-        <Button asChild variant="ghost" size="sm" className="ml-auto">
-          <Link to="/dashboard">Back to Dashboard</Link>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border flex items-center justify-between px-4 py-3">
+        <h1 className="text-lg font-semibold">Admin Dashboard</h1>
+        <Button variant="outline" size="sm" onClick={logOut}>
+          Log out
         </Button>
       </header>
 
-      <div className="p-4 lg:p-6 space-y-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Metric icon={BookOpen} label="Categories" value={categories.length} />
-          <Metric icon={ClipboardList} label="Test Series" value={series.length} />
-          <Metric icon={FileText} label="Tests" value={tests.length} />
-          <Metric icon={Users} label="Users" value={users.length} />
-        </div>
-
-        <Tabs defaultValue="categories">
-          <TabsList>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="series">Test Series</TabsTrigger>
-            <TabsTrigger value="tests">Tests</TabsTrigger>
-            <TabsTrigger value="questions">Questions</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="categories" className="mt-4"><CategoriesTab categories={categories} /></TabsContent>
-          <TabsContent value="series" className="mt-4"><TestSeriesTab series={series} categories={categories} /></TabsContent>
-          <TabsContent value="tests" className="mt-4"><TestsTab tests={tests} categories={categories} series={series} /></TabsContent>
-          <TabsContent value="questions" className="mt-4"><QuestionsTab tests={tests} /></TabsContent>
-          <TabsContent value="users" className="mt-4"><UsersTab users={users} /></TabsContent>
-        </Tabs>
+      <div className="p-4 space-y-8 max-w-5xl mx-auto">
+        <CategoriesSection categories={categories} />
+        <TestSeriesSection series={series} categories={categories} />
+        <TestsSection tests={tests} categories={categories} series={series} />
+        <QuestionsSection tests={tests} />
+        <UsersSection users={users} />
       </div>
     </div>
   );
 }
 
-function Metric({ icon: Icon, label, value }: any) {
-  return (
-    <Card className="p-4 flex items-center gap-3">
-      <span className="h-10 w-10 grid place-items-center rounded-lg bg-primary/10 text-primary">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-xl font-display font-bold">{value}</div>
-      </div>
-    </Card>
-  );
-}
-
 function SectionHeader({ title, onCreate }: { title: string; onCreate: () => void }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <h2 className="font-display font-bold">{title}</h2>
-      <Button size="sm" onClick={onCreate}><Plus className="h-4 w-4 mr-1" /> New</Button>
+    <div className="flex items-center justify-between mb-2">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <Button size="sm" onClick={onCreate}>
+        New
+      </Button>
     </div>
   );
 }
 
 // ---------------- Categories ----------------
 
-function CategoriesTab({ categories }: { categories: any[] }) {
+function CategoriesSection({ categories }: { categories: any[] }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -119,7 +93,7 @@ function CategoriesTab({ categories }: { categories: any[] }) {
     mutationFn: () => (editing ? categoryService.updateCategory(editing._id, form) : categoryService.createCategory(form)),
     onSuccess: () => {
       toast.success(editing ? "Category updated" : "Category created");
-      qc.invalidateQueries({ queryKey: ["adm-categories"] });
+      qc.invalidateQueries({ queryKey: ["ad-categories"] });
       setOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save category"),
@@ -129,13 +103,13 @@ function CategoriesTab({ categories }: { categories: any[] }) {
     mutationFn: (id: string) => categoryService.deleteCategory(id),
     onSuccess: () => {
       toast.success("Category deleted");
-      qc.invalidateQueries({ queryKey: ["adm-categories"] });
+      qc.invalidateQueries({ queryKey: ["ad-categories"] });
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete category"),
   });
 
   return (
-    <Card className="p-4">
+    <section className="border border-border rounded-md p-4">
       <SectionHeader title="Categories" onCreate={openCreate} />
       <Table>
         <TableHeader>
@@ -144,16 +118,16 @@ function CategoriesTab({ categories }: { categories: any[] }) {
         <TableBody>
           {categories.map((c) => (
             <TableRow key={c._id}>
-              <TableCell className="font-medium">{c.name}</TableCell>
+              <TableCell>{c.name}</TableCell>
               <TableCell>{c.slug}</TableCell>
               <TableCell className="max-w-xs truncate">{c.description || "—"}</TableCell>
-              <TableCell className="text-right space-x-1">
-                <Button size="icon" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => deleteMut.mutate(c._id)} disabled={deleteMut.isPending}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+              <TableCell className="text-right space-x-2">
+                <Button size="sm" variant="outline" onClick={() => openEdit(c)}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(c._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {categories.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">No categories yet.</TableCell></TableRow>}
+          {categories.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
 
@@ -171,13 +145,13 @@ function CategoriesTab({ categories }: { categories: any[] }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </section>
   );
 }
 
 // ---------------- Test Series ----------------
 
-function TestSeriesTab({ series, categories }: { series: any[]; categories: any[] }) {
+function TestSeriesSection({ series, categories }: { series: any[]; categories: any[] }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -194,7 +168,7 @@ function TestSeriesTab({ series, categories }: { series: any[]; categories: any[
     mutationFn: () => (editing ? testSeriesService.updateTestSeries(editing._id, form) : testSeriesService.createTestSeries(form)),
     onSuccess: () => {
       toast.success(editing ? "Test series updated" : "Test series created");
-      qc.invalidateQueries({ queryKey: ["adm-series"] });
+      qc.invalidateQueries({ queryKey: ["ad-series"] });
       setOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save test series"),
@@ -204,13 +178,13 @@ function TestSeriesTab({ series, categories }: { series: any[]; categories: any[
     mutationFn: (id: string) => testSeriesService.deleteTestSeries(id),
     onSuccess: () => {
       toast.success("Test series deleted");
-      qc.invalidateQueries({ queryKey: ["adm-series"] });
+      qc.invalidateQueries({ queryKey: ["ad-series"] });
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete test series"),
   });
 
   return (
-    <Card className="p-4">
+    <section className="border border-border rounded-md p-4">
       <SectionHeader title="Test Series" onCreate={openCreate} />
       <Table>
         <TableHeader>
@@ -219,17 +193,17 @@ function TestSeriesTab({ series, categories }: { series: any[]; categories: any[
         <TableBody>
           {series.map((s) => (
             <TableRow key={s._id}>
-              <TableCell className="font-medium">{s.name}</TableCell>
+              <TableCell>{s.name}</TableCell>
               <TableCell>{s.category?.name ?? "—"}</TableCell>
               <TableCell>{s.totalTests ?? 0}</TableCell>
-              <TableCell>{s.isPublished ? <Badge className="bg-success/15 text-success-foreground border-transparent">Published</Badge> : <Badge variant="outline">Draft</Badge>}</TableCell>
-              <TableCell className="text-right space-x-1">
-                <Button size="icon" variant="ghost" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => deleteMut.mutate(s._id)} disabled={deleteMut.isPending}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+              <TableCell>{s.isPublished ? "Published" : "Draft"}</TableCell>
+              <TableCell className="text-right space-x-2">
+                <Button size="sm" variant="outline" onClick={() => openEdit(s)}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(s._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {series.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">No test series yet.</TableCell></TableRow>}
+          {series.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No test series yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
 
@@ -256,13 +230,13 @@ function TestSeriesTab({ series, categories }: { series: any[]; categories: any[
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </section>
   );
 }
 
 // ---------------- Tests ----------------
 
-function TestsTab({ tests, categories, series }: { tests: any[]; categories: any[]; series: any[] }) {
+function TestsSection({ tests, categories, series }: { tests: any[]; categories: any[]; series: any[] }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -300,7 +274,7 @@ function TestsTab({ tests, categories, series }: { tests: any[]; categories: any
     },
     onSuccess: () => {
       toast.success(editing ? "Test updated" : "Test created");
-      qc.invalidateQueries({ queryKey: ["adm-tests"] });
+      qc.invalidateQueries({ queryKey: ["ad-tests"] });
       setOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save test"),
@@ -310,13 +284,13 @@ function TestsTab({ tests, categories, series }: { tests: any[]; categories: any
     mutationFn: (id: string) => testService.deleteTest(id),
     onSuccess: () => {
       toast.success("Test deleted");
-      qc.invalidateQueries({ queryKey: ["adm-tests"] });
+      qc.invalidateQueries({ queryKey: ["ad-tests"] });
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete test"),
   });
 
   return (
-    <Card className="p-4">
+    <section className="border border-border rounded-md p-4">
       <SectionHeader title="Tests" onCreate={openCreate} />
       <Table>
         <TableHeader>
@@ -325,19 +299,19 @@ function TestsTab({ tests, categories, series }: { tests: any[]; categories: any
         <TableBody>
           {tests.map((t) => (
             <TableRow key={t._id}>
-              <TableCell className="font-medium">{t.title}</TableCell>
+              <TableCell>{t.title}</TableCell>
               <TableCell>{categories.find((c) => c._id === (t.category?._id ?? t.category))?.name ?? "—"}</TableCell>
               <TableCell>{t.totalQuestions}</TableCell>
               <TableCell>{t.totalMarks}</TableCell>
               <TableCell>{t.duration} Min</TableCell>
-              <TableCell>{t.isPublished ? <Badge className="bg-success/15 text-success-foreground border-transparent">Published</Badge> : <Badge variant="outline">Draft</Badge>}</TableCell>
-              <TableCell className="text-right space-x-1">
-                <Button size="icon" variant="ghost" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => deleteMut.mutate(t._id)} disabled={deleteMut.isPending}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+              <TableCell>{t.isPublished ? "Published" : "Draft"}</TableCell>
+              <TableCell className="text-right space-x-2">
+                <Button size="sm" variant="outline" onClick={() => openEdit(t)}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(t._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {tests.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">No tests yet.</TableCell></TableRow>}
+          {tests.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No tests yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
 
@@ -376,23 +350,21 @@ function TestsTab({ tests, categories, series }: { tests: any[]; categories: any
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </section>
   );
 }
 
 // ---------------- Questions ----------------
 
-function QuestionsTab({ tests }: { tests: any[] }) {
+function QuestionsSection({ tests }: { tests: any[] }) {
   const qc = useQueryClient();
   const [testId, setTestId] = useState<string>(tests[0]?._id ?? "");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ questionText: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", marks: 1, negativeMarks: 0 });
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkText, setBulkText] = useState("");
 
   const { data: questionsRes, isLoading } = useQuery({
-    queryKey: ["adm-questions", testId],
+    queryKey: ["ad-questions", testId],
     enabled: !!testId,
     queryFn: () => questionService.getQuestionsAdmin(testId),
   });
@@ -419,8 +391,8 @@ function QuestionsTab({ tests }: { tests: any[] }) {
     },
     onSuccess: () => {
       toast.success(editing ? "Question updated" : "Question created");
-      qc.invalidateQueries({ queryKey: ["adm-questions", testId] });
-      qc.invalidateQueries({ queryKey: ["adm-tests"] });
+      qc.invalidateQueries({ queryKey: ["ad-questions", testId] });
+      qc.invalidateQueries({ queryKey: ["ad-tests"] });
       setOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save question"),
@@ -430,39 +402,22 @@ function QuestionsTab({ tests }: { tests: any[] }) {
     mutationFn: (id: string) => questionService.deleteQuestion(id),
     onSuccess: () => {
       toast.success("Question deleted");
-      qc.invalidateQueries({ queryKey: ["adm-questions", testId] });
-      qc.invalidateQueries({ queryKey: ["adm-tests"] });
+      qc.invalidateQueries({ queryKey: ["ad-questions", testId] });
+      qc.invalidateQueries({ queryKey: ["ad-tests"] });
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete question"),
   });
 
-  const bulkMut = useMutation({
-    mutationFn: () => {
-      const parsed = JSON.parse(bulkText);
-      const withTest = (Array.isArray(parsed) ? parsed : []).map((q: any) => ({ ...q, test: testId }));
-      return questionService.bulkCreateQuestions(withTest);
-    },
-    onSuccess: (res: any) => {
-      toast.success(res?.message ?? "Questions uploaded");
-      qc.invalidateQueries({ queryKey: ["adm-questions", testId] });
-      qc.invalidateQueries({ queryKey: ["adm-tests"] });
-      setBulkOpen(false);
-      setBulkText("");
-    },
-    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Bulk upload failed — check the JSON format"),
-  });
-
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-        <h2 className="font-display font-bold">Questions</h2>
+    <section className="border border-border rounded-md p-4">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <h2 className="text-base font-semibold">Questions</h2>
         <div className="flex items-center gap-2">
           <Select value={testId} onValueChange={setTestId}>
             <SelectTrigger className="w-64"><SelectValue placeholder="Select a test" /></SelectTrigger>
             <SelectContent>{tests.map((t) => <SelectItem key={t._id} value={t._id}>{t.title}</SelectItem>)}</SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)} disabled={!testId}>Bulk Upload (JSON)</Button>
-          <Button size="sm" onClick={openCreate} disabled={!testId}><Plus className="h-4 w-4 mr-1" /> New</Button>
+          <Button size="sm" onClick={openCreate} disabled={!testId}>New</Button>
         </div>
       </div>
 
@@ -471,19 +426,19 @@ function QuestionsTab({ tests }: { tests: any[] }) {
           <TableRow><TableHead>Question</TableHead><TableHead>Correct</TableHead><TableHead>Marks</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">Loading…</TableCell></TableRow>}
+          {isLoading && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">Loading…</TableCell></TableRow>}
           {!isLoading && questions.map((q) => (
             <TableRow key={q._id}>
               <TableCell className="max-w-md truncate">{q.questionText}</TableCell>
               <TableCell>{"ABCD"[q.correctAnswer] ?? "—"}</TableCell>
               <TableCell>{q.marks}</TableCell>
-              <TableCell className="text-right space-x-1">
-                <Button size="icon" variant="ghost" onClick={() => openEdit(q)}><Pencil className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => deleteMut.mutate(q._id)} disabled={deleteMut.isPending}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+              <TableCell className="text-right space-x-2">
+                <Button size="sm" variant="outline" onClick={() => openEdit(q)}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(q._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && questions.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">{testId ? "No questions for this test yet." : "Select a test first."}</TableCell></TableRow>}
+          {!isLoading && questions.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">{testId ? "No questions for this test yet." : "Select a test first."}</TableCell></TableRow>}
         </TableBody>
       </Table>
 
@@ -517,34 +472,20 @@ function QuestionsTab({ tests }: { tests: any[] }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Bulk Upload Questions</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground">
-            Paste a JSON array. Each item needs: questionText, options (array of 4 {"{ text }"}), correctAnswer (0-3), marks, negativeMarks.
-          </p>
-          <Textarea rows={10} className="font-mono text-xs" value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder='[{"questionText":"2+2=?","options":[{"text":"3"},{"text":"4"},{"text":"5"},{"text":"6"}],"correctAnswer":1,"marks":1,"negativeMarks":0}]' />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
-            <Button onClick={() => bulkMut.mutate()} disabled={bulkMut.isPending || !bulkText.trim()}>{bulkMut.isPending ? "Uploading…" : "Upload"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
+    </section>
   );
 }
 
 // ---------------- Users ----------------
 
-function UsersTab({ users }: { users: any[] }) {
+function UsersSection({ users }: { users: any[] }) {
   const qc = useQueryClient();
 
   const roleMut = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) => userService.updateUserByAdmin(id, { role }),
     onSuccess: () => {
       toast.success("Role updated");
-      qc.invalidateQueries({ queryKey: ["adm-users"] });
+      qc.invalidateQueries({ queryKey: ["ad-users"] });
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not update role"),
   });
@@ -553,16 +494,14 @@ function UsersTab({ users }: { users: any[] }) {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => userService.updateUserByAdmin(id, { isActive }),
     onSuccess: () => {
       toast.success("User status updated");
-      qc.invalidateQueries({ queryKey: ["adm-users"] });
+      qc.invalidateQueries({ queryKey: ["ad-users"] });
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not update user"),
   });
 
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="font-display font-bold">Users</h2>
-      </div>
+    <section className="border border-border rounded-md p-4">
+      <h2 className="text-base font-semibold mb-2">Users</h2>
       <Table>
         <TableHeader>
           <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
@@ -570,7 +509,7 @@ function UsersTab({ users }: { users: any[] }) {
         <TableBody>
           {users.map((u) => (
             <TableRow key={u._id}>
-              <TableCell className="font-medium">{u.name}</TableCell>
+              <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>
                 <Select value={u.role} onValueChange={(v) => roleMut.mutate({ id: u._id, role: v })}>
@@ -582,7 +521,7 @@ function UsersTab({ users }: { users: any[] }) {
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell>{u.isActive ? <Badge className="bg-success/15 text-success-foreground border-transparent">Active</Badge> : <Badge variant="destructive">Deactivated</Badge>}</TableCell>
+              <TableCell>{u.isActive ? "Active" : "Deactivated"}</TableCell>
               <TableCell className="text-right">
                 <Button size="sm" variant="outline" onClick={() => activeMut.mutate({ id: u._id, isActive: !u.isActive })} disabled={activeMut.isPending}>
                   {u.isActive ? "Deactivate" : "Activate"}
@@ -590,9 +529,9 @@ function UsersTab({ users }: { users: any[] }) {
               </TableCell>
             </TableRow>
           ))}
-          {users.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">No users found.</TableCell></TableRow>}
+          {users.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No users found.</TableCell></TableRow>}
         </TableBody>
       </Table>
-    </Card>
+    </section>
   );
 }

@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Search, Bookmark, ChevronRight, Flame, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -8,8 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// No backend endpoint exists yet for current affairs — this page stays on
+// static placeholder content until that resource is added to the API.
+const ARTICLES = [
+  { id: "c1", category: "National", title: "Parliament passes new labour codes", summary: "Key changes to labour law take effect nationwide.", published_at: new Date().toISOString(), is_featured: true },
+  { id: "c2", category: "Economy", title: "RBI keeps repo rate unchanged", summary: "Monetary policy committee holds rates steady.", published_at: new Date(Date.now() - 86400000).toISOString(), is_featured: true },
+  { id: "c3", category: "Science & Tech", title: "ISRO announces new satellite launch", summary: "Next launch scheduled for the upcoming quarter.", published_at: new Date(Date.now() - 2 * 86400000).toISOString(), is_featured: false },
+  { id: "c4", category: "Sports", title: "India wins bilateral series", summary: "A dominant series win at home.", published_at: new Date(Date.now() - 3 * 86400000).toISOString(), is_featured: false },
+];
 
 export const Route = createFileRoute("/current-affairs")({
   head: () => ({
@@ -29,10 +36,7 @@ function CAPage() {
   const [tab, setTab] = useState("All");
   const [q, setQ] = useState("");
 
-  const { data: articles = [] } = useQuery({
-    queryKey: ["current-affairs"],
-    queryFn: async () => (await supabase.from("current_affairs").select("*").order("published_at", { ascending: false })).data ?? [],
-  });
+  const articles = ARTICLES;
 
   const filtered = articles.filter((a) => {
     if (tab !== "All" && a.category !== tab) return false;

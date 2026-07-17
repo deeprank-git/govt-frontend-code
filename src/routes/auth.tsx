@@ -7,13 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import * as authService from "@/services/authService";
+import { setAuth } from "@/lib/auth-store";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import authImg from "@/assets/auth-illustration.png";
-import type { ApiError } from "@/api/axiosClient";
 
 const search = z.object({
   mode: z.enum(["login", "signup"]).optional(),
@@ -99,6 +107,8 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,8 +116,8 @@ function LoginForm() {
     try {
       await authService.login({ email, password });
       toast.success("Signed in");
-    } catch (err) {
-      toast.error((err as ApiError).message);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -116,9 +126,7 @@ function LoginForm() {
   return (
     <div>
       <h1 className="text-2xl font-display font-extrabold">Login to Your Account</h1>
-      <p className="text-sm text-muted-foreground mt-1">
-        Enter your credentials to access your account
-      </p>
+      <p className="text-sm text-muted-foreground mt-1">Enter your credentials to access your account</p>
 
       <form onSubmit={submit} className="space-y-4 mt-6">
         <div>
@@ -152,9 +160,13 @@ function LoginForm() {
             </button>
           </div>
           <div className="text-right mt-1.5">
-            <a href="#" className="text-xs text-primary hover:underline">
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setForgotOpen(true)}
+            >
               Forgot Password?
-            </a>
+            </button>
           </div>
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
@@ -167,18 +179,75 @@ function LoginForm() {
           Sign Up
         </Link>
       </p>
+
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>
+  );
+}
+
+function ForgotPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleForgotPassword = async (email: string) => {
+    setSubmitting(true);
+    // TODO: replace with real call once backend endpoint exists:
+    // await authService.forgotPassword({ email });
+    await new Promise((r) => setTimeout(r, 600)); // simulate a network call
+    setSubmitting(false);
+    onOpenChange(false);
+    toast.success("If that email is registered, a reset link has been sent.");
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleForgotPassword(email);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reset your password</DialogTitle>
+          <DialogDescription>
+            Enter the email address associated with your account and we'll send you a link to reset
+            your password.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <Label htmlFor="forgot-email">Email</Label>
+            <Input
+              id="forgot-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Sending…" : "Send Reset Link"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [accept, setAccept] = useState(true);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,10 +255,12 @@ function SignupForm() {
     if (!accept) return toast.error("Please accept the Terms");
     setLoading(true);
     try {
-      await authService.register({ name: fullName, email, password, mobile });
+      const res = await authService.register({ name: fullName, email, password });
+      setAuth(res.token, res.user);
       toast.success("Account created");
-    } catch (err) {
-      toast.error((err as ApiError).message);
+      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not create account");
     } finally {
       setLoading(false);
     }
@@ -220,15 +291,6 @@ function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email address"
-          />
-        </div>
-        <div>
-          <Label htmlFor="mo">Mobile Number</Label>
-          <Input
-            id="mo"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            placeholder="Enter your mobile number"
           />
         </div>
         <div>

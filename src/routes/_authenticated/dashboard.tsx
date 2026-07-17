@@ -6,15 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import * as authService from "@/services/authService";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { clearAuth } from "@/lib/auth-store";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardLayout,
@@ -52,9 +45,7 @@ function DashboardLayout() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-muted">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-                        {initials}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">{initials}</AvatarFallback>
                     </Avatar>
                     <span className="hidden sm:inline text-sm font-medium">
                       {name.split(" ")[0]}
@@ -64,12 +55,7 @@ function DashboardLayout() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      authService.logout();
-                      navigate({ to: "/" });
-                    }}
-                  >
+                  <DropdownMenuItem onSelect={() => { clearAuth(); navigate({ to: "/" }); }}>
                     <LogOut className="mr-2 h-4 w-4" /> Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -7,9 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
 import {
   FileText,
   CalendarDays,
@@ -48,52 +44,32 @@ function formatCount(n: number) {
   return String(n);
 }
 
+// No backend endpoint exists yet for previous-year papers — this page stays on
+// static placeholder content until that resource is added to the API.
+const EXAMS_MIN = [
+  { id: "e1", name: "SSC CGL", slug: "ssc-cgl" },
+  { id: "e2", name: "IBPS PO", slug: "ibps-po" },
+];
+const PYQS_ALL = [
+  { id: "p1", exam_id: "e1", title: "SSC CGL Tier 1 2024", year: 2024, tier: "Tier 1", shift: "Shift 1", paper_date: "2024-09-09", questions_count: 100, marks: 200, duration_minutes: 60, attempts: 45210, test_id: null as string | null },
+  { id: "p2", exam_id: "e2", title: "IBPS PO Prelims 2023", year: 2023, tier: "Tier 1", shift: "Shift 2", paper_date: "2023-11-04", questions_count: 100, marks: 100, duration_minutes: 60, attempts: 32110, test_id: null as string | null },
+];
+
 function PYQPage() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
   const [exam, setExam] = useState<string>("all");
   const [year, setYear] = useState<string>("all");
   const [tier, setTier] = useState<string>("all");
   const [shift, setShift] = useState<string>("all");
   const [tab, setTab] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
 
-  const { data: exams = [] } = useQuery({
-    queryKey: ["exams-min"],
-    queryFn: async () => (await supabase.from("exams").select("id,name,slug").order("name")).data ?? [],
-  });
+  const exams = EXAMS_MIN;
+  const pyqs = PYQS_ALL;
 
-  const { data: pyqs = [] } = useQuery({
-    queryKey: ["pyqs-all"],
-    queryFn: async () =>
-      (await supabase.from("pyqs").select("*").order("paper_date", { ascending: false })).data ?? [],
-  });
-
-  const { data: bookmarks = [] } = useQuery({
-    queryKey: ["pyq-bookmarks", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("bookmarks")
-        .select("item_id")
-        .eq("user_id", user!.id)
-        .eq("item_type", "pyq");
-      return (data ?? []).map((b) => b.item_id);
-    },
-  });
-
-  const bookmarkMut = useMutation({
-    mutationFn: async (pyqId: string) => {
-      if (!user) throw new Error("Sign in required");
-      if (bookmarks.includes(pyqId)) {
-        await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("item_type", "pyq").eq("item_id", pyqId);
-      } else {
-        await supabase.from("bookmarks").insert({ user_id: user.id, item_type: "pyq", item_id: pyqId });
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pyq-bookmarks", user?.id] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const toggleBookmark = (pyqId: string) => {
+    setBookmarks((b) => (b.includes(pyqId) ? b.filter((id) => id !== pyqId) : [...b, pyqId]));
+  };
 
   const filtered = useMemo(() => {
     return pyqs.filter((p) => {
@@ -297,7 +273,7 @@ function PYQPage() {
                             size="icon"
                             variant="outline"
                             className="h-9 w-9"
-                            onClick={() => bookmarkMut.mutate(p.id)}
+                            onClick={() => toggleBookmark(p.id)}
                             aria-label="Bookmark"
                           >
                             <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-primary text-primary" : ""}`} />
