@@ -7,6 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import * as authService from "@/services/authService";
 import { setAuth } from "@/lib/auth-store";
 import { Logo } from "@/components/site/Logo";
@@ -99,6 +107,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
@@ -151,9 +160,13 @@ function LoginForm() {
             </button>
           </div>
           <div className="text-right mt-1.5">
-            <a href="#" className="text-xs text-primary hover:underline">
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setForgotOpen(true)}
+            >
               Forgot Password?
-            </a>
+            </button>
           </div>
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
@@ -166,7 +179,64 @@ function LoginForm() {
           Sign Up
         </Link>
       </p>
+
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </div>
+  );
+}
+
+function ForgotPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleForgotPassword = async (email: string) => {
+    setSubmitting(true);
+    // TODO: replace with real call once backend endpoint exists:
+    // await authService.forgotPassword({ email });
+    await new Promise((r) => setTimeout(r, 600)); // simulate a network call
+    setSubmitting(false);
+    onOpenChange(false);
+    toast.success("If that email is registered, a reset link has been sent.");
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleForgotPassword(email);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reset your password</DialogTitle>
+          <DialogDescription>
+            Enter the email address associated with your account and we'll send you a link to reset
+            your password.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <Label htmlFor="forgot-email">Email</Label>
+            <Input
+              id="forgot-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Sending…" : "Send Reset Link"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

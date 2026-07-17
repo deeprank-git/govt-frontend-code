@@ -34,27 +34,6 @@ type Question = {
   negativeMarks: number;
 };
 
-type TestLite = {
-  title: string;
-  totalQuestions?: number;
-  totalMarks?: number;
-};
-
-type AttemptLite = {
-  _id?: string;
-  id?: string;
-  expiresAt?: string;
-};
-
-type AttemptQuestionLite = {
-  selectedOption?: string;
-  answer?: string;
-};
-
-function qid(q: { _id?: string; id?: string } | undefined): string {
-  return (q?._id ?? q?.id)!;
-}
-
 function TestEngine() {
   const { testId } = Route.useParams();
   const navigate = useNavigate();
@@ -144,7 +123,7 @@ function TestEngine() {
     const tick = () => {
       const left = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
       setTime(left);
-      if (left === 0) setExpired(true);
+      if (left === 0) submit();
     };
     tick();
     const i = setInterval(tick, 1000);
@@ -213,9 +192,6 @@ function TestEngine() {
     "ans-mark": "bg-purple-500 text-white ring-2 ring-success",
     "not-vis": "bg-muted text-foreground",
   };
-
-  const totalQuestions = test.totalQuestions ?? questions.length;
-  const totalMarks = test.totalMarks ?? 0;
 
   return (
     <div className="min-h-screen bg-surface-muted">
