@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Flame, ClipboardList, Trophy, Target, BarChart3, FileText, Bell, KeyRound, Newspaper, ChevronRight } from "lucide-react";
+import {
+  Flame,
+  ClipboardList,
+  Trophy,
+  Target,
+  BarChart3,
+  FileText,
+  Bell,
+  KeyRound,
+  Newspaper,
+  ChevronRight,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,8 +91,12 @@ function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-extrabold">Welcome back, {name}! 👋</h1>
-          <p className="text-sm text-muted-foreground">Let's continue your preparation and achieve your success.</p>
+          <h1 className="text-2xl md:text-3xl font-display font-extrabold">
+            Welcome back, {name}! 👋
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Let's continue your preparation and achieve your success.
+          </p>
         </div>
         <Card className="px-4 py-2.5 flex items-center gap-3">
           <Flame className="h-5 w-5 text-warning" />
@@ -90,8 +105,13 @@ function Dashboard() {
             <div className="text-[11px] text-muted-foreground">Day Streak</div>
           </div>
           <div className="flex gap-1 ml-3">
-            {["M","T","W","T","F","S","S"].map((d, i) => (
-              <span key={i} className="h-6 w-6 grid place-items-center text-[10px] rounded-full bg-success/15 text-success-foreground">{d}</span>
+            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+              <span
+                key={i}
+                className="h-6 w-6 grid place-items-center text-[10px] rounded-full bg-success/15 text-success-foreground"
+              >
+                {d}
+              </span>
             ))}
           </div>
         </Card>
@@ -108,10 +128,16 @@ function Dashboard() {
         <Card className="p-5 lg:col-span-1">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">Recent Mock Tests</h3>
-            <Link to="/dashboard/attempted-tests" className="text-xs text-primary hover:underline">View All</Link>
+            <Link to="/dashboard/attempted-tests" className="text-xs text-primary hover:underline">
+              View All
+            </Link>
           </div>
           <div className="space-y-3">
-            {attempts.length === 0 && <p className="text-sm text-muted-foreground">No attempts yet. Take your first mock test!</p>}
+            {attempts.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No attempts yet. Take your first mock test!
+              </p>
+            )}
             {attempts.slice(0, 4).map((a) => {
               const score = Math.round(pct(a));
               return (
@@ -134,7 +160,9 @@ function Dashboard() {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">All India Rank</h3>
-            <Link to="/dashboard/rank" className="text-xs text-primary hover:underline">View Details</Link>
+            <Link to="/dashboard/rank" className="text-xs text-primary hover:underline">
+              View Details
+            </Link>
           </div>
           <div className="text-center py-4">
             <Trophy className="h-10 w-10 text-warning mx-auto" />
@@ -144,16 +172,25 @@ function Dashboard() {
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold flex items-center gap-2"><Newspaper className="h-4 w-4 text-primary" />Daily Current Affairs</h3>
-            <Link to="/dashboard/current-affairs" className="text-xs text-primary hover:underline">View All</Link>
+            <h3 className="font-display font-bold flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-primary" />
+              Daily Current Affairs
+            </h3>
+            <Link to="/dashboard/current-affairs" className="text-xs text-primary hover:underline">
+              View All
+            </Link>
           </div>
           <div className="space-y-3">
             {CURRENT_AFFAIRS.map((a) => (
               <div key={a.id} className="flex items-start gap-2.5">
-                <Badge variant="outline" className="mt-0.5 text-[10px]">{a.category}</Badge>
+                <Badge variant="outline" className="mt-0.5 text-[10px]">
+                  {a.category}
+                </Badge>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium leading-snug line-clamp-2">{a.title}</div>
-                  <div className="text-[11px] text-muted-foreground">{new Date(a.published_at).toLocaleDateString()}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {new Date(a.published_at).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
             ))}
@@ -164,15 +201,27 @@ function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-5">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold flex items-center gap-2"><FileText className="h-4 w-4 text-primary" />Previous Year Papers</h3>
-            <Link to="/dashboard/previous-year-papers" className="text-xs text-primary hover:underline">View All</Link>
+            <h3 className="font-display font-bold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Previous Year Papers
+            </h3>
+            <Link
+              to="/dashboard/previous-year-papers"
+              className="text-xs text-primary hover:underline"
+            >
+              View All
+            </Link>
           </div>
           <div className="space-y-3">
             {PYQS.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{p.title} ({p.shift})</div>
-                  <div className="text-[11px] text-muted-foreground">{p.questions_count} Qs · {p.marks} Marks · {p.duration_minutes} Min</div>
+                  <div className="text-sm font-medium truncate">
+                    {p.title} ({p.shift})
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {p.questions_count} Qs · {p.marks} Marks · {p.duration_minutes} Min
+                  </div>
                 </div>
                 <Button size="sm" variant="outline" disabled>Start Test</Button>
               </div>
@@ -182,8 +231,13 @@ function Dashboard() {
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold flex items-center gap-2"><KeyRound className="h-4 w-4 text-primary" />Answer Key</h3>
-            <Link to="/dashboard/answer-key" className="text-xs text-primary hover:underline">View All</Link>
+            <h3 className="font-display font-bold flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-primary" />
+              Answer Key
+            </h3>
+            <Link to="/dashboard/answer-key" className="text-xs text-primary hover:underline">
+              View All
+            </Link>
           </div>
           <div className="space-y-3">
             {ANSWER_KEYS.map((k) => (
@@ -200,8 +254,13 @@ function Dashboard() {
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold flex items-center gap-2"><Bell className="h-4 w-4 text-primary" />Exam Alerts</h3>
-            <Link to="/dashboard/exam-alerts" className="text-xs text-primary hover:underline">Manage Alerts</Link>
+            <h3 className="font-display font-bold flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              Exam Alerts
+            </h3>
+            <Link to="/dashboard/exam-alerts" className="text-xs text-primary hover:underline">
+              Manage Alerts
+            </Link>
           </div>
           <div className="space-y-3">
             {ALERTS.map((a) => (

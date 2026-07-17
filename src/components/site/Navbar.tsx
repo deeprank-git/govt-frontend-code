@@ -57,7 +57,7 @@ export function Navbar() {
                   "px-3 py-2 text-sm font-medium rounded-md transition",
                   active
                     ? "text-primary"
-                    : "text-foreground/75 hover:text-foreground hover:bg-muted"
+                    : "text-foreground/75 hover:text-foreground hover:bg-muted",
                 )}
               >
                 {item.label}
@@ -122,10 +122,15 @@ export function Navbar() {
             </>
           ) : (
             <div className="hidden sm:flex items-center gap-2">
-              <Button variant="ghost" onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}>
+              <Button
+                variant="ghost"
+                onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}
+              >
                 Login
               </Button>
-              <Button onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}>
+              <Button
+                onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}
+              >
                 Sign Up
               </Button>
             </div>
@@ -158,10 +163,17 @@ export function Navbar() {
             ))}
             {!user && (
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate({ to: "/auth", search: { mode: "login" } as never })}
+                >
                   Login
                 </Button>
-                <Button className="flex-1" onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}>
+                <Button
+                  className="flex-1"
+                  onClick={() => navigate({ to: "/auth", search: { mode: "signup" } as never })}
+                >
                   Sign Up
                 </Button>
               </div>

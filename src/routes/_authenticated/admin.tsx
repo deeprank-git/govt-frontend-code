@@ -9,6 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -84,7 +92,9 @@ function AdminPanel() {
 function Metric({ icon: Icon, label, value }: any) {
   return (
     <Card className="p-4 flex items-center gap-3">
-      <span className="h-10 w-10 grid place-items-center rounded-lg bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span>
+      <span className="h-10 w-10 grid place-items-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
       <div>
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className="text-xl font-display font-bold">{value}</div>

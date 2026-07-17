@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+<<<<<<< API-integration-2-AS
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,27 +23,60 @@ import {
 import * as testAttemptService from "@/services/testAttemptService";
 import * as categoryService from "@/services/categoryService";
 import * as testService from "@/services/testService";
+=======
+import { ClipboardList, CheckCircle2, Clock3, ChevronLeft, ChevronRight } from "lucide-react";
+import * as testAttemptService from "@/services/testAttemptService";
+>>>>>>> main
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import type { DateRange } from "react-day-picker";
 
 export const Route = createFileRoute("/_authenticated/dashboard/attempted-tests")({
   component: AttemptedTests,
 });
 
+<<<<<<< API-integration-2-AS
 function AttemptedTests() {
   const [category, setCategory] = useState("all");
   const [range, setRange] = useState<DateRange | undefined>();
-  const [page, setPage] = useState(1);
-  const pageSize = 6;
+=======
+// NOTE: GET /test-attempts/my-attempts is documented as a lightweight list
+// (test name, score, status, dates) — it doesn't include the per-attempt
+// percentile/accuracy/difficulty/exam breakdown the original Supabase-backed
+// page showed, so those stat cards, filters, and the pie chart were dropped
+// here rather than fabricated. They can come back once/if the backend adds
+// that data to this endpoint.
 
+type AttemptLite = {
+  _id?: string;
+  id?: string;
+  test?: { id?: string; _id?: string; title?: string };
+  testId?: string;
+  testTitle?: string;
+  score?: number;
+  status?: string;
+  startedAt?: string;
+  completedAt?: string;
+};
+
+function AttemptedTests() {
+>>>>>>> main
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+
+<<<<<<< API-integration-2-AS
   const { data: attemptsRes } = useQuery({
     queryKey: ["attended"],
     queryFn: () => testAttemptService.getMyAttempts(),
+=======
+  const { data: attempts = [] } = useQuery({
+    queryKey: ["my-attempts"],
+    queryFn: async () => unwrapList<AttemptLite>(await testAttemptService.getMyAttempts()),
+>>>>>>> main
   });
   const attempts = unwrapList<any>(attemptsRes);
 
+<<<<<<< API-integration-2-AS
   const { data: categoriesRes } = useQuery({
     queryKey: ["exam-options"],
     queryFn: () => categoryService.getCategories(),
@@ -108,6 +142,55 @@ function AttemptedTests() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="space-y-5">
+=======
+  const completed = attempts.filter((a) => (a.status ?? "").toLowerCase() === "completed");
+  const inProgress = attempts.filter((a) => (a.status ?? "").toLowerCase() !== "completed");
+
+  const sorted = useMemo(
+    () =>
+      [...attempts].sort(
+        (a, b) =>
+          +new Date(b.completedAt ?? b.startedAt ?? 0) -
+          +new Date(a.completedAt ?? a.startedAt ?? 0),
+      ),
+    [attempts],
+  );
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageItems = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const stats = [
+    {
+      label: "Total Tests",
+      value: attempts.length,
+      icon: ClipboardList,
+      tint: "from-blue-500/10 to-blue-500/5",
+      iconClr: "text-blue-600",
+    },
+    {
+      label: "Completed",
+      value: completed.length,
+      icon: CheckCircle2,
+      tint: "from-emerald-500/10 to-emerald-500/5",
+      iconClr: "text-emerald-600",
+    },
+    {
+      label: "In Progress",
+      value: inProgress.length,
+      icon: Clock3,
+      tint: "from-amber-500/10 to-amber-500/5",
+      iconClr: "text-amber-600",
+    },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="space-y-5"
+    >
+>>>>>>> main
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
         <div>
           <div className="flex items-center gap-2">
@@ -115,27 +198,30 @@ function AttemptedTests() {
             <ClipboardList className="h-5 w-5 text-primary" />
           </div>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
-            Review all the tests you have attempted. Analyze your performance and track your progress.
+            Review all the tests you have attempted.
           </p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 xl:flex-1 xl:max-w-3xl">
-          {stats.map((s, i) => (
-            <motion.div key={s.label} whileHover={{ y: -2 }} transition={{ duration: 0.2 }} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ transitionDelay: `${i * 40}ms` }}>
-              <Card className="p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-                <div className={cn("h-11 w-11 rounded-xl bg-gradient-to-br grid place-items-center", s.tint)}>
-                  <s.icon className={cn("h-5 w-5", s.iconClr)} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[11px] text-muted-foreground">{s.label}</div>
-                  <div className="font-display font-extrabold text-lg leading-tight">{s.value}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{s.sub}</div>
-                </div>
-              </Card>
-            </motion.div>
+        <div className="grid grid-cols-3 gap-3 xl:flex-1 xl:max-w-xl">
+          {stats.map((s) => (
+            <Card key={s.label} className="p-3 flex items-center gap-3 shadow-sm">
+              <div
+                className={cn(
+                  "h-11 w-11 rounded-xl bg-gradient-to-br grid place-items-center",
+                  s.tint,
+                )}
+              >
+                <s.icon className={cn("h-5 w-5", s.iconClr)} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] text-muted-foreground">{s.label}</div>
+                <div className="font-display font-extrabold text-lg leading-tight">{s.value}</div>
+              </div>
+            </Card>
           ))}
         </div>
       </div>
 
+<<<<<<< API-integration-2-AS
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
           <div>
@@ -169,9 +255,18 @@ function AttemptedTests() {
           <Button variant="outline" className="text-primary border-primary/30 hover:bg-primary/5" onClick={reset}>
             <RefreshCw className="mr-2 h-4 w-4" /> Reset Filters
           </Button>
+=======
+      <Card className="overflow-hidden">
+        <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/30">
+          <div className="col-span-5">Test</div>
+          <div className="col-span-2">Score</div>
+          <div className="col-span-2">Status</div>
+          <div className="col-span-2">Date</div>
+          <div className="col-span-1 text-right">Action</div>
+>>>>>>> main
         </div>
-      </Card>
 
+<<<<<<< API-integration-2-AS
       <Card className="overflow-hidden">
         <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/30">
           <div className="col-span-4">Test Details</div>
@@ -232,17 +327,106 @@ function AttemptedTests() {
             <div>Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} tests</div>
             <div className="flex items-center gap-1">
               <Button size="icon" variant="outline" className="h-7 w-7" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+=======
+        <div className="divide-y divide-border">
+          {pageItems.map((a: AttemptLite) => {
+            const id = (a._id ?? a.id)!;
+            const status = (a.status ?? "in-progress").toLowerCase();
+            const isCompleted = status === "completed";
+            const testTitle = a.test?.title ?? a.testTitle ?? "Test";
+            const testId = (a.test?.id ?? a.test?._id ?? a.testId)!;
+            const date = a.completedAt ?? a.startedAt;
+            return (
+              <div key={id} className="grid grid-cols-12 gap-3 items-center px-4 py-3 text-sm">
+                <div className="col-span-5 font-semibold truncate">{testTitle}</div>
+                <div className="col-span-2">{a.score != null ? a.score : "—"}</div>
+                <div className="col-span-2">
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "capitalize text-[11px]",
+                      isCompleted
+                        ? "border-success/40 text-success-foreground bg-success/10"
+                        : "border-warning/40 text-warning-foreground bg-warning/10",
+                    )}
+                  >
+                    {status.replace("-", " ")}
+                  </Badge>
+                </div>
+                <div className="col-span-2 text-xs text-muted-foreground">
+                  {date ? format(new Date(date), "dd MMM yyyy") : "—"}
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  {isCompleted ? (
+                    <Button size="sm" variant="ghost" className="text-primary h-8 px-2" asChild>
+                      <Link to="/result/$attemptId" params={{ attemptId: id }}>
+                        View
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" className="h-8 px-2" asChild>
+                      <Link to="/test/$testId" params={{ testId }}>
+                        Resume
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {sorted.length === 0 && (
+            <div className="text-center text-sm text-muted-foreground py-16">
+              You haven't attempted any tests yet.
+            </div>
+          )}
+        </div>
+
+        {sorted.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs text-muted-foreground">
+            <div>
+              Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, sorted.length)} of{" "}
+              {sorted.length} tests
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+>>>>>>> main
                 <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
               {Array.from({ length: Math.min(pageCount, 5) }).map((_, i) => {
                 const n = i + 1;
                 return (
+<<<<<<< API-integration-2-AS
                   <Button key={n} size="icon" variant={page === n ? "default" : "outline"} className="h-7 w-7 text-xs" onClick={() => setPage(n)}>
+=======
+                  <Button
+                    key={n}
+                    size="icon"
+                    variant={page === n ? "default" : "outline"}
+                    className="h-7 w-7 text-xs"
+                    onClick={() => setPage(n)}
+                  >
+>>>>>>> main
                     {n}
                   </Button>
                 );
               })}
+<<<<<<< API-integration-2-AS
               <Button size="icon" variant="outline" className="h-7 w-7" disabled={page === pageCount} onClick={() => setPage((p) => p + 1)}>
+=======
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                disabled={page === pageCount}
+                onClick={() => setPage((p) => p + 1)}
+              >
+>>>>>>> main
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>

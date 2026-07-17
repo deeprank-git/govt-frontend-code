@@ -31,7 +31,10 @@ function DashboardLayout() {
             <SidebarTrigger />
             <div className="relative hidden md:flex flex-1 max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search exams, tests, topics…" className="pl-9 bg-muted/40 border-transparent" />
+              <Input
+                placeholder="Search exams, tests, topics…"
+                className="pl-9 bg-muted/40 border-transparent"
+              />
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
@@ -44,7 +47,9 @@ function DashboardLayout() {
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">{initials}</AvatarFallback>
                     </Avatar>
-                    <span className="hidden sm:inline text-sm font-medium">{name.split(" ")[0]}</span>
+                    <span className="hidden sm:inline text-sm font-medium">
+                      {name.split(" ")[0]}
+                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

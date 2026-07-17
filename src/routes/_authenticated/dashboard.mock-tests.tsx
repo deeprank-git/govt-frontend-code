@@ -5,7 +5,13 @@ import { ClipboardList, FileText, BookOpenCheck, TrendingUp, Database, RefreshCw
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as testService from "@/services/testService";
 import * as categoryService from "@/services/categoryService";
@@ -83,8 +89,12 @@ function MockTests() {
     <div className="space-y-5">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">Mock Tests <ClipboardList className="h-5 w-5 text-primary" /></h1>
-          <p className="text-sm text-muted-foreground">Take mock tests to evaluate your preparation and improve your performance.</p>
+          <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
+            Mock Tests <ClipboardList className="h-5 w-5 text-primary" />
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Take mock tests to evaluate your preparation and improve your performance.
+          </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
           <Stat icon={ClipboardList} value={`${tests.length}`} label="Mock Tests Available" tone="primary" />
@@ -92,7 +102,13 @@ function MockTests() {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v); setPage(1); }}>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          setTab(v);
+          setPage(1);
+        }}
+      >
         <TabsList className="bg-transparent p-0 h-auto flex flex-wrap gap-1 justify-start border-b border-border w-full rounded-none">
           {TABS.map((t) => (
             <TabsTrigger
@@ -156,13 +172,19 @@ function MockTests() {
           {!isLoading && pageItems.length === 0 && (
             <div className="px-5 py-10 text-center text-sm text-muted-foreground">No tests match your filters.</div>
           )}
-          {pageItems.map((t, i) => {
+          {pageItems.map((t: TestLite, i: number) => {
+            const id = (t._id ?? t.id)!;
             const icon = ICONS[i % ICONS.length];
             const Icon = icon.icon;
+            const totalQuestions = t.totalQuestions ?? t.total_questions ?? 0;
+            const totalMarks = t.totalMarks ?? t.total_marks ?? 0;
+            const durationMins = t.duration ?? t.duration_minutes ?? 0;
             return (
               <div key={t._id} className="grid lg:grid-cols-[1fr_90px_70px_80px_140px] gap-3 px-5 py-4 items-center hover:bg-muted/30">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className={cn("h-10 w-10 rounded-lg grid place-items-center shrink-0", icon.bg)}>
+                  <span
+                    className={cn("h-10 w-10 rounded-lg grid place-items-center shrink-0", icon.bg)}
+                  >
                     <Icon className={cn("h-5 w-5", icon.fg)} />
                   </span>
                   <div className="min-w-0">
@@ -211,7 +233,17 @@ function MockTests() {
   );
 }
 
-function Stat({ icon: Icon, value, label, tone }: { icon: any; value: string; label: string; tone: string }) {
+function Stat({
+  icon: Icon,
+  value,
+  label,
+  tone,
+}: {
+  icon: any;
+  value: string;
+  label: string;
+  tone: string;
+}) {
   const toneMap: Record<string, string> = {
     primary: "bg-primary/10 text-primary",
     success: "bg-success/10 text-success",

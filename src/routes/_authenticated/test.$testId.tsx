@@ -10,7 +10,14 @@ import * as testAttemptService from "@/services/testAttemptService";
 import { unwrapItem } from "@/lib/api-unwrap";
 import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/test/$testId")({
@@ -26,6 +33,27 @@ type Question = {
   marks: number;
   negativeMarks: number;
 };
+
+type TestLite = {
+  title: string;
+  totalQuestions?: number;
+  totalMarks?: number;
+};
+
+type AttemptLite = {
+  _id?: string;
+  id?: string;
+  expiresAt?: string;
+};
+
+type AttemptQuestionLite = {
+  selectedOption?: string;
+  answer?: string;
+};
+
+function qid(q: { _id?: string; id?: string } | undefined): string {
+  return (q?._id ?? q?.id)!;
+}
 
 function TestEngine() {
   const { testId } = Route.useParams();
@@ -108,13 +136,15 @@ function TestEngine() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attemptId, index]);
 
-  // Timer
+  // Timer — driven by expiresAt from the start-attempt response. A 400 from
+  // any test-attempt call is treated as authoritative and wins over the local
+  // clock (the server may finalize slightly before/after our countdown hits 0).
   useEffect(() => {
     if (!expiresAt) return;
     const tick = () => {
       const left = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
       setTime(left);
-      if (left === 0) submit();
+      if (left === 0) setExpired(true);
     };
     tick();
     const i = setInterval(tick, 1000);
@@ -184,6 +214,9 @@ function TestEngine() {
     "not-vis": "bg-muted text-foreground",
   };
 
+  const totalQuestions = test.totalQuestions ?? questions.length;
+  const totalMarks = test.totalMarks ?? 0;
+
   return (
     <div className="min-h-screen bg-surface-muted">
       <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-4">
@@ -194,7 +227,9 @@ function TestEngine() {
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
             <span className="text-[10px] font-normal text-destructive/70 ml-1">Time Left</span>
           </div>
-          <Button size="sm" onClick={() => setConfirmOpen(true)}>Submit Test</Button>
+          <Button size="sm" onClick={() => setConfirmOpen(true)}>
+            Submit Test
+          </Button>
         </div>
       </header>
 
@@ -272,14 +307,21 @@ function TestEngine() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-warning" />Submit Test?</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-warning" />
+              Submit Test?
+            </DialogTitle>
             <DialogDescription>
               You have answered {answeredCount} of {totalQuestions} questions. Once submitted you cannot change your answers.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Continue Test</Button>
-            <Button onClick={submit} disabled={submitting}>{submitting ? "Submitting…" : "Submit Now"}</Button>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Continue Test
+            </Button>
+            <Button onClick={submit} disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit Now"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -290,7 +332,14 @@ function TestEngine() {
 function Legend({ color, label, value }: { color: string; label: string; value: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className={cn("inline-block h-5 w-5 rounded grid place-items-center text-white text-[10px] font-bold", color)}>{value}</span>
+      <span
+        className={cn(
+          "inline-block h-5 w-5 rounded grid place-items-center text-white text-[10px] font-bold",
+          color,
+        )}
+      >
+        {value}
+      </span>
       <span className="text-muted-foreground leading-tight">{label}</span>
     </div>
   );

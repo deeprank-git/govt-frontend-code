@@ -34,7 +34,10 @@ function ResultPage() {
     <div className="min-h-screen bg-surface-muted">
       <header className="bg-background border-b border-border h-14 flex items-center px-4 lg:px-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/dashboard"><ArrowLeft className="h-4 w-4 mr-1" />Back to Dashboard</Link>
+          <Link to="/dashboard">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Dashboard
+          </Link>
         </Button>
         <h1 className="ml-3 font-display font-bold truncate">{result.test?.title}</h1>
         <Badge className="ml-2 bg-success/15 text-success-foreground border-transparent capitalize">{result.status?.replace("-", " ")}</Badge>
@@ -103,7 +106,10 @@ function ResultPage() {
 function StatCard({ icon: Icon, label, value, sub, tone = "primary" }: any) {
   return (
     <Card className="p-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className={`h-4 w-4 text-${tone}`} />{label}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Icon className={`h-4 w-4 text-${tone}`} />
+        {label}
+      </div>
       <div className="text-xl font-display font-bold mt-1">{value}</div>
       {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
     </Card>
@@ -114,7 +120,10 @@ function BreakdownCard({ icon: Icon, label, value, pct, tone = "primary" }: any)
     <Card className="p-4 text-center">
       <Icon className={`h-7 w-7 mx-auto text-${tone}`} />
       <div className="text-3xl font-display font-extrabold mt-2">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}{pct ? ` · ${pct}%` : ""}</div>
+      <div className="text-xs text-muted-foreground">
+        {label}
+        {pct ? ` · ${pct}%` : ""}
+      </div>
     </Card>
   );
 }

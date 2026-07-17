@@ -8,6 +8,7 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
+    config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -16,14 +17,50 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status ?? 0;
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      "Something went wrong";
+
+    if (status === 401) {
       clearAuth();
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth?mode=login";
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+        window.location.assign("/auth?mode=login");
       }
     }
-    return Promise.reject(error);
+
+    const normalized: ApiError = { message, status };
+    return Promise.reject(normalized);
   },
 );
 
 export default axiosClient;
+
+export type ApiError = {
+  message: string;
+  status: number;
+};
+
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status ?? 0;
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      "Something went wrong";
+
+    if (status === 401) {
+      clearAuth();
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+        window.location.assign("/auth?mode=login");
+      }
+    }
+
+    const normalized: ApiError = { message, status };
+    return Promise.reject(normalized);
+  },
+);
