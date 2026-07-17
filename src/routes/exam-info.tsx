@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { CalendarDays, Bell, FileText, ExternalLink, Download, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +7,18 @@ import { Input } from "@/components/ui/input";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { ExamIcon } from "@/components/site/ExamIcon";
-import { supabase } from "@/integrations/supabase/client";
+
+// No backend endpoint exists yet for exams/notifications browsing — this page
+// stays on static placeholder content until those resources are added to the API.
+const EXAMS = [
+  { id: "ex1", slug: "ssc-cgl", name: "SSC CGL", short_name: "SSC CGL", conducting_body: "Staff Selection Commission" },
+  { id: "ex2", slug: "ssc-chsl", name: "SSC CHSL", short_name: "SSC CHSL", conducting_body: "Staff Selection Commission" },
+  { id: "ex3", slug: "ibps-po", name: "IBPS PO", short_name: "IBPS PO", conducting_body: "IBPS" },
+];
+const NOTIFICATIONS = [
+  { id: "n1", title: "SSC CGL Tier 2 Admit Card Released", alert_date: new Date(Date.now() + 3 * 86400000).toISOString(), alert_type: "admit_card" },
+  { id: "n2", title: "IBPS PO Registration Open", alert_date: new Date(Date.now() + 10 * 86400000).toISOString(), alert_type: "registration" },
+];
 
 export const Route = createFileRoute("/exam-info")({
   head: () => ({
@@ -23,16 +33,8 @@ export const Route = createFileRoute("/exam-info")({
 });
 
 function ExamInfoPage() {
-  const { data: exams = [] } = useQuery({
-    queryKey: ["info-exams"],
-    queryFn: async () =>
-      (await supabase.from("exams").select("id,slug,name,short_name,conducting_body").order("name").limit(8)).data ?? [],
-  });
-  const { data: notifications = [] } = useQuery({
-    queryKey: ["info-alerts"],
-    queryFn: async () =>
-      (await supabase.from("notifications").select("*").order("alert_date").limit(8)).data ?? [],
-  });
+  const exams = EXAMS;
+  const notifications = NOTIFICATIONS;
 
   return (
     <SiteShell>

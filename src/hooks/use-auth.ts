@@ -1,24 +1,23 @@
 import { useEffect, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { getToken, getUser, type AuthUser } from "@/lib/auth-store";
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+    const sync = () => {
+      setUser(getToken() ? getUser() : null);
       setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
+    };
+    sync();
+    window.addEventListener("gp-auth-change", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("gp-auth-change", sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
-  return { session, user, loading };
+  return { user, loading };
 }

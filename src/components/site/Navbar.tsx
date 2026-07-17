@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "./Logo";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { clearAuth } from "@/lib/auth-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -36,7 +36,7 @@ export function Navbar() {
     if (query.trim()) navigate({ to: "/exams", search: { q: query } as never });
   };
 
-  const initials = (user?.user_metadata?.full_name || user?.email || "U")
+  const initials = (user?.name || user?.email || "U")
     .split(/[\s@]/)[0]
     .slice(0, 2)
     .toUpperCase();
@@ -87,19 +87,18 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-muted transition">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.user_metadata?.avatar_url} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden sm:inline text-sm font-medium">
-                      {user.user_metadata?.full_name?.split(" ")[0] ?? "Aspirant"}
+                      {user.name?.split(" ")[0] ?? "Aspirant"}
                     </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
-                    <p className="text-sm font-medium">{user.user_metadata?.full_name ?? "Aspirant"}</p>
+                    <p className="text-sm font-medium">{user.name ?? "Aspirant"}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -111,8 +110,8 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onSelect={async () => {
-                      await supabase.auth.signOut();
+                    onSelect={() => {
+                      clearAuth();
                       navigate({ to: "/" });
                     }}
                   >

@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   Users,
@@ -17,8 +16,31 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SiteShell } from "@/components/site/SiteShell";
 import { ExamIcon } from "@/components/site/ExamIcon";
-import { supabase } from "@/integrations/supabase/client";
 import heroImg from "@/assets/hero-student.png";
+
+// No backend endpoint exists yet for exams/categories/current-affairs browsing
+// (see AGENTS.md) — the homepage stays on static placeholder content until
+// those resources are added to the API.
+const CATEGORIES = [
+  { id: "cat1", slug: "ssc", name: "SSC" },
+  { id: "cat2", slug: "banking", name: "Banking" },
+];
+const EXAMS = [
+  { id: "ex1", slug: "ssc-cgl", name: "SSC CGL", short_name: "SSC CGL", category_id: "cat1" },
+  { id: "ex2", slug: "ssc-chsl", name: "SSC CHSL", short_name: "SSC CHSL", category_id: "cat1" },
+  { id: "ex3", slug: "ibps-po", name: "IBPS PO", short_name: "IBPS PO", category_id: "cat2" },
+];
+const FREE_TESTS = [
+  { id: "t1", title: "SSC CGL Tier 1 Full Mock Test 01", total_questions: 100, duration_minutes: 60, attempt_count: 45210 },
+  { id: "t2", title: "IBPS PO Prelims Mock Test 01", total_questions: 100, duration_minutes: 60, attempt_count: 32110 },
+];
+const CURRENT_AFFAIRS = [
+  { id: "c1", title: "Parliament passes new labour codes", category: "Polity", published_at: new Date().toISOString() },
+  { id: "c2", title: "RBI keeps repo rate unchanged", category: "Economy", published_at: new Date(Date.now() - 86400000).toISOString() },
+];
+const ALERTS = [
+  { id: "a1", title: "SSC CGL Tier 2 Admit Card Released", alert_date: new Date(Date.now() + 3 * 86400000).toISOString(), alert_type: "admit_card" },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,48 +71,11 @@ const STATS = [
 ];
 
 function HomePage() {
-  const { data: categories = [] } = useQuery({
-    queryKey: ["home-categories"],
-    queryFn: async () =>
-      (await supabase.from("categories").select("*").order("sort_order")).data ?? [],
-  });
-  const { data: exams = [] } = useQuery({
-    queryKey: ["home-exams"],
-    queryFn: async () =>
-      (await supabase.from("exams").select("id,slug,name,short_name,category_id").limit(60)).data ?? [],
-  });
-  const { data: freeTests = [] } = useQuery({
-    queryKey: ["home-free-tests"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("mock_tests")
-          .select("id,title,total_questions,total_marks,duration_minutes,attempt_count")
-          .limit(3)
-      ).data ?? [],
-  });
-  const { data: currentAffairs = [] } = useQuery({
-    queryKey: ["home-ca"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("current_affairs")
-          .select("id,slug,title,category,published_at")
-          .order("published_at", { ascending: false })
-          .limit(3)
-      ).data ?? [],
-  });
-  const { data: alerts = [] } = useQuery({
-    queryKey: ["home-alerts"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("notifications")
-          .select("id,title,alert_date,alert_type")
-          .order("alert_date", { ascending: true })
-          .limit(5)
-      ).data ?? [],
-  });
+  const categories = CATEGORIES;
+  const exams = EXAMS;
+  const freeTests = FREE_TESTS;
+  const currentAffairs = CURRENT_AFFAIRS;
+  const alerts = ALERTS;
 
   return (
     <SiteShell>

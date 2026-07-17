@@ -1,5 +1,4 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -17,10 +16,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { ExamIcon } from "@/components/site/ExamIcon";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+// No backend endpoint exists yet for exam detail pages — this page stays on
+// static placeholder content until that resource is added to the API.
+const EXAMS: Record<string, any> = {
+  "ssc-cgl": { id: "ex1", slug: "ssc-cgl", name: "SSC CGL", short_name: "SSC CGL", conducting_body: "Staff Selection Commission", level: "Graduate", description: "Combined Graduate Level exam for Group B & C posts.", apply_url: "#", notification_url: "#" },
+  "ssc-chsl": { id: "ex2", slug: "ssc-chsl", name: "SSC CHSL", short_name: "SSC CHSL", conducting_body: "Staff Selection Commission", level: "12th Pass", description: "Combined Higher Secondary Level exam.", apply_url: "#", notification_url: "#" },
+  "ibps-po": { id: "ex3", slug: "ibps-po", name: "IBPS PO", short_name: "IBPS PO", conducting_body: "IBPS", level: "Graduate", description: "Probationary Officer recruitment for public sector banks.", apply_url: "#", notification_url: "#" },
+  "rrb-ntpc": { id: "ex4", slug: "rrb-ntpc", name: "RRB NTPC", short_name: "RRB NTPC", conducting_body: "Railway Recruitment Board", level: "Graduate", description: "Non-Technical Popular Categories recruitment.", apply_url: "#", notification_url: "#" },
+};
 
 export const Route = createFileRoute("/exams/$slug")({
   head: ({ params }) => ({
@@ -56,39 +61,17 @@ const NAV_ITEMS = [
 function ExamDetail() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState("overview");
 
-  const { data: exam, isLoading } = useQuery({
-    queryKey: ["exam", slug],
-    queryFn: async () => {
-      const { data } = await supabase.from("exams").select("*").eq("slug", slug).maybeSingle();
-      return data;
-    },
-  });
-  const { data: tests = [] } = useQuery({
-    queryKey: ["exam-tests", exam?.id],
-    enabled: !!exam?.id,
-    queryFn: async () =>
-      (await supabase.from("mock_tests").select("*").eq("exam_id", exam!.id).order("created_at")).data ?? [],
-  });
+  const exam = EXAMS[slug];
+  const tests: any[] = [];
 
-  if (!isLoading && !exam) throw notFound();
-  if (!exam) return <SiteShell><div className="container mx-auto p-8">Loading…</div></SiteShell>;
+  if (!exam) throw notFound();
 
-  const startTest = async (testId: string) => {
-    if (!user) {
-      toast.message("Please sign in to start the test");
-      navigate({ to: "/auth", search: { mode: "login", redirect: `/test/${testId}` } as never });
-      return;
-    }
-    const { data, error } = await supabase
-      .from("attempts")
-      .insert({ user_id: user.id, test_id: testId, total_marks: 0 })
-      .select("id")
-      .single();
-    if (error || !data) { toast.error("Could not start test"); return; }
-    navigate({ to: "/test/$testId", params: { testId } });
+  const startTest = () => {
+    // Exam-to-test mapping doesn't exist on the backend yet — send the user
+    // to the real mock tests list instead of a fabricated test id.
+    navigate({ to: "/dashboard/mock-tests" });
   };
 
   const scrollTo = (id: string) => {
@@ -504,7 +487,7 @@ function ExamDetail() {
                       <div className="text-sm font-semibold truncate">{t.title}</div>
                       <div className="text-xs text-muted-foreground">{t.total_questions} Questions</div>
                     </div>
-                    <Button size="sm" onClick={() => tests.length ? startTest(t.id) : navigate({ to: "/dashboard/mock-tests" as never })}>
+                    <Button size="sm" onClick={startTest}>
                       Start Test
                     </Button>
                   </li>

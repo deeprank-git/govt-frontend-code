@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import * as authService from "@/services/authService";
+import { setAuth } from "@/lib/auth-store";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -86,23 +86,26 @@ function AuthPage() {
   );
 }
 
-function googleSignIn() {
-  return lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/dashboard" });
-}
-
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Signed in");
+    try {
+      const res = await authService.login({ email, password });
+      setAuth(res.token, res.user);
+      toast.success("Signed in");
+      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -110,15 +113,7 @@ function LoginForm() {
       <h1 className="text-2xl font-display font-extrabold">Login to Your Account</h1>
       <p className="text-sm text-muted-foreground mt-1">Enter your credentials to access your account</p>
 
-      <div className="mt-6 space-y-2">
-        <Button variant="outline" className="w-full justify-center" onClick={googleSignIn}>
-          <span className="mr-2 text-base">🔵</span> Continue with Google
-        </Button>
-      </div>
-
-      <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="flex-1 h-px bg-border" />or<span className="flex-1 h-px bg-border" /></div>
-
-      <form onSubmit={submit} className="space-y-4">
+      <form onSubmit={submit} className="space-y-4 mt-6">
         <div>
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
@@ -147,28 +142,27 @@ function LoginForm() {
 function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [accept, setAccept] = useState(true);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) return toast.error("Passwords don't match");
     if (!accept) return toast.error("Please accept the Terms");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin + "/dashboard",
-        data: { full_name: fullName, mobile },
-      },
-    });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Account created. Check your email if confirmation is required.");
+    try {
+      const res = await authService.register({ name: fullName, email, password });
+      setAuth(res.token, res.user);
+      toast.success("Account created");
+      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not create account");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -176,15 +170,7 @@ function SignupForm() {
       <h1 className="text-2xl font-display font-extrabold">Sign Up</h1>
       <p className="text-sm text-muted-foreground mt-1">Create an account to get started</p>
 
-      <div className="mt-6 space-y-2">
-        <Button variant="outline" className="w-full justify-center" onClick={googleSignIn}>
-          <span className="mr-2 text-base">🔵</span> Continue with Google
-        </Button>
-      </div>
-
-      <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="flex-1 h-px bg-border" />or<span className="flex-1 h-px bg-border" /></div>
-
-      <form onSubmit={submit} className="space-y-3">
+      <form onSubmit={submit} className="space-y-3 mt-6">
         <div>
           <Label htmlFor="fn">Full Name</Label>
           <Input id="fn" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" />
@@ -192,10 +178,6 @@ function SignupForm() {
         <div>
           <Label htmlFor="em">Email Address</Label>
           <Input id="em" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email address" />
-        </div>
-        <div>
-          <Label htmlFor="mo">Mobile Number</Label>
-          <Input id="mo" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="Enter your mobile number" />
         </div>
         <div>
           <Label htmlFor="pw">Password</Label>

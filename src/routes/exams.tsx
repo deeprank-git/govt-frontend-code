@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, Search, BookOpen, Users as UsersIcon, FileText, Sparkles } from "lucide-react";
@@ -8,8 +7,21 @@ import { Input } from "@/components/ui/input";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { ExamIcon } from "@/components/site/ExamIcon";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// No backend endpoint exists yet for exams/categories browsing — this page
+// stays on static placeholder content until that resource is added to the API.
+const CATEGORIES = [
+  { id: "cat1", name: "SSC" },
+  { id: "cat2", name: "Banking" },
+  { id: "cat3", name: "Railways" },
+];
+const EXAMS = [
+  { id: "ex1", slug: "ssc-cgl", name: "SSC CGL", short_name: "SSC CGL", category_id: "cat1", test_count: 42, conducting_body: "Staff Selection Commission" },
+  { id: "ex2", slug: "ssc-chsl", name: "SSC CHSL", short_name: "SSC CHSL", category_id: "cat1", test_count: 30, conducting_body: "Staff Selection Commission" },
+  { id: "ex3", slug: "ibps-po", name: "IBPS PO", short_name: "IBPS PO", category_id: "cat2", test_count: 25, conducting_body: "IBPS" },
+  { id: "ex4", slug: "rrb-ntpc", name: "RRB NTPC", short_name: "RRB NTPC", category_id: "cat3", test_count: 18, conducting_body: "Railway Recruitment Board" },
+];
 
 export const Route = createFileRoute("/exams")({
   head: () => ({
@@ -34,20 +46,8 @@ function ExamsPage() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => (await supabase.from("categories").select("*").order("sort_order")).data ?? [],
-  });
-  const { data: exams = [] } = useQuery({
-    queryKey: ["exams"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("exams")
-          .select("id,slug,name,short_name,category_id,test_count,conducting_body")
-          .order("name")
-      ).data ?? [],
-  });
+  const categories = CATEGORIES;
+  const exams = EXAMS;
 
   const filtered = useMemo(() => {
     return exams.filter((e) => {

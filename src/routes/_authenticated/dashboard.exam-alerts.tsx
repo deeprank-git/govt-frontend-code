@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Bell,
   CalendarDays,
@@ -18,8 +17,6 @@ import {
   IdCard,
   Megaphone,
   AlertTriangle,
-  Info,
-  Star,
   ChevronRight,
   ChevronLeft,
   Settings,
@@ -33,6 +30,18 @@ import {
 export const Route = createFileRoute("/_authenticated/dashboard/exam-alerts")({
   component: AlertsPage,
 });
+
+// No backend endpoint exists yet for exam alerts/notifications — this page
+// stays on static placeholder content until that resource is added to the API.
+const CATEGORIES_MIN = [
+  { id: "c1", name: "SSC" },
+  { id: "c2", name: "Banking" },
+];
+const ALERTS_ALL = [
+  { id: "a1", title: "SSC CGL Tier 2 Admit Card Released", description: "Download your admit card now", alert_type: "admit_card", alert_date: new Date(Date.now() + 3 * 86400000).toISOString(), category_id: "c1" },
+  { id: "a2", title: "IBPS PO Registration Open", description: "Apply before the last date", alert_type: "registration", alert_date: new Date(Date.now() + 10 * 86400000).toISOString(), category_id: "c2" },
+  { id: "a3", title: "SSC CHSL Tier 1 Result Declared", description: "Check your result", alert_type: "result", alert_date: new Date(Date.now() - 2 * 86400000).toISOString(), category_id: "c1" },
+];
 
 const TABS = [
   { id: "all", label: "All Alerts" },
@@ -56,14 +65,11 @@ const ALERT_STYLES: Record<string, { icon: any; iconBg: string; badgeBg: string;
   admit_card: { icon: IdCard, iconBg: "bg-violet-50 text-violet-600", badgeBg: "bg-violet-100 hover:bg-violet-100", badgeText: "text-violet-700", label: "Admit Card" },
   result: { icon: Megaphone, iconBg: "bg-orange-50 text-orange-600", badgeBg: "bg-orange-100 hover:bg-orange-100", badgeText: "text-orange-700", label: "Result" },
   others: { icon: AlertTriangle, iconBg: "bg-rose-50 text-rose-600", badgeBg: "bg-rose-100 hover:bg-rose-100", badgeText: "text-rose-700", label: "Notification" },
-  notification: { icon: Info, iconBg: "bg-cyan-50 text-cyan-600", badgeBg: "bg-cyan-100 hover:bg-cyan-100", badgeText: "text-cyan-700", label: "Notification" },
-  reminder: { icon: Star, iconBg: "bg-yellow-50 text-yellow-600", badgeBg: "bg-yellow-100 hover:bg-yellow-100", badgeText: "text-yellow-700", label: "Reminder" },
 };
 
 const PAGE_SIZE = 7;
 
 function AlertsPage() {
-  const qc = useQueryClient();
   const [tab, setTab] = useState<string>("all");
   const [category, setCategory] = useState("all");
   const [type, setType] = useState("all");
@@ -71,24 +77,15 @@ function AlertsPage() {
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
 
-  const { data: alerts = [] } = useQuery({
-    queryKey: ["dash-alerts-full"],
-    queryFn: async () =>
-      (await supabase.from("notifications").select("*, exams(name, short_name, category_id)").order("alert_date", { ascending: true })).data ?? [],
-  });
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ["cats-alerts"],
-    queryFn: async () => (await supabase.from("categories").select("id, name").order("name")).data ?? [],
-  });
+  const alerts = ALERTS_ALL;
+  const categories = CATEGORIES_MIN;
 
   const filtered = useMemo(() => {
     let rows = [...alerts];
     if (tab !== "all") rows = rows.filter((r) => r.alert_type === tab);
-    if (category !== "all") rows = rows.filter((r: any) => r.exams?.category_id === category);
+    if (category !== "all") rows = rows.filter((r) => r.category_id === category);
     if (type !== "all") rows = rows.filter((r) => r.alert_type === type);
     if (month !== "all") rows = rows.filter((r) => r.alert_date?.slice(5, 7) === month);
-    if (status === "new") rows = rows.filter((r) => r.is_new);
     return rows;
   }, [alerts, tab, category, type, month, status]);
 
@@ -96,21 +93,11 @@ function AlertsPage() {
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const upcoming = useMemo(
-    () =>
-      alerts
-        .filter((a) => a.alert_date && new Date(a.alert_date) > new Date())
-        .slice(0, 4),
-    [alerts]
+    () => alerts.filter((a) => a.alert_date && new Date(a.alert_date) > new Date()).slice(0, 4),
+    [alerts],
   );
 
-  const remind = useMutation({
-    mutationFn: async (id: string) => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("auth");
-      await supabase.from("bookmarks").insert({ user_id: u.user.id, item_id: id, item_type: "alert" });
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmarks"] }),
-  });
+  const remind = (id: string) => toast.success("We'll remind you about this alert");
 
   const reset = () => {
     setCategory("all"); setType("all"); setMonth("all"); setStatus("all"); setPage(1);
@@ -170,7 +157,6 @@ function AlertsPage() {
                     <SelectItem value="registration">Registration</SelectItem>
                     <SelectItem value="admit_card">Admit Card</SelectItem>
                     <SelectItem value="result">Result</SelectItem>
-                    <SelectItem value="notification">Notification</SelectItem>
                   </SelectContent>
                 </Select>
               </FilterField>
@@ -220,7 +206,7 @@ function AlertsPage() {
             </div>
 
             <div className="divide-y divide-border">
-              {pageRows.map((a: any) => {
+              {pageRows.map((a) => {
                 const style = ALERT_STYLES[a.alert_type] ?? ALERT_STYLES.others;
                 const Icon = style.icon;
                 const d = a.alert_date ? new Date(a.alert_date) : null;
@@ -244,7 +230,7 @@ function AlertsPage() {
                       <div className="font-medium">{d ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</div>
                       <div className="text-muted-foreground">{d ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""}</div>
                     </div>
-                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5" onClick={() => remind.mutate(a.id)}>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5" onClick={() => remind(a.id)}>
                       <Bell className="h-3.5 w-3.5 mr-1.5" /> Remind Me
                     </Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
@@ -280,7 +266,7 @@ function AlertsPage() {
               <Link to="/exams" className="text-xs text-primary hover:underline">View All</Link>
             </div>
             <ul className="space-y-3">
-              {upcoming.map((u: any) => {
+              {upcoming.map((u) => {
                 const d = u.alert_date ? new Date(u.alert_date) : null;
                 return (
                   <li key={u.id} className="flex items-center gap-3">

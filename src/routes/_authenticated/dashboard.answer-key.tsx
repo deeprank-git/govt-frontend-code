@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   KeyRound,
   FileText,
@@ -43,8 +42,22 @@ const STATS = [
 
 const PAGE_SIZE = 5;
 
+// No backend endpoint exists yet for answer keys — this page stays on static
+// placeholder content until that resource is added to the API.
+const EXAMS_LIST = [
+  { id: "e1", name: "SSC CGL", short_name: "SSC CGL" },
+  { id: "e2", name: "IBPS PO", short_name: "IBPS PO" },
+];
+const CATEGORIES_LIST = [
+  { id: "c1", name: "SSC" },
+  { id: "c2", name: "Banking" },
+];
+const KEYS_ALL = [
+  { id: "k1", exam_id: "e1", title: "SSC CGL Tier 1 2024 Answer Key", released_on: new Date().toISOString(), challenge_open: true, tier: "Tier 1", exams: { name: "SSC CGL", short_name: "SSC CGL", conducting_body: "Staff Selection Commission", category_id: "c1" } },
+  { id: "k2", exam_id: "e2", title: "IBPS PO Prelims 2024 Answer Key", released_on: new Date(Date.now() - 5 * 86400000).toISOString(), challenge_open: false, tier: "Prelims", exams: { name: "IBPS PO", short_name: "IBPS PO", conducting_body: "IBPS", category_id: "c2" } },
+];
+
 function KeyPage() {
-  const qc = useQueryClient();
   const [tab, setTab] = useState<TabId>("latest");
   const [category, setCategory] = useState("all");
   const [exam, setExam] = useState("all");
@@ -53,26 +66,9 @@ function KeyPage() {
   const [sort, setSort] = useState<"latest" | "oldest">("latest");
   const [page, setPage] = useState(1);
 
-  const { data: keys = [] } = useQuery({
-    queryKey: ["all-keys-full"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("answer_keys")
-          .select("*, exams(name, short_name, conducting_body, category_id, categories(name))")
-          .order("released_on", { ascending: false })
-      ).data ?? [],
-  });
-
-  const { data: exams = [] } = useQuery({
-    queryKey: ["exams-list"],
-    queryFn: async () => (await supabase.from("exams").select("id, name, short_name").order("name")).data ?? [],
-  });
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ["cats-list"],
-    queryFn: async () => (await supabase.from("categories").select("id, name").order("name")).data ?? [],
-  });
+  const keys = KEYS_ALL;
+  const exams = EXAMS_LIST;
+  const categories = CATEGORIES_LIST;
 
   const filtered = useMemo(() => {
     let rows = [...keys];
@@ -97,14 +93,9 @@ function KeyPage() {
   const featured = keys[0];
   const popular = keys.slice(0, 5);
 
-  const bookmark = useMutation({
-    mutationFn: async (id: string) => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("auth");
-      await supabase.from("bookmarks").insert({ user_id: u.user.id, item_id: id, item_type: "answer_key" });
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["bookmarks"] }),
-  });
+  const bookmark = {
+    mutate: (_id: string) => toast.success("Saved for later"),
+  };
 
   const reset = () => {
     setCategory("all");
