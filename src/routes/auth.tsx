@@ -14,7 +14,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import authImg from "@/assets/auth-illustration.png";
-import type { ApiError } from "@/api/axiosClient";
 
 const search = z.object({
   mode: z.enum(["login", "signup"]).optional(),
@@ -108,8 +107,8 @@ function LoginForm() {
     try {
       await authService.login({ email, password });
       toast.success("Signed in");
-    } catch (err) {
-      toast.error((err as ApiError).message);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -119,9 +118,6 @@ function LoginForm() {
     <div>
       <h1 className="text-2xl font-display font-extrabold">Login to Your Account</h1>
       <p className="text-sm text-muted-foreground mt-1">Enter your credentials to access your account</p>
-      <p className="text-sm text-muted-foreground mt-1">
-        Enter your credentials to access your account
-      </p>
 
       <form onSubmit={submit} className="space-y-4 mt-6">
         <div>
@@ -225,15 +221,6 @@ function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email address"
-          />
-        </div>
-        <div>
-          <Label htmlFor="mo">Mobile Number</Label>
-          <Input
-            id="mo"
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            placeholder="Enter your mobile number"
           />
         </div>
         <div>

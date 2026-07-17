@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import * as testService from "@/services/testService";
 import * as leaderboardService from "@/services/leaderboardService";
-import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
+import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ function RankPage() {
     queryFn: () => leaderboardService.getLeaderboard(activeTestId, 50),
   });
   const rows = unwrapList<any>(leaderboardRes);
-  const testInfo = unwrapItem<any>(leaderboardRes) as any;
+  const testInfo = leaderboardRes?.test;
   const count = leaderboardRes?.count ?? rows.length;
 
   const myRow = rows.find((r) => r.userId === user?.id);

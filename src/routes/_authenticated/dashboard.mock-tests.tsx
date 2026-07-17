@@ -172,13 +172,9 @@ function MockTests() {
           {!isLoading && pageItems.length === 0 && (
             <div className="px-5 py-10 text-center text-sm text-muted-foreground">No tests match your filters.</div>
           )}
-          {pageItems.map((t: TestLite, i: number) => {
-            const id = (t._id ?? t.id)!;
+          {pageItems.map((t: any, i: number) => {
             const icon = ICONS[i % ICONS.length];
             const Icon = icon.icon;
-            const totalQuestions = t.totalQuestions ?? t.total_questions ?? 0;
-            const totalMarks = t.totalMarks ?? t.total_marks ?? 0;
-            const durationMins = t.duration ?? t.duration_minutes ?? 0;
             return (
               <div key={t._id} className="grid lg:grid-cols-[1fr_90px_70px_80px_140px] gap-3 px-5 py-4 items-center hover:bg-muted/30">
                 <div className="flex items-center gap-3 min-w-0">
