@@ -13,6 +13,8 @@ import { Route as ExamsRouteImport } from './routes/exams'
 import { Route as ExamInfoRouteImport } from './routes/exam-info'
 import { Route as CurrentAffairsRouteImport } from './routes/current-affairs'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminLoginRouteImport } from './routes/admin-login'
+import { Route as AdminDashboardRouteImport } from './routes/admin-dashboard'
 import { Route as AboutUsRouteImport } from './routes/about-us'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -49,6 +51,16 @@ const CurrentAffairsRoute = CurrentAffairsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin-login',
+  path: '/admin-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin-dashboard',
+  path: '/admin-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutUsRoute = AboutUsRouteImport.update({
@@ -149,6 +161,8 @@ const AuthenticatedDashboardAnswerKeyRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
+  '/admin-dashboard': typeof AdminDashboardRoute
+  '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
   '/current-affairs': typeof CurrentAffairsRoute
   '/exam-info': typeof ExamInfoRoute
@@ -171,6 +185,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
+  '/admin-dashboard': typeof AdminDashboardRoute
+  '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
   '/current-affairs': typeof CurrentAffairsRoute
   '/exam-info': typeof ExamInfoRoute
@@ -194,6 +210,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about-us': typeof AboutUsRoute
+  '/admin-dashboard': typeof AdminDashboardRoute
+  '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
   '/current-affairs': typeof CurrentAffairsRoute
   '/exam-info': typeof ExamInfoRoute
@@ -218,6 +236,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about-us'
+    | '/admin-dashboard'
+    | '/admin-login'
     | '/auth'
     | '/current-affairs'
     | '/exam-info'
@@ -240,6 +260,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about-us'
+    | '/admin-dashboard'
+    | '/admin-login'
     | '/auth'
     | '/current-affairs'
     | '/exam-info'
@@ -262,6 +284,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/about-us'
+    | '/admin-dashboard'
+    | '/admin-login'
     | '/auth'
     | '/current-affairs'
     | '/exam-info'
@@ -286,6 +310,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutUsRoute: typeof AboutUsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   AuthRoute: typeof AuthRoute
   CurrentAffairsRoute: typeof CurrentAffairsRoute
   ExamInfoRoute: typeof ExamInfoRoute
@@ -320,6 +346,20 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-login': {
+      id: '/admin-login'
+      path: '/admin-login'
+      fullPath: '/admin-login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-dashboard': {
+      id: '/admin-dashboard'
+      path: '/admin-dashboard'
+      fullPath: '/admin-dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about-us': {
@@ -509,6 +549,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutUsRoute: AboutUsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminLoginRoute: AdminLoginRoute,
   AuthRoute: AuthRoute,
   CurrentAffairsRoute: CurrentAffairsRoute,
   ExamInfoRoute: ExamInfoRoute,
