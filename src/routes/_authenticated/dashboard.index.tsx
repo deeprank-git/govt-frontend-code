@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import * as testAttemptService from "@/services/testAttemptService";
+import * as currentAffairsService from "@/services/currentAffairsService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -23,16 +24,12 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Dashboard,
 });
 
-// No backend endpoint exists yet for PYQs, current affairs, answer keys or exam
-// alerts — these widgets stay on static placeholder content until those
-// resources are added to the API.
+// No backend endpoint exists yet for PYQs, answer keys or exam alerts — these
+// widgets stay on static placeholder content until those resources are added
+// to the API. Current Affairs is now wired to the real backend below.
 const PYQS = [
   { id: "p1", title: "SSC CGL Tier 1 2024", shift: "Shift 1", questions_count: 100, marks: 200, duration_minutes: 60 },
   { id: "p2", title: "IBPS PO Prelims 2024", shift: "Shift 2", questions_count: 100, marks: 100, duration_minutes: 60 },
-];
-const CURRENT_AFFAIRS = [
-  { id: "c1", category: "Polity", title: "Parliament passes new labour codes", published_at: new Date().toISOString() },
-  { id: "c2", category: "Economy", title: "RBI keeps repo rate unchanged", published_at: new Date().toISOString() },
 ];
 const ANSWER_KEYS = [
   { id: "k1", title: "SSC CGL Tier 1 2024 Answer Key", released_on: new Date().toISOString() },
@@ -66,6 +63,12 @@ function Dashboard() {
     queryFn: () => testAttemptService.getMyAttempts(),
   });
   const attempts = unwrapList<any>(attemptsRes).slice(0, 10);
+
+  const { data: caRes } = useQuery({
+    queryKey: ["dashboard-home-ca"],
+    queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 3 }),
+  });
+  const currentAffairs = unwrapList<any>(caRes);
 
   const completed = attempts.filter((a) => a.status === "completed" || a.status === "auto-submitted");
   const attempted = attempts.length;
@@ -181,19 +184,20 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {CURRENT_AFFAIRS.map((a) => (
-              <div key={a.id} className="flex items-start gap-2.5">
+            {currentAffairs.map((a) => (
+              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex items-start gap-2.5 hover:bg-muted/40 -mx-1 px-1 py-0.5 rounded transition">
                 <Badge variant="outline" className="mt-0.5 text-[10px]">
                   {a.category}
                 </Badge>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium leading-snug line-clamp-2">{a.title}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {new Date(a.published_at).toLocaleDateString()}
+                    {new Date(a.date).toLocaleDateString()}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
+            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
           </div>
         </Card>
       </div>

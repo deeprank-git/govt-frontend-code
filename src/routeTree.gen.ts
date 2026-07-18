@@ -20,10 +20,17 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminDashboardIndexRouteImport } from './routes/admin-dashboard.index'
 import { Route as ExamsSlugRouteImport } from './routes/exams.$slug'
+import { Route as CurrentAffairsIdRouteImport } from './routes/current-affairs.$id'
 import { Route as AdminDashboardUsersRouteImport } from './routes/admin-dashboard.users'
 import { Route as AdminDashboardTestsRouteImport } from './routes/admin-dashboard.tests'
 import { Route as AdminDashboardTestSeriesRouteImport } from './routes/admin-dashboard.test-series'
+import { Route as AdminDashboardSettingsRouteImport } from './routes/admin-dashboard.settings'
+import { Route as AdminDashboardReportsRouteImport } from './routes/admin-dashboard.reports'
 import { Route as AdminDashboardQuestionsRouteImport } from './routes/admin-dashboard.questions'
+import { Route as AdminDashboardPagesRouteImport } from './routes/admin-dashboard.pages'
+import { Route as AdminDashboardNotificationsRouteImport } from './routes/admin-dashboard.notifications'
+import { Route as AdminDashboardMediaRouteImport } from './routes/admin-dashboard.media'
+import { Route as AdminDashboardCurrentAffairsRouteImport } from './routes/admin-dashboard.current-affairs'
 import { Route as AdminDashboardCategoriesRouteImport } from './routes/admin-dashboard.categories'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -38,6 +45,7 @@ import { Route as AuthenticatedDashboardExamAlertsRouteImport } from './routes/_
 import { Route as AuthenticatedDashboardCurrentAffairsRouteImport } from './routes/_authenticated/dashboard.current-affairs'
 import { Route as AuthenticatedDashboardAttemptedTestsRouteImport } from './routes/_authenticated/dashboard.attempted-tests'
 import { Route as AuthenticatedDashboardAnswerKeyRouteImport } from './routes/_authenticated/dashboard.answer-key'
+import { Route as AuthenticatedDashboardCurrentAffairsIdRouteImport } from './routes/_authenticated/dashboard.current-affairs.$id'
 
 const ExamsRoute = ExamsRouteImport.update({
   id: '/exams',
@@ -93,6 +101,11 @@ const ExamsSlugRoute = ExamsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ExamsRoute,
 } as any)
+const CurrentAffairsIdRoute = CurrentAffairsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CurrentAffairsRoute,
+} as any)
 const AdminDashboardUsersRoute = AdminDashboardUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -109,11 +122,43 @@ const AdminDashboardTestSeriesRoute =
     path: '/test-series',
     getParentRoute: () => AdminDashboardRoute,
   } as any)
+const AdminDashboardSettingsRoute = AdminDashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
+const AdminDashboardReportsRoute = AdminDashboardReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
 const AdminDashboardQuestionsRoute = AdminDashboardQuestionsRouteImport.update({
   id: '/questions',
   path: '/questions',
   getParentRoute: () => AdminDashboardRoute,
 } as any)
+const AdminDashboardPagesRoute = AdminDashboardPagesRouteImport.update({
+  id: '/pages',
+  path: '/pages',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
+const AdminDashboardNotificationsRoute =
+  AdminDashboardNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AdminDashboardRoute,
+  } as any)
+const AdminDashboardMediaRoute = AdminDashboardMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
+const AdminDashboardCurrentAffairsRoute =
+  AdminDashboardCurrentAffairsRouteImport.update({
+    id: '/current-affairs',
+    path: '/current-affairs',
+    getParentRoute: () => AdminDashboardRoute,
+  } as any)
 const AdminDashboardCategoriesRoute =
   AdminDashboardCategoriesRouteImport.update({
     id: '/categories',
@@ -195,6 +240,12 @@ const AuthenticatedDashboardAnswerKeyRoute =
     path: '/answer-key',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardCurrentAffairsIdRoute =
+  AuthenticatedDashboardCurrentAffairsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedDashboardCurrentAffairsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -202,21 +253,28 @@ export interface FileRoutesByFullPath {
   '/admin-dashboard': typeof AdminDashboardRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
-  '/current-affairs': typeof CurrentAffairsRoute
+  '/current-affairs': typeof CurrentAffairsRouteWithChildren
   '/exam-info': typeof ExamInfoRoute
   '/exams': typeof ExamsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/admin-dashboard/categories': typeof AdminDashboardCategoriesRoute
+  '/admin-dashboard/current-affairs': typeof AdminDashboardCurrentAffairsRoute
+  '/admin-dashboard/media': typeof AdminDashboardMediaRoute
+  '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
+  '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
+  '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
+  '/admin-dashboard/settings': typeof AdminDashboardSettingsRoute
   '/admin-dashboard/test-series': typeof AdminDashboardTestSeriesRoute
   '/admin-dashboard/tests': typeof AdminDashboardTestsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
+  '/current-affairs/$id': typeof CurrentAffairsIdRoute
   '/exams/$slug': typeof ExamsSlugRoute
   '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/dashboard/answer-key': typeof AuthenticatedDashboardAnswerKeyRoute
   '/dashboard/attempted-tests': typeof AuthenticatedDashboardAttemptedTestsRoute
-  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRoute
+  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   '/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
   '/dashboard/previous-year-papers': typeof AuthenticatedDashboardPreviousYearPapersRoute
@@ -225,26 +283,34 @@ export interface FileRoutesByFullPath {
   '/result/$attemptId': typeof AuthenticatedResultAttemptIdRoute
   '/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
   '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
-  '/current-affairs': typeof CurrentAffairsRoute
+  '/current-affairs': typeof CurrentAffairsRouteWithChildren
   '/exam-info': typeof ExamInfoRoute
   '/exams': typeof ExamsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-dashboard/categories': typeof AdminDashboardCategoriesRoute
+  '/admin-dashboard/current-affairs': typeof AdminDashboardCurrentAffairsRoute
+  '/admin-dashboard/media': typeof AdminDashboardMediaRoute
+  '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
+  '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
+  '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
+  '/admin-dashboard/settings': typeof AdminDashboardSettingsRoute
   '/admin-dashboard/test-series': typeof AdminDashboardTestSeriesRoute
   '/admin-dashboard/tests': typeof AdminDashboardTestsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
+  '/current-affairs/$id': typeof CurrentAffairsIdRoute
   '/exams/$slug': typeof ExamsSlugRoute
   '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard/answer-key': typeof AuthenticatedDashboardAnswerKeyRoute
   '/dashboard/attempted-tests': typeof AuthenticatedDashboardAttemptedTestsRoute
-  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRoute
+  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   '/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
   '/dashboard/previous-year-papers': typeof AuthenticatedDashboardPreviousYearPapersRoute
@@ -253,6 +319,7 @@ export interface FileRoutesByTo {
   '/result/$attemptId': typeof AuthenticatedResultAttemptIdRoute
   '/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -262,21 +329,28 @@ export interface FileRoutesById {
   '/admin-dashboard': typeof AdminDashboardRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
-  '/current-affairs': typeof CurrentAffairsRoute
+  '/current-affairs': typeof CurrentAffairsRouteWithChildren
   '/exam-info': typeof ExamInfoRoute
   '/exams': typeof ExamsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/admin-dashboard/categories': typeof AdminDashboardCategoriesRoute
+  '/admin-dashboard/current-affairs': typeof AdminDashboardCurrentAffairsRoute
+  '/admin-dashboard/media': typeof AdminDashboardMediaRoute
+  '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
+  '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
+  '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
+  '/admin-dashboard/settings': typeof AdminDashboardSettingsRoute
   '/admin-dashboard/test-series': typeof AdminDashboardTestSeriesRoute
   '/admin-dashboard/tests': typeof AdminDashboardTestsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
+  '/current-affairs/$id': typeof CurrentAffairsIdRoute
   '/exams/$slug': typeof ExamsSlugRoute
   '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/_authenticated/dashboard/answer-key': typeof AuthenticatedDashboardAnswerKeyRoute
   '/_authenticated/dashboard/attempted-tests': typeof AuthenticatedDashboardAttemptedTestsRoute
-  '/_authenticated/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRoute
+  '/_authenticated/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   '/_authenticated/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/_authenticated/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
   '/_authenticated/dashboard/previous-year-papers': typeof AuthenticatedDashboardPreviousYearPapersRoute
@@ -285,6 +359,7 @@ export interface FileRoutesById {
   '/_authenticated/result/$attemptId': typeof AuthenticatedResultAttemptIdRoute
   '/_authenticated/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/_authenticated/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -300,10 +375,17 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/admin-dashboard/categories'
+    | '/admin-dashboard/current-affairs'
+    | '/admin-dashboard/media'
+    | '/admin-dashboard/notifications'
+    | '/admin-dashboard/pages'
     | '/admin-dashboard/questions'
+    | '/admin-dashboard/reports'
+    | '/admin-dashboard/settings'
     | '/admin-dashboard/test-series'
     | '/admin-dashboard/tests'
     | '/admin-dashboard/users'
+    | '/current-affairs/$id'
     | '/exams/$slug'
     | '/admin-dashboard/'
     | '/dashboard/answer-key'
@@ -317,6 +399,7 @@ export interface FileRouteTypes {
     | '/result/$attemptId'
     | '/test/$testId'
     | '/dashboard/'
+    | '/dashboard/current-affairs/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -328,10 +411,17 @@ export interface FileRouteTypes {
     | '/exams'
     | '/admin'
     | '/admin-dashboard/categories'
+    | '/admin-dashboard/current-affairs'
+    | '/admin-dashboard/media'
+    | '/admin-dashboard/notifications'
+    | '/admin-dashboard/pages'
     | '/admin-dashboard/questions'
+    | '/admin-dashboard/reports'
+    | '/admin-dashboard/settings'
     | '/admin-dashboard/test-series'
     | '/admin-dashboard/tests'
     | '/admin-dashboard/users'
+    | '/current-affairs/$id'
     | '/exams/$slug'
     | '/admin-dashboard'
     | '/dashboard/answer-key'
@@ -345,6 +435,7 @@ export interface FileRouteTypes {
     | '/result/$attemptId'
     | '/test/$testId'
     | '/dashboard'
+    | '/dashboard/current-affairs/$id'
   id:
     | '__root__'
     | '/'
@@ -359,10 +450,17 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/admin-dashboard/categories'
+    | '/admin-dashboard/current-affairs'
+    | '/admin-dashboard/media'
+    | '/admin-dashboard/notifications'
+    | '/admin-dashboard/pages'
     | '/admin-dashboard/questions'
+    | '/admin-dashboard/reports'
+    | '/admin-dashboard/settings'
     | '/admin-dashboard/test-series'
     | '/admin-dashboard/tests'
     | '/admin-dashboard/users'
+    | '/current-affairs/$id'
     | '/exams/$slug'
     | '/admin-dashboard/'
     | '/_authenticated/dashboard/answer-key'
@@ -376,6 +474,7 @@ export interface FileRouteTypes {
     | '/_authenticated/result/$attemptId'
     | '/_authenticated/test/$testId'
     | '/_authenticated/dashboard/'
+    | '/_authenticated/dashboard/current-affairs/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -385,7 +484,7 @@ export interface RootRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   AuthRoute: typeof AuthRoute
-  CurrentAffairsRoute: typeof CurrentAffairsRoute
+  CurrentAffairsRoute: typeof CurrentAffairsRouteWithChildren
   ExamInfoRoute: typeof ExamInfoRoute
   ExamsRoute: typeof ExamsRouteWithChildren
 }
@@ -469,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExamsSlugRouteImport
       parentRoute: typeof ExamsRoute
     }
+    '/current-affairs/$id': {
+      id: '/current-affairs/$id'
+      path: '/$id'
+      fullPath: '/current-affairs/$id'
+      preLoaderRoute: typeof CurrentAffairsIdRouteImport
+      parentRoute: typeof CurrentAffairsRoute
+    }
     '/admin-dashboard/users': {
       id: '/admin-dashboard/users'
       path: '/users'
@@ -490,11 +596,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardTestSeriesRouteImport
       parentRoute: typeof AdminDashboardRoute
     }
+    '/admin-dashboard/settings': {
+      id: '/admin-dashboard/settings'
+      path: '/settings'
+      fullPath: '/admin-dashboard/settings'
+      preLoaderRoute: typeof AdminDashboardSettingsRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
+    '/admin-dashboard/reports': {
+      id: '/admin-dashboard/reports'
+      path: '/reports'
+      fullPath: '/admin-dashboard/reports'
+      preLoaderRoute: typeof AdminDashboardReportsRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
     '/admin-dashboard/questions': {
       id: '/admin-dashboard/questions'
       path: '/questions'
       fullPath: '/admin-dashboard/questions'
       preLoaderRoute: typeof AdminDashboardQuestionsRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
+    '/admin-dashboard/pages': {
+      id: '/admin-dashboard/pages'
+      path: '/pages'
+      fullPath: '/admin-dashboard/pages'
+      preLoaderRoute: typeof AdminDashboardPagesRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
+    '/admin-dashboard/notifications': {
+      id: '/admin-dashboard/notifications'
+      path: '/notifications'
+      fullPath: '/admin-dashboard/notifications'
+      preLoaderRoute: typeof AdminDashboardNotificationsRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
+    '/admin-dashboard/media': {
+      id: '/admin-dashboard/media'
+      path: '/media'
+      fullPath: '/admin-dashboard/media'
+      preLoaderRoute: typeof AdminDashboardMediaRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
+    '/admin-dashboard/current-affairs': {
+      id: '/admin-dashboard/current-affairs'
+      path: '/current-affairs'
+      fullPath: '/admin-dashboard/current-affairs'
+      preLoaderRoute: typeof AdminDashboardCurrentAffairsRouteImport
       parentRoute: typeof AdminDashboardRoute
     }
     '/admin-dashboard/categories': {
@@ -595,13 +743,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAnswerKeyRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/current-affairs/$id': {
+      id: '/_authenticated/dashboard/current-affairs/$id'
+      path: '/$id'
+      fullPath: '/dashboard/current-affairs/$id'
+      preLoaderRoute: typeof AuthenticatedDashboardCurrentAffairsIdRouteImport
+      parentRoute: typeof AuthenticatedDashboardCurrentAffairsRoute
+    }
   }
 }
+
+interface AuthenticatedDashboardCurrentAffairsRouteChildren {
+  AuthenticatedDashboardCurrentAffairsIdRoute: typeof AuthenticatedDashboardCurrentAffairsIdRoute
+}
+
+const AuthenticatedDashboardCurrentAffairsRouteChildren: AuthenticatedDashboardCurrentAffairsRouteChildren =
+  {
+    AuthenticatedDashboardCurrentAffairsIdRoute:
+      AuthenticatedDashboardCurrentAffairsIdRoute,
+  }
+
+const AuthenticatedDashboardCurrentAffairsRouteWithChildren =
+  AuthenticatedDashboardCurrentAffairsRoute._addFileChildren(
+    AuthenticatedDashboardCurrentAffairsRouteChildren,
+  )
 
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardAnswerKeyRoute: typeof AuthenticatedDashboardAnswerKeyRoute
   AuthenticatedDashboardAttemptedTestsRoute: typeof AuthenticatedDashboardAttemptedTestsRoute
-  AuthenticatedDashboardCurrentAffairsRoute: typeof AuthenticatedDashboardCurrentAffairsRoute
+  AuthenticatedDashboardCurrentAffairsRoute: typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   AuthenticatedDashboardExamAlertsRoute: typeof AuthenticatedDashboardExamAlertsRoute
   AuthenticatedDashboardMockTestsRoute: typeof AuthenticatedDashboardMockTestsRoute
   AuthenticatedDashboardPreviousYearPapersRoute: typeof AuthenticatedDashboardPreviousYearPapersRoute
@@ -616,7 +786,7 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardAttemptedTestsRoute:
       AuthenticatedDashboardAttemptedTestsRoute,
     AuthenticatedDashboardCurrentAffairsRoute:
-      AuthenticatedDashboardCurrentAffairsRoute,
+      AuthenticatedDashboardCurrentAffairsRouteWithChildren,
     AuthenticatedDashboardExamAlertsRoute:
       AuthenticatedDashboardExamAlertsRoute,
     AuthenticatedDashboardMockTestsRoute: AuthenticatedDashboardMockTestsRoute,
@@ -651,7 +821,13 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AdminDashboardRouteChildren {
   AdminDashboardCategoriesRoute: typeof AdminDashboardCategoriesRoute
+  AdminDashboardCurrentAffairsRoute: typeof AdminDashboardCurrentAffairsRoute
+  AdminDashboardMediaRoute: typeof AdminDashboardMediaRoute
+  AdminDashboardNotificationsRoute: typeof AdminDashboardNotificationsRoute
+  AdminDashboardPagesRoute: typeof AdminDashboardPagesRoute
   AdminDashboardQuestionsRoute: typeof AdminDashboardQuestionsRoute
+  AdminDashboardReportsRoute: typeof AdminDashboardReportsRoute
+  AdminDashboardSettingsRoute: typeof AdminDashboardSettingsRoute
   AdminDashboardTestSeriesRoute: typeof AdminDashboardTestSeriesRoute
   AdminDashboardTestsRoute: typeof AdminDashboardTestsRoute
   AdminDashboardUsersRoute: typeof AdminDashboardUsersRoute
@@ -660,7 +836,13 @@ interface AdminDashboardRouteChildren {
 
 const AdminDashboardRouteChildren: AdminDashboardRouteChildren = {
   AdminDashboardCategoriesRoute: AdminDashboardCategoriesRoute,
+  AdminDashboardCurrentAffairsRoute: AdminDashboardCurrentAffairsRoute,
+  AdminDashboardMediaRoute: AdminDashboardMediaRoute,
+  AdminDashboardNotificationsRoute: AdminDashboardNotificationsRoute,
+  AdminDashboardPagesRoute: AdminDashboardPagesRoute,
   AdminDashboardQuestionsRoute: AdminDashboardQuestionsRoute,
+  AdminDashboardReportsRoute: AdminDashboardReportsRoute,
+  AdminDashboardSettingsRoute: AdminDashboardSettingsRoute,
   AdminDashboardTestSeriesRoute: AdminDashboardTestSeriesRoute,
   AdminDashboardTestsRoute: AdminDashboardTestsRoute,
   AdminDashboardUsersRoute: AdminDashboardUsersRoute,
@@ -669,6 +851,18 @@ const AdminDashboardRouteChildren: AdminDashboardRouteChildren = {
 
 const AdminDashboardRouteWithChildren = AdminDashboardRoute._addFileChildren(
   AdminDashboardRouteChildren,
+)
+
+interface CurrentAffairsRouteChildren {
+  CurrentAffairsIdRoute: typeof CurrentAffairsIdRoute
+}
+
+const CurrentAffairsRouteChildren: CurrentAffairsRouteChildren = {
+  CurrentAffairsIdRoute: CurrentAffairsIdRoute,
+}
+
+const CurrentAffairsRouteWithChildren = CurrentAffairsRoute._addFileChildren(
+  CurrentAffairsRouteChildren,
 )
 
 interface ExamsRouteChildren {
@@ -688,7 +882,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminDashboardRoute: AdminDashboardRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   AuthRoute: AuthRoute,
-  CurrentAffairsRoute: CurrentAffairsRoute,
+  CurrentAffairsRoute: CurrentAffairsRouteWithChildren,
   ExamInfoRoute: ExamInfoRoute,
   ExamsRoute: ExamsRouteWithChildren,
 }

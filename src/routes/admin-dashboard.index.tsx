@@ -1,38 +1,35 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { unwrapList } from "@/lib/api-unwrap";
-import * as categoryService from "@/services/categoryService";
-import * as testSeriesService from "@/services/testSeriesService";
-import * as testService from "@/services/testService";
-import * as questionService from "@/services/questionService";
-import * as userService from "@/services/userService";
+import { unwrapItem } from "@/lib/api-unwrap";
+import * as analyticsService from "@/services/analyticsService";
 
 export const Route = createFileRoute("/admin-dashboard/")({
   component: AdminDashboardHome,
 });
 
 function AdminDashboardHome() {
-  const { data: categoriesRes } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
-  const { data: seriesRes } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
-  const { data: testsRes } = useQuery({ queryKey: ["ad-tests"], queryFn: () => testService.getTests() });
-  const { data: usersRes } = useQuery({ queryKey: ["ad-users"], queryFn: () => userService.getAllUsers() });
+  const { data: overviewRes } = useQuery({ queryKey: ["ad-analytics-overview"], queryFn: () => analyticsService.getOverview() });
+  const overview = unwrapItem<any>(overviewRes);
 
-  const categories = unwrapList<any>(categoriesRes);
-  const series = unwrapList<any>(seriesRes);
-  const tests = unwrapList<any>(testsRes);
-  const users = unwrapList<any>(usersRes);
-
-  // Question count = sum of each test's totalQuestions, so we don't need a
-  // separate "all questions" endpoint (there isn't one — questions are only
-  // listable per-test via GET /admin/questions?test=).
-  const totalQuestions = tests.reduce((sum, t) => sum + (t.totalQuestions ?? 0), 0);
+  const users = overview?.users ?? {};
+  const content = overview?.content ?? {};
+  const attempts = overview?.attempts ?? {};
+  const moderation = overview?.moderation ?? {};
 
   const stats = [
-    { label: "Categories", value: categories.length },
-    { label: "Test Series", value: series.length },
-    { label: "Tests", value: tests.length },
-    { label: "Questions", value: totalQuestions },
-    { label: "Users", value: users.length },
+    { label: "Categories", value: content.categories ?? 0 },
+    { label: "Test Series", value: content.testSeries ?? 0 },
+    { label: "Tests", value: content.tests ?? 0 },
+    { label: "Questions", value: content.questions ?? 0 },
+    { label: "Users", value: users.total ?? 0 },
+  ];
+
+  const secondaryStats = [
+    { label: "Published Tests", value: content.publishedTests ?? 0 },
+    { label: "Current Affairs", value: content.currentAffairs ?? 0 },
+    { label: "Pending Reports", value: moderation.pendingReports ?? 0, to: "/admin-dashboard/reports" },
+    { label: "Avg Score", value: `${attempts.avgScorePercentage ?? 0}%` },
+    { label: "New Users (7d)", value: users.newLast7Days ?? 0 },
   ];
 
   return (
@@ -45,6 +42,21 @@ function AdminDashboardHome() {
             <div className="text-2xl font-semibold mt-1">{s.value}</div>
           </div>
         ))}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-3">
+        {secondaryStats.map((s) =>
+          s.to ? (
+            <Link key={s.label} to={s.to} className="border border-border rounded-md p-4 hover:border-primary transition">
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+              <div className="text-2xl font-semibold mt-1">{s.value}</div>
+            </Link>
+          ) : (
+            <div key={s.label} className="border border-border rounded-md p-4">
+              <div className="text-xs text-muted-foreground">{s.label}</div>
+              <div className="text-2xl font-semibold mt-1">{s.value}</div>
+            </div>
+          ),
+        )}
       </div>
     </div>
   );

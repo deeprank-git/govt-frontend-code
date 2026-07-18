@@ -1,10 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, RotateCcw, Trophy, Target, Clock, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { ArrowLeft, RotateCcw, Trophy, Target, Clock, CheckCircle2, XCircle, MinusCircle, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import * as testAttemptService from "@/services/testAttemptService";
+import * as reportService from "@/services/reportService";
 import { unwrapItem } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/_authenticated/result/$attemptId")({
@@ -15,12 +20,24 @@ const OPTION_LETTERS = ["A", "B", "C", "D"];
 
 function ResultPage() {
   const { attemptId } = Route.useParams();
+  const [reportingId, setReportingId] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
 
   const { data: resultRes, isLoading } = useQuery({
     queryKey: ["attempt-result", attemptId],
     queryFn: () => testAttemptService.getResult(attemptId),
   });
   const result = unwrapItem<any>(resultRes);
+
+  const reportMut = useMutation({
+    mutationFn: () => reportService.reportQuestion({ questionId: reportingId!, reason }),
+    onSuccess: () => {
+      toast.success("Thanks — we'll take a look at this question.");
+      setReportingId(null);
+      setReason("");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not submit report"),
+  });
 
   if (isLoading) return <div className="p-8">Loading…</div>;
   if (!result) return <div className="p-8">Could not load this result.</div>;
@@ -71,11 +88,20 @@ function ResultPage() {
               <div key={q.questionId} className="rounded-lg border border-border p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-xs text-muted-foreground">Q.{i + 1}</div>
-                  {q.attempted ? (
-                    q.isCorrect
-                      ? <Badge className="bg-success/15 text-success-foreground border-transparent">Correct</Badge>
-                      : <Badge variant="destructive">Incorrect</Badge>
-                  ) : <Badge variant="outline">Skipped</Badge>}
+                  <div className="flex items-center gap-2">
+                    {q.attempted ? (
+                      q.isCorrect
+                        ? <Badge className="bg-success/15 text-success-foreground border-transparent">Correct</Badge>
+                        : <Badge variant="destructive">Incorrect</Badge>
+                    ) : <Badge variant="outline">Skipped</Badge>}
+                    <button
+                      onClick={() => { setReportingId(q.questionId); setReason(""); }}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Report an issue with this question"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="font-medium">{q.questionText}</div>
                 <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
@@ -99,6 +125,22 @@ function ResultPage() {
           </div>
         </Card>
       </div>
+
+      <Dialog open={!!reportingId} onOpenChange={(open) => !open && setReportingId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report an Issue</DialogTitle>
+            <DialogDescription>What's wrong with this question? (e.g. wrong answer, typo, unclear wording)</DialogDescription>
+          </DialogHeader>
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Describe the issue…" rows={4} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportingId(null)}>Cancel</Button>
+            <Button onClick={() => reportMut.mutate()} disabled={reportMut.isPending || !reason.trim()}>
+              {reportMut.isPending ? "Submitting…" : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

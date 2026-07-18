@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, Outlet, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { getToken, getUser, clearAuth } from "@/lib/auth-store";
+import { getToken, getUser } from "@/lib/auth-store";
+import * as authService from "@/services/authService";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin-dashboard")({
@@ -22,6 +23,12 @@ const NAV_ITEMS = [
   { to: "/admin-dashboard/tests" as const, label: "Tests" },
   { to: "/admin-dashboard/questions" as const, label: "Questions" },
   { to: "/admin-dashboard/users" as const, label: "Users" },
+  { to: "/admin-dashboard/current-affairs" as const, label: "Current Affairs" },
+  { to: "/admin-dashboard/pages" as const, label: "Pages" },
+  { to: "/admin-dashboard/settings" as const, label: "Settings" },
+  { to: "/admin-dashboard/media" as const, label: "Media" },
+  { to: "/admin-dashboard/reports" as const, label: "Reports" },
+  { to: "/admin-dashboard/notifications" as const, label: "Notifications" },
 ];
 
 function AdminDashboardLayout() {
@@ -29,7 +36,7 @@ function AdminDashboardLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const logOut = () => {
-    clearAuth();
+    authService.logout();
     navigate({ to: "/admin-login" });
   };
 

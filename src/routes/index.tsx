@@ -1,4 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import * as currentAffairsService from "@/services/currentAffairsService";
+import { unwrapList } from "@/lib/api-unwrap";
+import { useAuth } from "@/hooks/use-auth";
 import {
   ArrowRight,
   Users,
@@ -34,10 +38,6 @@ const FREE_TESTS = [
   { id: "t1", title: "SSC CGL Tier 1 Full Mock Test 01", total_questions: 100, duration_minutes: 60, attempt_count: 45210 },
   { id: "t2", title: "IBPS PO Prelims Mock Test 01", total_questions: 100, duration_minutes: 60, attempt_count: 32110 },
 ];
-const CURRENT_AFFAIRS = [
-  { id: "c1", title: "Parliament passes new labour codes", category: "Polity", published_at: new Date().toISOString() },
-  { id: "c2", title: "RBI keeps repo rate unchanged", category: "Economy", published_at: new Date(Date.now() - 86400000).toISOString() },
-];
 const ALERTS = [
   { id: "a1", title: "SSC CGL Tier 2 Admit Card Released", alert_date: new Date(Date.now() + 3 * 86400000).toISOString(), alert_type: "admit_card" },
 ];
@@ -71,11 +71,18 @@ const STATS = [
 ];
 
 function HomePage() {
+  const { user } = useAuth();
   const categories = CATEGORIES;
   const exams = EXAMS;
   const freeTests = FREE_TESTS;
-  const currentAffairs = CURRENT_AFFAIRS;
   const alerts = ALERTS;
+
+  const { data: caRes } = useQuery({
+    queryKey: ["home-current-affairs"],
+    queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 2 }),
+    enabled: !!user,
+  });
+  const currentAffairs = unwrapList<any>(caRes);
 
   return (
     <SiteShell>
@@ -236,17 +243,23 @@ function HomePage() {
             <h3 className="font-display font-bold text-lg">Latest Current Affairs</h3>
             <Link to="/current-affairs" className="text-xs text-primary hover:underline">View All</Link>
           </div>
-          <div className="space-y-3">
-            {currentAffairs.map((a) => (
-              <div key={a.id} className="rounded-lg border border-border p-3">
-                <Badge className="mb-2 bg-primary/15 text-primary border-transparent">{a.category}</Badge>
-                <div className="font-semibold text-sm leading-snug">{a.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {new Date(a.published_at).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
-                </div>
-              </div>
-            ))}
-          </div>
+          {!user ? (
+            <p className="text-sm text-muted-foreground">
+              <Link to="/auth" search={{ mode: "login" } as never} className="text-primary hover:underline">Log in</Link> to see today's current affairs.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {currentAffairs.map((a) => (
+                <Link key={a._id} to="/current-affairs/$id" params={{ id: a._id }} className="block rounded-lg border border-border p-3 hover:border-primary transition">
+                  <Badge className="mb-2 bg-primary/15 text-primary border-transparent">{a.category}</Badge>
+                  <div className="font-semibold text-sm leading-snug">{a.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {new Date(a.date).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card className="p-5">
