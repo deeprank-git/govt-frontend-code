@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import * as authService from "@/services/authService";
-import { clearAuth } from "@/lib/auth-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin-login")({
@@ -24,7 +23,7 @@ function AdminLoginPage() {
     try {
       const res = await authService.login({ email, password });
       if (res.user?.role !== "admin") {
-        clearAuth();
+        authService.logout();
         toast.error("This login is for administrators only.");
         return;
       }

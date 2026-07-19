@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import * as testAttemptService from "@/services/testAttemptService";
+import * as reportService from "@/services/reportService";
 import { unwrapItem } from "@/lib/api-unwrap";
 import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/utils";
@@ -55,6 +57,9 @@ function TestEngine() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   // Start (or resume) the attempt
   useEffect(() => {
@@ -155,6 +160,21 @@ function TestEngine() {
 
   const goto = (i: number) => setIndex(Math.max(0, Math.min(totalQuestions - 1, i)));
 
+  const submitReport = async () => {
+    if (!question || !reportReason.trim()) return;
+    setReporting(true);
+    try {
+      await reportService.reportQuestion({ questionId: question._id, reason: reportReason });
+      toast.success("Thanks — we'll take a look at this question.");
+      setReportOpen(false);
+      setReportReason("");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not submit report");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   const submit = async () => {
     if (!attemptId || submitting) return;
     setSubmitting(true);
@@ -217,6 +237,10 @@ function TestEngine() {
               <button onClick={toggleMark} className="flex items-center gap-1 text-muted-foreground hover:text-primary">
                 <Bookmark className={cn("h-4 w-4", marked.has(index) && "fill-primary text-primary")} />
                 Mark for Review
+              </button>
+              <button onClick={() => setReportOpen(true)} className="flex items-center gap-1 text-muted-foreground hover:text-destructive">
+                <Flag className="h-4 w-4" />
+                Report Issue
               </button>
             </div>
           </div>
@@ -297,6 +321,22 @@ function TestEngine() {
             </Button>
             <Button onClick={submit} disabled={submitting}>
               {submitting ? "Submitting…" : "Submit Now"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report an Issue</DialogTitle>
+            <DialogDescription>What's wrong with this question? (e.g. wrong answer, typo, unclear wording)</DialogDescription>
+          </DialogHeader>
+          <Textarea value={reportReason} onChange={(e) => setReportReason(e.target.value)} placeholder="Describe the issue…" rows={4} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportOpen(false)}>Cancel</Button>
+            <Button onClick={submitReport} disabled={reporting || !reportReason.trim()}>
+              {reporting ? "Submitting…" : "Submit Report"}
             </Button>
           </DialogFooter>
         </DialogContent>

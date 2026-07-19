@@ -1,5 +1,5 @@
 import axiosClient from "@/api/axiosClient";
-import { setAuth, clearAuth, type AuthUser } from "@/lib/auth-store";
+import { setAuth, clearAuth, getRefreshToken, type AuthUser } from "@/lib/auth-store";
 
 export type RegisterInput = {
   name: string;
@@ -14,8 +14,8 @@ export type LoginInput = {
 };
 
 function persistFromResponse(data: unknown) {
-  const payload = data as { token?: string; user?: AuthUser };
-  if (payload?.token && payload?.user) setAuth(payload.token, payload.user);
+  const payload = data as { token?: string; refreshToken?: string; user?: AuthUser };
+  if (payload?.token && payload?.user) setAuth(payload.token, payload.user, payload.refreshToken);
 }
 
 export async function register(data: RegisterInput) {
@@ -31,5 +31,9 @@ export async function login(data: LoginInput) {
 }
 
 export function logout() {
+  const refreshToken = getRefreshToken();
   clearAuth();
+  if (refreshToken) {
+    axiosClient.post("/auth/logout", { refreshToken }).catch(() => {});
+  }
 }

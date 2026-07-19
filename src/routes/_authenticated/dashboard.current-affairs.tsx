@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -22,23 +23,12 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
-
-// No backend endpoint exists yet for current affairs — this page stays on
-// static placeholder content until that resource is added to the API.
-const CA_ALL = [
-  { id: "c1", category: "Polity", title: "Parliament passes new labour codes", summary: "Key changes to labour law take effect nationwide.", published_at: new Date().toISOString(), is_featured: true, image_url: null as string | null },
-  { id: "c2", category: "Economy", title: "RBI keeps repo rate unchanged", summary: "Monetary policy committee holds rates steady for the third quarter.", published_at: new Date(Date.now() - 86400000).toISOString(), is_featured: true, image_url: null as string | null },
-  { id: "c3", category: "Science & Tech", title: "ISRO announces new satellite launch", summary: "Next launch scheduled for the upcoming quarter.", published_at: new Date(Date.now() - 2 * 86400000).toISOString(), is_featured: false, image_url: null as string | null },
-];
+import * as currentAffairsService from "@/services/currentAffairsService";
+import { unwrapList } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/_authenticated/dashboard/current-affairs")({
   component: CADashboard,
 });
-
-const CATEGORIES = [
-  "All", "Polity", "Economy", "Indian Economy", "International Affairs",
-  "Science & Tech", "Environment", "Sports", "Awards", "Reports",
-];
 
 const CAT_TINT: Record<string, { bg: string; text: string }> = {
   Polity: { bg: "bg-violet-100", text: "text-violet-700" },
@@ -66,27 +56,33 @@ function CADashboard() {
   const [topIndex, setTopIndex] = useState(0);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
 
-  const ca = CA_ALL;
+  const { data: caRes } = useQuery({
+    queryKey: ["dashboard-current-affairs"],
+    queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 100 }),
+  });
+  const ca = unwrapList<any>(caRes);
   const bookmarkSet = new Set(bookmarkedIds);
 
   const toggleBookmark = {
     mutate: (id: string) => setBookmarkedIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id])),
   };
 
+  // Backend `category` is free text, no fixed enum — derive the tab list
+  // from whatever's actually in the data instead of a hardcoded list.
+  const CATEGORIES = useMemo(() => ["All", ...Array.from(new Set(ca.map((a: any) => a.category)))], [ca]);
+
   const filtered = useMemo(() => {
     let list = ca;
     if (category !== "All") list = list.filter((a: any) => a.category === category);
     list = [...list].sort((a: any, b: any) => {
-      const diff = +new Date(b.published_at) - +new Date(a.published_at);
+      const diff = +new Date(b.date) - +new Date(a.date);
       return sort === "latest" ? diff : -diff;
     });
     return list;
   }, [ca, category, sort]);
 
-  const topStories = useMemo(() => {
-    const featured = ca.filter((a: any) => a.is_featured);
-    return (featured.length ? featured : ca).slice(0, 10);
-  }, [ca]);
+  // No `is_featured` field on the real model — take the most recent items instead.
+  const topStories = useMemo(() => ca.slice(0, 10), [ca]);
 
   const latest = filtered.slice(0, 6);
 
@@ -191,11 +187,11 @@ function CADashboard() {
               {visibleTop.map((a: any) => {
                 const t = tintFor(a.category);
                 return (
-                  <motion.div key={a.id} whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
+                  <motion.div key={a._id} whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
                     <Card className="overflow-hidden flex flex-col h-full">
                       <div className="relative h-24 bg-muted overflow-hidden group">
-                        {a.image_url ? (
-                          <img src={a.image_url} alt={a.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                        {a.image ? (
+                          <img src={a.image} alt={a.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                         ) : (
                           <div className={cn("w-full h-full grid place-items-center", t.bg)}>
                             <Newspaper className={cn("h-8 w-8", t.text)} />
@@ -204,14 +200,16 @@ function CADashboard() {
                         <Badge className={cn("absolute top-2 left-2 text-[10px] border-transparent", t.bg, t.text)}>{a.category}</Badge>
                       </div>
                       <div className="p-2.5 flex flex-col flex-1">
-                        <h4 className="text-xs font-semibold leading-snug line-clamp-3">{a.title}</h4>
+                        <Link to="/dashboard/current-affairs/$id" params={{ id: a._id }}>
+                          <h4 className="text-xs font-semibold leading-snug line-clamp-3 hover:text-primary">{a.title}</h4>
+                        </Link>
                         {a.summary && <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>}
                         <div className="flex items-center justify-between mt-auto pt-2">
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <CalendarDays className="h-3 w-3" />{format(new Date(a.published_at), "dd MMM yyyy")}
+                            <CalendarDays className="h-3 w-3" />{format(new Date(a.date), "dd MMM yyyy")}
                           </span>
-                          <button onClick={() => toggleBookmark.mutate(a.id)} className="text-muted-foreground hover:text-primary">
-                            <Bookmark className={cn("h-3.5 w-3.5", bookmarkSet.has(a.id) && "fill-primary text-primary")} />
+                          <button onClick={() => toggleBookmark.mutate(a._id)} className="text-muted-foreground hover:text-primary">
+                            <Bookmark className={cn("h-3.5 w-3.5", bookmarkSet.has(a._id) && "fill-primary text-primary")} />
                           </button>
                         </div>
                       </div>
@@ -246,25 +244,25 @@ function CADashboard() {
               {latest.map((a: any) => {
                 const t = tintFor(a.category);
                 return (
-                  <motion.div key={a.id} whileHover={{ x: 2 }} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                  <motion.div key={a._id} whileHover={{ x: 2 }} className="flex gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="h-14 w-20 rounded-lg overflow-hidden shrink-0 bg-muted">
-                      {a.image_url ? (
-                        <img src={a.image_url} alt={a.title} className="w-full h-full object-cover" />
+                      {a.image ? (
+                        <img src={a.image} alt={a.title} className="w-full h-full object-cover" />
                       ) : (
                         <div className={cn("w-full h-full grid place-items-center", t.bg)}>
                           <Newspaper className={cn("h-5 w-5", t.text)} />
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <Link to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex-1 min-w-0">
                       <Badge className={cn("text-[10px] border-transparent mb-1", t.bg, t.text)}>{a.category}</Badge>
-                      <h4 className="text-sm font-semibold leading-snug">{a.title}</h4>
+                      <h4 className="text-sm font-semibold leading-snug hover:text-primary">{a.title}</h4>
                       {a.summary && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.summary}</p>}
-                    </div>
+                    </Link>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className="text-[11px] text-muted-foreground">{format(new Date(a.published_at), "dd MMM yyyy")}</span>
-                      <button onClick={() => toggleBookmark.mutate(a.id)} className="text-muted-foreground hover:text-primary">
-                        <Bookmark className={cn("h-4 w-4", bookmarkSet.has(a.id) && "fill-primary text-primary")} />
+                      <span className="text-[11px] text-muted-foreground">{format(new Date(a.date), "dd MMM yyyy")}</span>
+                      <button onClick={() => toggleBookmark.mutate(a._id)} className="text-muted-foreground hover:text-primary">
+                        <Bookmark className={cn("h-4 w-4", bookmarkSet.has(a._id) && "fill-primary text-primary")} />
                       </button>
                     </div>
                   </motion.div>

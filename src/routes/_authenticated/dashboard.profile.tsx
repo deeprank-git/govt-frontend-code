@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import * as userService from "@/services/userService";
 import { unwrapItem } from "@/lib/api-unwrap";
-import { setAuth, clearAuth, getToken } from "@/lib/auth-store";
+import { setAuth, getToken } from "@/lib/auth-store";
+import * as authService from "@/services/authService";
 import { toast } from "sonner";
 import {
   Settings,
@@ -224,7 +225,7 @@ function ProfilePage() {
             <Button
               variant="outline"
               onClick={() => {
-                clearAuth();
+                authService.logout();
                 navigate({ to: "/" });
               }}
             >

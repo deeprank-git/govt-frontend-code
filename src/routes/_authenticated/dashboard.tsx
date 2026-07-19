@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { clearAuth } from "@/lib/auth-store";
+import * as authService from "@/services/authService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -55,7 +55,7 @@ function DashboardLayout() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => { clearAuth(); navigate({ to: "/" }); }}>
+                  <DropdownMenuItem onSelect={() => { authService.logout(); navigate({ to: "/" }); }}>
                     <LogOut className="mr-2 h-4 w-4" /> Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
