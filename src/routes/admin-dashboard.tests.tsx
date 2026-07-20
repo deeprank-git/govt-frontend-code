@@ -13,6 +13,10 @@ import { unwrapList } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
+import { LoadingRows } from "@/components/admin/LoadingRows";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/tests")({
   component: TestsPage,
@@ -23,7 +27,7 @@ function TestsPage() {
   const categories = unwrapList<any>(categoriesRes);
   const { data: seriesRes } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
   const series = unwrapList<any>(seriesRes);
-  const { data: testsRes } = useQuery({ queryKey: ["ad-tests"], queryFn: () => testService.getTests() });
+  const { data: testsRes, isLoading } = useQuery({ queryKey: ["ad-tests"], queryFn: () => testService.getTests() });
   const tests = unwrapList<any>(testsRes);
 
   const qc = useQueryClient();
@@ -34,6 +38,9 @@ function TestsPage() {
     negativeMarking: false, negativeMarksPerQuestion: 0, marksPerQuestion: 1,
     isPublished: false, isPaid: false,
   });
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(tests, ["title"]);
 
   const openCreate = () => {
     setEditing(null);
@@ -74,6 +81,7 @@ function TestsPage() {
     onSuccess: () => {
       toast.success("Test deleted");
       qc.invalidateQueries({ queryKey: ["ad-tests"] });
+      setDeleteTarget(null);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete test"),
   });
@@ -84,12 +92,21 @@ function TestsPage() {
         <h2 className="text-base font-semibold">Tests</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
       </div>
+      <div className="mb-2">
+        <Input
+          placeholder="Search tests…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
       <Table>
         <TableHeader>
           <TableRow><TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Qs</TableHead><TableHead>Marks</TableHead><TableHead>Duration</TableHead><TableHead>Published</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {tests.map((t) => (
+          {isLoading && <LoadingRows colSpan={7} />}
+          {!isLoading && paginated.map((t) => (
             <TableRow key={t._id}>
               <TableCell>{t.title}</TableCell>
               <TableCell>{categories.find((c) => c._id === (t.category?._id ?? t.category))?.name ?? "—"}</TableCell>
@@ -99,13 +116,14 @@ function TestsPage() {
               <TableCell>{t.isPublished ? "Published" : "Draft"}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(t)}>Edit</Button>
-                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(t._id)} disabled={deleteMut.isPending}>Delete</Button>
+                <Button size="sm" variant="outline" onClick={() => setDeleteTarget(t._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {tests.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No tests yet.</TableCell></TableRow>}
+          {!isLoading && tests.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No tests yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -142,6 +160,14 @@ function TestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)}
+        isPending={deleteMut.isPending}
+        itemLabel="this test"
+      />
     </div>
   );
 }

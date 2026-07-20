@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as reportService from "@/services/reportService";
+import { LoadingRows } from "@/components/admin/LoadingRows";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/reports")({
   component: ReportsPage,
@@ -24,7 +28,7 @@ const STATUS_TINT: Record<string, string> = {
 
 function ReportsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { data: reportsRes } = useQuery({
+  const { data: reportsRes, isLoading } = useQuery({
     queryKey: ["ad-reports", statusFilter],
     queryFn: () => reportService.adminGetReports(statusFilter === "all" ? undefined : { status: statusFilter as any }),
   });
@@ -40,6 +44,14 @@ function ReportsPage() {
     setStatus(r.status ?? "pending");
     setAdminNote(r.adminNote ?? "");
   };
+
+  // Use reason and question text as search fields
+  const searchableReports = reports.map((r) => ({
+    ...r,
+    _searchText: `${r.reason ?? ""} ${r.question?.questionText ?? ""} ${r.user?.name ?? ""} ${r.user?.email ?? ""}`,
+  }));
+
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(searchableReports, ["_searchText"]);
 
   const saveMut = useMutation({
     mutationFn: () => reportService.adminUpdateReport(reviewing._id, { status: status as any, adminNote }),
@@ -65,6 +77,14 @@ function ReportsPage() {
           </SelectContent>
         </Select>
       </div>
+      <div className="mb-2">
+        <Input
+          placeholder="Search reports…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -78,7 +98,8 @@ function ReportsPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {reports.map((r) => (
+          {isLoading && <LoadingRows colSpan={7} />}
+          {!isLoading && paginated.map((r) => (
             <TableRow key={r._id}>
               <TableCell>{r.user?.name}<div className="text-xs text-muted-foreground">{r.user?.email}</div></TableCell>
               <TableCell className="max-w-xs truncate">{r.question?.questionText}</TableCell>
@@ -91,9 +112,10 @@ function ReportsPage() {
               </TableCell>
             </TableRow>
           ))}
-          {reports.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No reports found.</TableCell></TableRow>}
+          {!isLoading && reports.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No reports found.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Dialog open={!!reviewing} onOpenChange={(open) => !open && setReviewing(null)}>
         <DialogContent>

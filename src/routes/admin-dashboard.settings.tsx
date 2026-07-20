@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -68,6 +69,20 @@ function SettingsPage() {
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save settings"),
   });
+
+  if (loading) {
+    return (
+      <div className="max-w-xl space-y-4">
+        <Skeleton className="h-6 w-24" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-1">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl">

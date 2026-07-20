@@ -44,7 +44,7 @@ function AdminDashboardLayout() {
     <div className="min-h-screen flex bg-background text-foreground">
       <aside className="w-[230px] shrink-0 border-r border-border bg-muted/30 flex flex-col">
         <div className="px-4 py-4 border-b border-border">
-          <h1 className="text-base font-semibold">Admin Dashboard</h1>
+          <h1 className="text-base font-semibold">Admin Panel</h1>
         </div>
         <nav className="flex-1 py-2">
           {NAV_ITEMS.map((item) => {

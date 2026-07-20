@@ -13,6 +13,10 @@ import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
+import { LoadingRows } from "@/components/admin/LoadingRows";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/test-series")({
   component: TestSeriesPage,
@@ -21,13 +25,16 @@ export const Route = createFileRoute("/admin-dashboard/test-series")({
 function TestSeriesPage() {
   const { data: categoriesRes } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
   const categories = unwrapList<any>(categoriesRes);
-  const { data: seriesRes } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
+  const { data: seriesRes, isLoading } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
   const series = unwrapList<any>(seriesRes);
 
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", category: "", isPublished: false, isPaid: false, price: 0 });
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(series, ["name", "description"]);
 
   const openCreate = () => { setEditing(null); setForm({ name: "", description: "", category: categories[0]?._id ?? "", isPublished: false, isPaid: false, price: 0 }); setOpen(true); };
   const openEdit = (s: any) => {
@@ -51,6 +58,7 @@ function TestSeriesPage() {
     onSuccess: () => {
       toast.success("Test series deleted");
       qc.invalidateQueries({ queryKey: ["ad-series"] });
+      setDeleteTarget(null);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete test series"),
   });
@@ -61,12 +69,21 @@ function TestSeriesPage() {
         <h2 className="text-base font-semibold">Test Series</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
       </div>
+      <div className="mb-2">
+        <Input
+          placeholder="Search test series…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
       <Table>
         <TableHeader>
           <TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Total Tests</TableHead><TableHead>Published</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {series.map((s) => (
+          {isLoading && <LoadingRows colSpan={5} />}
+          {!isLoading && paginated.map((s) => (
             <TableRow key={s._id}>
               <TableCell>{s.name}</TableCell>
               <TableCell>{s.category?.name ?? "—"}</TableCell>
@@ -74,13 +91,14 @@ function TestSeriesPage() {
               <TableCell>{s.isPublished ? "Published" : "Draft"}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(s)}>Edit</Button>
-                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(s._id)} disabled={deleteMut.isPending}>Delete</Button>
+                <Button size="sm" variant="outline" onClick={() => setDeleteTarget(s._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {series.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No test series yet.</TableCell></TableRow>}
+          {!isLoading && series.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No test series yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -105,6 +123,14 @@ function TestSeriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)}
+        isPending={deleteMut.isPending}
+        itemLabel="this test series"
+      />
     </div>
   );
 }
