@@ -34,6 +34,16 @@ export function logout() {
   const refreshToken = getRefreshToken();
   clearAuth();
   if (refreshToken) {
-    axiosClient.post("/auth/logout", { refreshToken }).catch(() => {});
+    axiosClient.post("/auth/logout", { refreshToken }).catch(() => { });
   }
+}
+
+export async function requestPasswordReset(data: { email: string }) {
+  const res = await axiosClient.post("/auth/forgot-password", data);
+  return res.data;
+}
+
+export async function resetPassword(data: { token: string; newPassword: string }) {
+  const res = await axiosClient.post("/auth/reset-password", data);
+  return res.data;
 }

@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as notificationService from "@/services/notificationService";
 import * as userService from "@/services/userService";
+import { LoadingRows } from "@/components/admin/LoadingRows";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/notifications")({
   component: NotificationsPage,
@@ -26,8 +29,10 @@ function NotificationsPage() {
   const { data: usersRes } = useQuery({ queryKey: ["ad-users-for-notify"], queryFn: () => userService.getAllUsers() });
   const users = unwrapList<any>(usersRes);
 
-  const { data: sentRes } = useQuery({ queryKey: ["ad-notifications"], queryFn: () => notificationService.adminGetNotifications({ limit: 100 }) });
+  const { data: sentRes, isLoading } = useQuery({ queryKey: ["ad-notifications"], queryFn: () => notificationService.adminGetNotifications({ limit: 100 }) });
   const sent = unwrapList<any>(sentRes);
+
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(sent, ["title", "message"]);
 
   const sendMut = useMutation({
     mutationFn: () => notificationService.adminSendNotification({
@@ -84,12 +89,21 @@ function NotificationsPage() {
 
       <div>
         <h2 className="text-base font-semibold mb-3">Sent Notifications</h2>
+        <div className="mb-2">
+          <Input
+            placeholder="Search notifications…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+        </div>
         <Table>
           <TableHeader>
             <TableRow><TableHead>Title</TableHead><TableHead>Message</TableHead><TableHead>Type</TableHead><TableHead>Recipient</TableHead><TableHead>Sent At</TableHead></TableRow>
           </TableHeader>
           <TableBody>
-            {sent.map((n) => (
+            {isLoading && <LoadingRows colSpan={5} />}
+            {!isLoading && paginated.map((n) => (
               <TableRow key={n._id}>
                 <TableCell>{n.title}</TableCell>
                 <TableCell className="max-w-xs truncate">{n.message}</TableCell>
@@ -98,9 +112,10 @@ function NotificationsPage() {
                 <TableCell>{new Date(n.createdAt).toLocaleString()}</TableCell>
               </TableRow>
             ))}
-            {sent.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No notifications sent yet.</TableCell></TableRow>}
+            {!isLoading && sent.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No notifications sent yet.</TableCell></TableRow>}
           </TableBody>
         </Table>
+        <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </div>
   );

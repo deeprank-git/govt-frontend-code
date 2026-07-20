@@ -191,12 +191,16 @@ function ForgotPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   const handleForgotPassword = async (email: string) => {
     setSubmitting(true);
-    // TODO: replace with real call once backend endpoint exists:
-    // await authService.forgotPassword({ email });
-    await new Promise((r) => setTimeout(r, 600)); // simulate a network call
-    setSubmitting(false);
-    onOpenChange(false);
-    toast.success("If that email is registered, a reset link has been sent.");
+    try {
+      await authService.requestPasswordReset({ email });
+      setEmail("");
+      onOpenChange(false);
+      toast.success("If that email is registered, a reset link has been sent.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Error sending reset link");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const submit = (e: React.FormEvent) => {

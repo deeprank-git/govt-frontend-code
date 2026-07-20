@@ -12,6 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import { LoadingRows } from "@/components/admin/LoadingRows";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/current-affairs")({
   component: CurrentAffairsPage,
@@ -29,13 +33,16 @@ const emptyForm = {
 };
 
 function CurrentAffairsPage() {
-  const { data: caRes } = useQuery({ queryKey: ["ad-current-affairs"], queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 200 }) });
+  const { data: caRes, isLoading } = useQuery({ queryKey: ["ad-current-affairs"], queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 200 }) });
   const items = unwrapList<any>(caRes);
 
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(items, ["title", "category"]);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
   const openEdit = (c: any) => {
@@ -74,6 +81,7 @@ function CurrentAffairsPage() {
     onSuccess: () => {
       toast.success("Article deleted");
       qc.invalidateQueries({ queryKey: ["ad-current-affairs"] });
+      setDeleteTarget(null);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete article"),
   });
@@ -83,6 +91,14 @@ function CurrentAffairsPage() {
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-semibold">Current Affairs</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
+      </div>
+      <div className="mb-2">
+        <Input
+          placeholder="Search articles…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
       </div>
       <Table>
         <TableHeader>
@@ -97,7 +113,8 @@ function CurrentAffairsPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((c) => {
+          {isLoading && <LoadingRows colSpan={7} />}
+          {!isLoading && paginated.map((c) => {
             const deleted = !c.isActive;
             return (
               <TableRow key={c._id}>
@@ -109,14 +126,15 @@ function CurrentAffairsPage() {
                 <TableCell>{deleted ? <Badge variant="destructive">Deleted</Badge> : <Badge variant="outline">Active</Badge>}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={deleted}>Edit</Button>
-                  <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(c._id)} disabled={deleted || deleteMut.isPending}>Delete</Button>
+                  <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleted || deleteMut.isPending}>Delete</Button>
                 </TableCell>
               </TableRow>
             );
           })}
-          {items.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No articles yet.</TableCell></TableRow>}
+          {!isLoading && items.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No articles yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -139,6 +157,14 @@ function CurrentAffairsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)}
+        isPending={deleteMut.isPending}
+        itemLabel="this article"
+      />
     </div>
   );
 }

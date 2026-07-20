@@ -12,6 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as pageService from "@/services/pageService";
+import { LoadingRows } from "@/components/admin/LoadingRows";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/pages")({
   component: PagesPage,
@@ -21,7 +25,7 @@ const emptyForm = { slug: "", title: "", content: "", status: "draft" as "draft"
 
 function PagesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { data: pagesRes } = useQuery({
+  const { data: pagesRes, isLoading } = useQuery({
     queryKey: ["ad-pages", statusFilter],
     queryFn: () => pageService.adminGetPages(statusFilter === "all" ? undefined : { status: statusFilter as "draft" | "published" }),
   });
@@ -31,6 +35,9 @@ function PagesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(pages, ["slug", "title"]);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
   const openEdit = (p: any) => {
@@ -60,6 +67,7 @@ function PagesPage() {
     onSuccess: () => {
       toast.success("Page deleted");
       qc.invalidateQueries({ queryKey: ["ad-pages"] });
+      setDeleteTarget(null);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete page"),
   });
@@ -80,12 +88,21 @@ function PagesPage() {
           <Button size="sm" onClick={openCreate}>New</Button>
         </div>
       </div>
+      <div className="mb-2">
+        <Input
+          placeholder="Search pages…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
       <Table>
         <TableHeader>
           <TableRow><TableHead>Slug</TableHead><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Updated By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {pages.map((p) => (
+          {isLoading && <LoadingRows colSpan={5} />}
+          {!isLoading && paginated.map((p) => (
             <TableRow key={p._id}>
               <TableCell className="font-mono text-xs">{p.slug}</TableCell>
               <TableCell>{p.title}</TableCell>
@@ -93,13 +110,14 @@ function PagesPage() {
               <TableCell>{p.updatedBy?.name ?? "—"}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(p)}>Edit</Button>
-                <Button size="sm" variant="outline" onClick={() => deleteMut.mutate(p._id)} disabled={deleteMut.isPending}>Delete</Button>
+                <Button size="sm" variant="outline" onClick={() => setDeleteTarget(p._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>
           ))}
-          {pages.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No pages yet.</TableCell></TableRow>}
+          {!isLoading && pages.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No pages yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
+      <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -125,6 +143,14 @@ function PagesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && deleteMut.mutate(deleteTarget)}
+        isPending={deleteMut.isPending}
+        itemLabel="this page"
+      />
     </div>
   );
 }
