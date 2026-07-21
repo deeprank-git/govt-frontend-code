@@ -5,7 +5,20 @@ export async function getMe() {
   return res.data;
 }
 
-export async function updateMe(data: { name?: string; email?: string; password?: string }) {
+// Backend User model currently only persists name/email/password. The extra
+// fields are accepted here so the frontend form can be built ahead of the
+// backend schema — the API silently ignores whatever it doesn't recognize.
+export async function updateMe(data: {
+  name?: string;
+  email?: string;
+  password?: string;
+  username?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  picture?: string;
+}) {
   const res = await axiosClient.put("/users/me", data);
   return res.data;
 }
