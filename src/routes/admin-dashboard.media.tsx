@@ -5,21 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as mediaService from "@/services/mediaService";
+import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
+import { AdminPager } from "@/components/admin/AdminPager";
+import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
 export const Route = createFileRoute("/admin-dashboard/media")({
   component: MediaPage,
@@ -27,17 +20,13 @@ export const Route = createFileRoute("/admin-dashboard/media")({
 
 function MediaPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [search, setSearch] = useState("");
   const { data: mediaRes, isLoading } = useQuery({
     queryKey: ["ad-media", typeFilter],
     queryFn: () => mediaService.getMedia(typeFilter === "all" ? undefined : { type: typeFilter }),
   });
   const media = unwrapList<any>(mediaRes);
 
-  // Client-side search filter on originalName
-  const filtered = search.trim()
-    ? media.filter((m) => m.originalName?.toLowerCase().includes(search.trim().toLowerCase()))
-    : media;
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(media, ["originalName"]);
 
   const qc = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,7 +95,7 @@ function MediaPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {filtered.map((m) => (
+          {paginated.map((m) => (
             <Card key={m._id} className="p-2 flex flex-col gap-2">
               <div className="h-24 rounded-md bg-muted grid place-items-center overflow-hidden">
                 {m.type === "image" ? (
@@ -121,24 +110,19 @@ function MediaPage() {
               </Button>
             </Card>
           ))}
-          {filtered.length === 0 && <p className="col-span-full text-center text-sm text-muted-foreground py-6">No media uploaded yet.</p>}
+          {media.length === 0 && <p className="col-span-full text-center text-sm text-muted-foreground py-6">No media uploaded yet.</p>}
         </div>
       )}
+      <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this file?</AlertDialogTitle>
-            <AlertDialogDescription>This permanently removes the file from storage. This action cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && deleteMut.mutate(deleteId)} disabled={deleteMut.isPending}>
-              {deleteMut.isPending ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onOpenChange={(o) => !o && setDeleteId(null)}
+        onConfirm={() => deleteId && deleteMut.mutate(deleteId)}
+        isPending={deleteMut.isPending}
+        itemLabel="this file"
+        description="This permanently removes the file from storage. This action cannot be undone."
+      />
     </div>
   );
 }

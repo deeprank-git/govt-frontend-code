@@ -28,6 +28,7 @@ import { Route as AdminDashboardTestSeriesRouteImport } from './routes/admin-das
 import { Route as AdminDashboardSettingsRouteImport } from './routes/admin-dashboard.settings'
 import { Route as AdminDashboardReportsRouteImport } from './routes/admin-dashboard.reports'
 import { Route as AdminDashboardQuestionsRouteImport } from './routes/admin-dashboard.questions'
+import { Route as AdminDashboardProfileRouteImport } from './routes/admin-dashboard.profile'
 import { Route as AdminDashboardPagesRouteImport } from './routes/admin-dashboard.pages'
 import { Route as AdminDashboardNotificationsRouteImport } from './routes/admin-dashboard.notifications'
 import { Route as AdminDashboardMediaRouteImport } from './routes/admin-dashboard.media'
@@ -141,6 +142,11 @@ const AdminDashboardReportsRoute = AdminDashboardReportsRouteImport.update({
 const AdminDashboardQuestionsRoute = AdminDashboardQuestionsRouteImport.update({
   id: '/questions',
   path: '/questions',
+  getParentRoute: () => AdminDashboardRoute,
+} as any)
+const AdminDashboardProfileRoute = AdminDashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AdminDashboardRoute,
 } as any)
 const AdminDashboardPagesRoute = AdminDashboardPagesRouteImport.update({
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/admin-dashboard/media': typeof AdminDashboardMediaRoute
   '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
   '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
+  '/admin-dashboard/profile': typeof AdminDashboardProfileRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
   '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
   '/admin-dashboard/settings': typeof AdminDashboardSettingsRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByTo {
   '/admin-dashboard/media': typeof AdminDashboardMediaRoute
   '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
   '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
+  '/admin-dashboard/profile': typeof AdminDashboardProfileRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
   '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
   '/admin-dashboard/settings': typeof AdminDashboardSettingsRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/admin-dashboard/media': typeof AdminDashboardMediaRoute
   '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
   '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
+  '/admin-dashboard/profile': typeof AdminDashboardProfileRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
   '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
   '/admin-dashboard/settings': typeof AdminDashboardSettingsRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/admin-dashboard/media'
     | '/admin-dashboard/notifications'
     | '/admin-dashboard/pages'
+    | '/admin-dashboard/profile'
     | '/admin-dashboard/questions'
     | '/admin-dashboard/reports'
     | '/admin-dashboard/settings'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/admin-dashboard/media'
     | '/admin-dashboard/notifications'
     | '/admin-dashboard/pages'
+    | '/admin-dashboard/profile'
     | '/admin-dashboard/questions'
     | '/admin-dashboard/reports'
     | '/admin-dashboard/settings'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/admin-dashboard/media'
     | '/admin-dashboard/notifications'
     | '/admin-dashboard/pages'
+    | '/admin-dashboard/profile'
     | '/admin-dashboard/questions'
     | '/admin-dashboard/reports'
     | '/admin-dashboard/settings'
@@ -634,6 +646,13 @@ declare module '@tanstack/react-router' {
       path: '/questions'
       fullPath: '/admin-dashboard/questions'
       preLoaderRoute: typeof AdminDashboardQuestionsRouteImport
+      parentRoute: typeof AdminDashboardRoute
+    }
+    '/admin-dashboard/profile': {
+      id: '/admin-dashboard/profile'
+      path: '/profile'
+      fullPath: '/admin-dashboard/profile'
+      preLoaderRoute: typeof AdminDashboardProfileRouteImport
       parentRoute: typeof AdminDashboardRoute
     }
     '/admin-dashboard/pages': {
@@ -844,6 +863,7 @@ interface AdminDashboardRouteChildren {
   AdminDashboardMediaRoute: typeof AdminDashboardMediaRoute
   AdminDashboardNotificationsRoute: typeof AdminDashboardNotificationsRoute
   AdminDashboardPagesRoute: typeof AdminDashboardPagesRoute
+  AdminDashboardProfileRoute: typeof AdminDashboardProfileRoute
   AdminDashboardQuestionsRoute: typeof AdminDashboardQuestionsRoute
   AdminDashboardReportsRoute: typeof AdminDashboardReportsRoute
   AdminDashboardSettingsRoute: typeof AdminDashboardSettingsRoute
@@ -859,6 +879,7 @@ const AdminDashboardRouteChildren: AdminDashboardRouteChildren = {
   AdminDashboardMediaRoute: AdminDashboardMediaRoute,
   AdminDashboardNotificationsRoute: AdminDashboardNotificationsRoute,
   AdminDashboardPagesRoute: AdminDashboardPagesRoute,
+  AdminDashboardProfileRoute: AdminDashboardProfileRoute,
   AdminDashboardQuestionsRoute: AdminDashboardQuestionsRoute,
   AdminDashboardReportsRoute: AdminDashboardReportsRoute,
   AdminDashboardSettingsRoute: AdminDashboardSettingsRoute,

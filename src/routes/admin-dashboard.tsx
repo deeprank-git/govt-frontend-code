@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { to: "/admin-dashboard/media" as const, label: "Media" },
   { to: "/admin-dashboard/reports" as const, label: "Reports" },
   { to: "/admin-dashboard/notifications" as const, label: "Notifications" },
+  { to: "/admin-dashboard/profile" as const, label: "My Profile" },
 ];
 
 function AdminDashboardLayout() {
