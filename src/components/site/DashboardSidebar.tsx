@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  Gauge,
   Trophy,
   ClipboardList,
   FileText,
@@ -23,6 +24,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -31,6 +33,7 @@ import { Button } from "@/components/ui/button";
 
 const ITEMS = [
   { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/dashboard/overview" as const, label: "Overview", icon: Gauge },
   { to: "/dashboard/rank" as const, label: "All India Rank", icon: Trophy },
   { to: "/dashboard/mock-tests" as const, label: "Mock Tests", icon: ClipboardList },
   { to: "/dashboard/previous-year-papers" as const, label: "Previous Year Papers", icon: FileText },
@@ -43,6 +46,7 @@ const ITEMS = [
 
 export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { state } = useSidebar();
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 py-3 border-b border-sidebar-border">
@@ -80,7 +84,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-3">
-        {pathname.startsWith("/dashboard/attempted-tests") ? (
+        {state === "collapsed" ? null : pathname.startsWith("/dashboard/attempted-tests") ? (
           <Card className="p-3 bg-primary/5 border-primary/20 text-center">
             <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center">
               <BarChart3 className="h-7 w-7 text-primary" />
@@ -138,7 +142,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
             <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 grid place-items-center relative">
               <Shield className="h-7 w-7 text-primary" />
               <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-success grid place-items-center">
-                <svg className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                <svg className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </span>
             </div>
             <div className="font-display font-semibold text-sm mt-2">Secure Your Account</div>

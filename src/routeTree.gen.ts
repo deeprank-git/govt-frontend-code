@@ -42,11 +42,13 @@ import { Route as AuthenticatedResultAttemptIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedDashboardRankRouteImport } from './routes/_authenticated/dashboard.rank'
 import { Route as AuthenticatedDashboardProfileRouteImport } from './routes/_authenticated/dashboard.profile'
 import { Route as AuthenticatedDashboardPreviousYearPapersRouteImport } from './routes/_authenticated/dashboard.previous-year-papers'
+import { Route as AuthenticatedDashboardOverviewRouteImport } from './routes/_authenticated/dashboard.overview'
 import { Route as AuthenticatedDashboardMockTestsRouteImport } from './routes/_authenticated/dashboard.mock-tests'
 import { Route as AuthenticatedDashboardExamAlertsRouteImport } from './routes/_authenticated/dashboard.exam-alerts'
 import { Route as AuthenticatedDashboardCurrentAffairsRouteImport } from './routes/_authenticated/dashboard.current-affairs'
 import { Route as AuthenticatedDashboardAttemptedTestsRouteImport } from './routes/_authenticated/dashboard.attempted-tests'
 import { Route as AuthenticatedDashboardAnswerKeyRouteImport } from './routes/_authenticated/dashboard.answer-key'
+import { Route as AuthenticatedDashboardTestSeriesIdRouteImport } from './routes/_authenticated/dashboard.test-series.$id'
 import { Route as AuthenticatedDashboardCurrentAffairsIdRouteImport } from './routes/_authenticated/dashboard.current-affairs.$id'
 
 const ExamsRoute = ExamsRouteImport.update({
@@ -222,6 +224,12 @@ const AuthenticatedDashboardPreviousYearPapersRoute =
     path: '/previous-year-papers',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardOverviewRoute =
+  AuthenticatedDashboardOverviewRouteImport.update({
+    id: '/overview',
+    path: '/overview',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const AuthenticatedDashboardMockTestsRoute =
   AuthenticatedDashboardMockTestsRouteImport.update({
     id: '/mock-tests',
@@ -250,6 +258,12 @@ const AuthenticatedDashboardAnswerKeyRoute =
   AuthenticatedDashboardAnswerKeyRouteImport.update({
     id: '/answer-key',
     path: '/answer-key',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
+const AuthenticatedDashboardTestSeriesIdRoute =
+  AuthenticatedDashboardTestSeriesIdRouteImport.update({
+    id: '/test-series/$id',
+    path: '/test-series/$id',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
 const AuthenticatedDashboardCurrentAffairsIdRoute =
@@ -291,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   '/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
+  '/dashboard/overview': typeof AuthenticatedDashboardOverviewRoute
   '/dashboard/previous-year-papers': typeof AuthenticatedDashboardPreviousYearPapersRoute
   '/dashboard/profile': typeof AuthenticatedDashboardProfileRoute
   '/dashboard/rank': typeof AuthenticatedDashboardRankRoute
@@ -298,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -329,6 +345,7 @@ export interface FileRoutesByTo {
   '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   '/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
+  '/dashboard/overview': typeof AuthenticatedDashboardOverviewRoute
   '/dashboard/previous-year-papers': typeof AuthenticatedDashboardPreviousYearPapersRoute
   '/dashboard/profile': typeof AuthenticatedDashboardProfileRoute
   '/dashboard/rank': typeof AuthenticatedDashboardRankRoute
@@ -336,6 +353,7 @@ export interface FileRoutesByTo {
   '/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -371,6 +389,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   '/_authenticated/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/_authenticated/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
+  '/_authenticated/dashboard/overview': typeof AuthenticatedDashboardOverviewRoute
   '/_authenticated/dashboard/previous-year-papers': typeof AuthenticatedDashboardPreviousYearPapersRoute
   '/_authenticated/dashboard/profile': typeof AuthenticatedDashboardProfileRoute
   '/_authenticated/dashboard/rank': typeof AuthenticatedDashboardRankRoute
@@ -378,6 +397,7 @@ export interface FileRoutesById {
   '/_authenticated/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/_authenticated/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -413,6 +433,7 @@ export interface FileRouteTypes {
     | '/dashboard/current-affairs'
     | '/dashboard/exam-alerts'
     | '/dashboard/mock-tests'
+    | '/dashboard/overview'
     | '/dashboard/previous-year-papers'
     | '/dashboard/profile'
     | '/dashboard/rank'
@@ -420,6 +441,7 @@ export interface FileRouteTypes {
     | '/test/$testId'
     | '/dashboard/'
     | '/dashboard/current-affairs/$id'
+    | '/dashboard/test-series/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -451,6 +473,7 @@ export interface FileRouteTypes {
     | '/dashboard/current-affairs'
     | '/dashboard/exam-alerts'
     | '/dashboard/mock-tests'
+    | '/dashboard/overview'
     | '/dashboard/previous-year-papers'
     | '/dashboard/profile'
     | '/dashboard/rank'
@@ -458,6 +481,7 @@ export interface FileRouteTypes {
     | '/test/$testId'
     | '/dashboard'
     | '/dashboard/current-affairs/$id'
+    | '/dashboard/test-series/$id'
   id:
     | '__root__'
     | '/'
@@ -492,6 +516,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/current-affairs'
     | '/_authenticated/dashboard/exam-alerts'
     | '/_authenticated/dashboard/mock-tests'
+    | '/_authenticated/dashboard/overview'
     | '/_authenticated/dashboard/previous-year-papers'
     | '/_authenticated/dashboard/profile'
     | '/_authenticated/dashboard/rank'
@@ -499,6 +524,7 @@ export interface FileRouteTypes {
     | '/_authenticated/test/$testId'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/current-affairs/$id'
+    | '/_authenticated/dashboard/test-series/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -746,6 +772,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardPreviousYearPapersRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/overview': {
+      id: '/_authenticated/dashboard/overview'
+      path: '/overview'
+      fullPath: '/dashboard/overview'
+      preLoaderRoute: typeof AuthenticatedDashboardOverviewRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/_authenticated/dashboard/mock-tests': {
       id: '/_authenticated/dashboard/mock-tests'
       path: '/mock-tests'
@@ -781,6 +814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAnswerKeyRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/test-series/$id': {
+      id: '/_authenticated/dashboard/test-series/$id'
+      path: '/test-series/$id'
+      fullPath: '/dashboard/test-series/$id'
+      preLoaderRoute: typeof AuthenticatedDashboardTestSeriesIdRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/_authenticated/dashboard/current-affairs/$id': {
       id: '/_authenticated/dashboard/current-affairs/$id'
       path: '/$id'
@@ -812,10 +852,12 @@ interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardCurrentAffairsRoute: typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
   AuthenticatedDashboardExamAlertsRoute: typeof AuthenticatedDashboardExamAlertsRoute
   AuthenticatedDashboardMockTestsRoute: typeof AuthenticatedDashboardMockTestsRoute
+  AuthenticatedDashboardOverviewRoute: typeof AuthenticatedDashboardOverviewRoute
   AuthenticatedDashboardPreviousYearPapersRoute: typeof AuthenticatedDashboardPreviousYearPapersRoute
   AuthenticatedDashboardProfileRoute: typeof AuthenticatedDashboardProfileRoute
   AuthenticatedDashboardRankRoute: typeof AuthenticatedDashboardRankRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
+  AuthenticatedDashboardTestSeriesIdRoute: typeof AuthenticatedDashboardTestSeriesIdRoute
 }
 
 const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
@@ -828,11 +870,14 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardExamAlertsRoute:
       AuthenticatedDashboardExamAlertsRoute,
     AuthenticatedDashboardMockTestsRoute: AuthenticatedDashboardMockTestsRoute,
+    AuthenticatedDashboardOverviewRoute: AuthenticatedDashboardOverviewRoute,
     AuthenticatedDashboardPreviousYearPapersRoute:
       AuthenticatedDashboardPreviousYearPapersRoute,
     AuthenticatedDashboardProfileRoute: AuthenticatedDashboardProfileRoute,
     AuthenticatedDashboardRankRoute: AuthenticatedDashboardRankRoute,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
+    AuthenticatedDashboardTestSeriesIdRoute:
+      AuthenticatedDashboardTestSeriesIdRoute,
   }
 
 const AuthenticatedDashboardRouteWithChildren =

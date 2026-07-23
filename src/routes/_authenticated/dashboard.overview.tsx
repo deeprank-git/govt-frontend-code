@@ -1,0 +1,160 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { ChevronRight, Search, BookOpen, FileText, ClipboardList, Sparkles } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExamIcon } from "@/components/site/ExamIcon";
+import * as categoryService from "@/services/categoryService";
+import * as testSeriesService from "@/services/testSeriesService";
+import { unwrapList } from "@/lib/api-unwrap";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/_authenticated/dashboard/overview")({
+  component: OverviewPage,
+});
+
+function OverviewPage() {
+  const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+
+  const { data: categoriesRes, isLoading: loadingCats } = useQuery({
+    queryKey: ["ov-categories"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const categories = unwrapList<any>(categoriesRes);
+
+  const { data: seriesRes, isLoading: loadingSeries } = useQuery({
+    queryKey: ["ov-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
+  });
+  const series = unwrapList<any>(seriesRes);
+
+  const isLoading = loadingCats || loadingSeries;
+
+  // Default to the first category once loaded — there's no "All" option here.
+  const resolvedCat = activeCat ?? categories[0]?._id ?? null;
+  const activeCategoryName = categories.find((c) => c._id === resolvedCat)?.name ?? "";
+
+  const filtered = useMemo(() => {
+    return series.filter((s) => {
+      const catId = s.category?._id ?? s.category;
+      if (resolvedCat && catId !== resolvedCat) return false;
+      if (q && !String(s.name ?? "").toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
+  }, [series, resolvedCat, q]);
+
+  const totalTests = series.reduce((sum, s) => sum + (s.totalTests ?? 0), 0);
+  const freePct = series.length ? Math.round((series.filter((s) => !s.isPaid).length / series.length) * 100) : 0;
+
+  const STATS = [
+    { icon: BookOpen, value: `${categories.length}`, label: "Categories" },
+    { icon: FileText, value: `${series.length}`, label: "Test Series" },
+    { icon: ClipboardList, value: `${totalTests}`, label: "Mock Tests" },
+    { icon: Sparkles, value: `${freePct}%`, label: "Free Access" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid lg:grid-cols-[1fr_auto] gap-4 items-start">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-display font-extrabold">Overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Browse exam categories and jump straight into a test series.
+          </p>
+        </div>
+        <Card className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-3">
+          {STATS.map((s) => (
+            <div key={s.label} className="flex items-center gap-2.5">
+              <span className="h-9 w-9 grid place-items-center rounded-md bg-primary/10 text-primary shrink-0">
+                <s.icon className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="font-display font-bold text-base leading-tight">{s.value}</div>
+                <div className="text-xs text-muted-foreground whitespace-nowrap">{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-[220px_1fr] gap-4 items-start">
+        {/* Categories */}
+        <Card className="p-3 h-fit">
+          <h3 className="font-display font-semibold mb-2 text-sm px-1">Exam Categories</h3>
+          {isLoading ? (
+            <div className="space-y-1.5">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 rounded-md" />)}
+            </div>
+          ) : categories.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-1 py-2">No categories yet.</p>
+          ) : (
+            categories.map((c) => {
+              const count = series.filter((s) => (s.category?._id ?? s.category) === c._id).length;
+              const active = resolvedCat === c._id;
+              return (
+                <button
+                  key={c._id}
+                  onClick={() => setActiveCat(c._id)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between mt-0.5",
+                    active ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted",
+                  )}
+                >
+                  {c.name}
+                  <span className="text-xs text-muted-foreground">{count}</span>
+                </button>
+              );
+            })
+          )}
+        </Card>
+
+        {/* Test series for the selected category */}
+        <Card className="p-4 sm:p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+            <h2 className="font-display font-bold text-lg">
+              {filtered.length} Test Series{activeCategoryName ? ` in ${activeCategoryName}` : ""}
+            </h2>
+            <div className="relative md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search test series…" className="pl-9" />
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              {series.length === 0 ? "No test series available yet." : "No test series match your search."}
+            </p>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {filtered.map((s) => (
+                <Link
+                  key={s._id}
+                  to="/dashboard/test-series/$id"
+                  params={{ id: s._id }}
+                  search={{ name: s.name, category: activeCategoryName || undefined }}
+                  className="group block"
+                >
+                  <div className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition">
+                    <ExamIcon name={s.name ?? "?"} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{s.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">{s.totalTests ?? 0} Tests</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}

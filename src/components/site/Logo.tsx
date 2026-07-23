@@ -9,10 +9,10 @@ export function Logo({ compact = false }: { compact?: boolean }) {
       </span>
       {!compact && (
         <span className="flex flex-col leading-none">
-          <span className="font-display font-bold text-[1.15rem] tracking-tight text-foreground">
+          <span className="font-display font-bold text-[1.15rem] tracking-tight text-foreground ">
             GovtPrep
           </span>
-          <span className="text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground">
+          <span className="text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground pt-2">
             Prepare. Practice. Succeed.
           </span>
         </span>

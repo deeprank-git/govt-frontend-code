@@ -48,7 +48,7 @@ function AuthPage() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: (redirect as never) ?? "/dashboard" });
+    if (!loading && user) navigate({ to: (redirect as never) ?? "/dashboard/overview" });
   }, [user, loading, redirect, navigate]);
 
   const isLogin = mode === "login";
@@ -262,7 +262,7 @@ function SignupForm() {
       const res = await authService.register({ name: fullName, email, password });
       setAuth(res.token, res.user);
       toast.success("Account created");
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard/overview" });
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Could not create account");
     } finally {
