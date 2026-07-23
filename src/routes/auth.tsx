@@ -276,7 +276,7 @@ function SignupForm() {
       <p className="text-sm text-muted-foreground mt-1">Create an account to get started</p>
 
       <form onSubmit={submit} className="space-y-3 mt-6">
-        <div>
+        {/* <div>
           <Label htmlFor="fn">Full Name</Label>
           <Input
             id="fn"
@@ -285,7 +285,7 @@ function SignupForm() {
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Enter your full name"
           />
-        </div>
+        </div> */}
         <div>
           <Label htmlFor="em">Email Address</Label>
           <Input
