@@ -40,7 +40,7 @@ function TestSeriesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptySeriesForm);
-  const [importantDates, setImportantDates] = useState<{ label: string; date: string }[]>([]);
+  const [importantDates, setImportantDates] = useState<{ label: string; from: string; to: string }[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImage, setExistingImage] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +69,12 @@ function TestSeriesPage() {
       negativeMarksPerQuestion: s.negativeMarksPerQuestion ?? 0,
       marksPerQuestion: s.marksPerQuestion ?? 1,
     });
-    setImportantDates(Object.entries(s.importantDates ?? {}).map(([label, date]) => ({ label, date: String(date) })));
+    setImportantDates(
+      Object.entries(s.importantDates ?? {}).map(([label, value]) => {
+        const [from = "", to = ""] = String(value).split(" to ");
+        return { label, from, to };
+      }),
+    );
     setImageFile(null);
     setExistingImage(s.image ?? "");
     setOpen(true);
@@ -80,7 +85,11 @@ function TestSeriesPage() {
       const payload: testSeriesService.TestSeriesInput = {
         ...form,
         importantDates: importantDates.length
-          ? Object.fromEntries(importantDates.filter((d) => d.label.trim()).map((d) => [d.label, d.date]))
+          ? Object.fromEntries(
+              importantDates
+                .filter((d) => d.label.trim() && d.from)
+                .map((d) => [d.label, d.to && d.to !== d.from ? `${d.from} to ${d.to}` : d.from]),
+            )
           : undefined,
         image: imageFile ?? undefined,
       };
@@ -197,29 +206,42 @@ function TestSeriesPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setImportantDates([...importantDates, { label: "", date: "" }])}
+                  onClick={() => setImportantDates([...importantDates, { label: "", from: "", to: "" }])}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Date
                 </Button>
               </div>
               <div className="space-y-2">
                 {importantDates.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <div key={i} className="rounded-md border border-border p-2.5 space-y-2">
                     <Input
                       placeholder="e.g. examDate"
                       value={d.label}
                       onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, label: e.target.value } : x))}
                     />
-                    <Input
-                      type="date"
-                      value={d.date}
-                      onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, date: e.target.value } : x))}
-                    />
-                    <Button type="button" size="icon" variant="ghost" onClick={() => setImportantDates(importantDates.filter((_, xi) => xi !== i))}>
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        title="From"
+                        className="flex-1"
+                        value={d.from}
+                        onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, from: e.target.value } : x))}
+                      />
+                      <span className="text-xs text-muted-foreground shrink-0">to</span>
+                      <Input
+                        type="date"
+                        title="To (optional — leave blank for a single date)"
+                        className="flex-1"
+                        value={d.to}
+                        onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, to: e.target.value } : x))}
+                      />
+                      <Button type="button" size="icon" variant="ghost" className="shrink-0" onClick={() => setImportantDates(importantDates.filter((_, xi) => xi !== i))}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
+                {importantDates.length === 0 && <p className="text-xs text-muted-foreground">No dates added yet.</p>}
               </div>
             </div>
           </div>
