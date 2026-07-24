@@ -4,7 +4,7 @@ import {
   LayoutGrid, ClipboardList, FileText,
   Trophy, ExternalLink, Globe, Download, ArrowLeft,
   CheckCircle2, FileSignature, IdCard, ScrollText,
-  Landmark, User, BookOpen,
+  Landmark, User, BookOpen, Clock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { ExamIcon } from "@/components/site/ExamIcon";
 import { useSidebar } from "@/components/ui/sidebar";
 import * as mediaService from "@/services/mediaService";
 import { getTestSeriesById } from "@/services/testSeriesService";
+import { getTests } from "@/services/testService";
 import { cn } from "@/lib/utils";
 
 type SeriesApiData = {
@@ -23,6 +24,15 @@ type SeriesApiData = {
   applyLink?: string;
   notificationPdf?: string;
   importantDates?: Record<string, string>;
+};
+
+type MockTest = {
+  _id: string;
+  title: string;
+  duration: number;
+  totalQuestions: number;
+  totalMarks: number;
+  isPaid: boolean;
 };
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
@@ -49,12 +59,6 @@ const NAV_ITEMS = [
   { id: "pyp", label: "Previous Year Question Paper", icon: FileText },
 ] as const;
 
-const FULL_MOCK_TESTS = [
-  { id: "m1", title: "Full Mock Test 1", questions: 100, marks: 200, duration: 60, attempts: "15.2K" },
-  { id: "m2", title: "Full Mock Test 2", questions: 100, marks: 200, duration: 60, attempts: "9.8K" },
-  { id: "m3", title: "Full Mock Test 3", questions: 100, marks: 200, duration: 60, attempts: "7.1K" },
-  { id: "m4", title: "Full Mock Test 4", questions: 100, marks: 200, duration: 60, attempts: "5.6K" },
-];
 
 const PYQ_PAPERS = [
   { id: "p1", title: "12 Sep 2025, Shift 1", date: "12 Sep 2025 (Fri)", questions: 100, marks: 200, duration: 60 },
@@ -117,6 +121,8 @@ function TestSeriesDetailPage() {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<(typeof NAV_ITEMS)[number]["id"]>("overview");
   const [series, setSeries] = useState<SeriesApiData | null>(null);
+  const [mockTests, setMockTests] = useState<MockTest[]>([]);
+  const [mocksLoading, setMocksLoading] = useState(false);
   const { setOpen } = useSidebar();
 
   useEffect(() => {
@@ -129,6 +135,16 @@ function TestSeriesDetailPage() {
     getTestSeriesById(id).then((res) => {
       if (res?.success && res?.data) setSeries(res.data);
     });
+  }, [id]);
+
+  useEffect(() => {
+    setMocksLoading(true);
+    getTests({ testSeries: id })
+      .then((res) => {
+        const list = res?.data ?? (Array.isArray(res) ? res : []);
+        setMockTests(list);
+      })
+      .finally(() => setMocksLoading(false));
   }, [id]);
 
   const displayName = series?.name ?? name ?? "Test Series";
@@ -305,17 +321,44 @@ function TestSeriesDetailPage() {
           {activeSection === "mocks" && (
             <Card className="p-5 lg:p-6">
               <h2 className="font-display font-bold text-lg mb-4">Full Length Mock Tests</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {FULL_MOCK_TESTS.map((t) => (
-                  <div key={t.id} className="rounded-lg border border-border p-4">
-                    <Badge variant="outline" className="text-[10px] mb-2">FULL MOCK</Badge>
-                    <div className="font-semibold text-sm">{displayName} {t.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{t.questions} Questions · {t.marks} Marks</div>
-                    <div className="text-xs text-muted-foreground">{t.duration} Minutes · {t.attempts} Attempts</div>
-                    <Button size="sm" className="w-full mt-3" onClick={goToTests}>Start Test →</Button>
-                  </div>
-                ))}
-              </div>
+              {mocksLoading ? (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map((n) => (
+                    <div key={n} className="rounded-xl border border-border p-4 h-44 animate-pulse bg-muted/40" />
+                  ))}
+                </div>
+              ) : mockTests.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No mock tests available yet.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {mockTests.map((t) => (
+                    <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                          <ClipboardList className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Badge variant="outline" className="text-[10px] mb-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50">
+                            {t.isPaid ? "PAID" : "FREE"}
+                          </Badge>
+                          <div className="font-bold text-sm leading-snug">{t.title}</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t.totalQuestions} Questions &nbsp;·&nbsp; {t.totalMarks} Marks</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t.duration} Minutes</span>
+                        </div>
+                      </div>
+                      <Button className="w-full" onClick={goToTests}>Start Test →</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           )}
 
@@ -324,15 +367,28 @@ function TestSeriesDetailPage() {
               <h2 className="font-display font-bold text-lg mb-4">Previous Year Question Papers</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 {PYQ_PAPERS.map((p) => (
-                  <div key={p.id} className="rounded-lg border border-border p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">{p.date}</span>
-                      <Badge className="bg-success/15 text-success-foreground border-transparent text-[10px]">FREE</Badge>
+                  <div key={p.id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Badge variant="outline" className="text-[10px] mb-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50">PREV YEAR</Badge>
+                        <div className="font-bold text-sm leading-snug">{displayName} — {p.title}</div>
+                      </div>
                     </div>
-                    <div className="font-semibold text-sm mt-1">{displayName} — {p.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{p.questions} Questions · {p.marks} Marks</div>
-                    <div className="text-xs text-muted-foreground">{p.duration} Mins</div>
-                    <Button size="sm" variant="outline" className="w-full mt-3" onClick={goToTests}>Start Now</Button>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        <span>{p.questions} Questions &nbsp;·&nbsp; {p.marks} Marks</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>{p.duration} Mins</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground pl-0.5">{p.date}</div>
+                    </div>
+                    <Button className="w-full" onClick={goToTests}>Start Now →</Button>
                   </div>
                 ))}
               </div>
