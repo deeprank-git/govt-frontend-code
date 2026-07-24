@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -16,19 +16,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import * as userService from "@/services/userService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapItem } from "@/lib/api-unwrap";
-import { setAuth, getToken } from "@/lib/auth-store";
+import { setAuth, getToken, getUser } from "@/lib/auth-store";
 import * as authService from "@/services/authService";
 import { toast } from "sonner";
 import {
   Settings,
   CheckCircle2,
   Bell,
-  Lock,
   KeyRound,
   Trash2,
   ChevronRight,
-  Info,
+  Camera,
   Headphones,
 } from "lucide-react";
 
@@ -38,15 +38,28 @@ export const Route = createFileRoute("/_authenticated/dashboard/profile")({
 
 const TABS = ["Profile Information", "Notification Settings", "Privacy & Security", "Account Settings"] as const;
 
+type ProfileState = {
+  name?: string;
+  email?: string;
+  mobile?: string;
+  username?: string;
+  address?: string;
+  country?: string;
+  city?: string;
+  profilePicture?: string;
+};
+
 function ProfilePage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<{ name?: string; email?: string }>({});
+  const [profile, setProfile] = useState<ProfileState>({});
+  const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Profile Information");
   const [pwdOpen, setPwdOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     userService
@@ -56,16 +69,50 @@ function ProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const completion = (profile.name ? 50 : 0) + (profile.email ? 50 : 0);
+  const FIELDS: (keyof ProfileState)[] = ["name", "email", "mobile", "username", "address", "country", "city"];
+  const completion = Math.round((FIELDS.filter((f) => profile[f]).length / FIELDS.length) * 100);
+
+  const avatarSrc = pictureFile
+    ? URL.createObjectURL(pictureFile)
+    : profile.profilePicture
+      ? mediaService.resolveMediaUrl(profile.profilePicture)
+      : undefined;
+
+  const onPictureSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) setPictureFile(file);
+  };
 
   const save = async () => {
     setSaving(true);
     try {
-      const res = await userService.updateMe({ name: profile.name, email: profile.email });
+      const res = await userService.updateMe({
+        name: profile.name,
+        email: profile.email,
+        mobile: profile.mobile,
+        username: profile.username,
+        address: profile.address,
+        country: profile.country,
+        city: profile.city,
+        profilePicture: pictureFile ?? undefined,
+      });
       const updated = unwrapItem<any>(res);
       if (updated) {
+        setProfile((p) => ({ ...p, ...updated }));
+        setPictureFile(null);
         const token = getToken();
-        if (token) setAuth(token, { ...updated, id: updated.id ?? updated._id });
+        const current = getUser();
+        if (token && current) {
+          setAuth(token, {
+            ...current,
+            name: updated.name ?? current.name,
+            email: updated.email ?? current.email,
+            mobile: updated.mobile ?? current.mobile,
+            username: updated.username ?? current.username,
+            profilePicture: updated.profilePicture ?? current.profilePicture,
+          });
+        }
       }
       toast.success("Profile updated successfully");
     } catch (err: any) {
@@ -125,11 +172,23 @@ function ProfilePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
                 <div className="flex md:block justify-center">
-                  <Avatar className="h-28 w-28 ring-1 ring-border">
-                    <AvatarFallback className="bg-muted text-foreground text-xl font-display font-bold">
-                      {(profile.name ?? profile.email ?? "U").slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative h-28 w-28">
+                    <Avatar className="h-28 w-28 ring-1 ring-border">
+                      {avatarSrc && <AvatarImage src={avatarSrc} alt={profile.name ?? "Profile"} />}
+                      <AvatarFallback className="bg-muted text-foreground text-xl font-display font-bold">
+                        {(profile.name ?? profile.email ?? "U").slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onPictureSelected} />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center ring-2 ring-background"
+                      aria-label="Change profile picture"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -155,6 +214,49 @@ function ProfilePage() {
                         <CheckCircle2 className="h-3 w-3" /> Verified
                       </Badge>
                     </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Username</Label>
+                    <Input
+                      value={profile.username ?? ""}
+                      onChange={(e) => setProfile({ ...profile, username: e.target.value })}
+                      placeholder="e.g. jane_doe"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Mobile Number</Label>
+                    <Input
+                      value={profile.mobile ?? ""}
+                      onChange={(e) => setProfile({ ...profile, mobile: e.target.value })}
+                      placeholder="Your mobile number"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Address</Label>
+                    <Input
+                      value={profile.address ?? ""}
+                      onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                      placeholder="Street address"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">City</Label>
+                    <Input
+                      value={profile.city ?? ""}
+                      onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1.5 block">Country</Label>
+                    <Input
+                      value={profile.country ?? ""}
+                      onChange={(e) => setProfile({ ...profile, country: e.target.value })}
+                      disabled={loading}
+                    />
                   </div>
 
                   <div className="md:col-span-2 flex justify-end">
@@ -185,17 +287,6 @@ function ProfilePage() {
                 />
               </div>
             </Card>
-
-            <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
-              <Info className="h-5 w-5 text-primary flex-none mt-0.5" />
-              <p className="text-sm">
-                <span className="font-semibold">Note:</span>{" "}
-                <span className="text-muted-foreground">
-                  Only name, email and password are stored on your account. Other preferences shown
-                  here are local to this screen for now.
-                </span>
-              </p>
-            </div>
           </>
         )}
 

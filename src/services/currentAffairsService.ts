@@ -1,6 +1,6 @@
 import axiosClient from "@/api/axiosClient";
 
-export async function getCurrentAffairs(params?: { date?: string; category?: string; q?: string; limit?: number }) {
+export async function getCurrentAffairs(params?: { date?: string; category?: string; q?: string; limit?: number; isPublished?: boolean }) {
   const res = await axiosClient.get("/current-affairs", { params });
   return res.data;
 }

@@ -247,6 +247,7 @@ function ForgotPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [accept, setAccept] = useState(true);
@@ -259,7 +260,7 @@ function SignupForm() {
     if (!accept) return toast.error("Please accept the Terms");
     setLoading(true);
     try {
-      const res = await authService.register({ name: fullName, email, password });
+      const res = await authService.register({ name: fullName, email, mobile: mobile || undefined, password });
       setAuth(res.token, res.user);
       toast.success("Account created");
       navigate({ to: "/dashboard/overview" });
@@ -295,6 +296,16 @@ function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email address"
+          />
+        </div>
+        <div>
+          <Label htmlFor="mobile">Mobile Number (optional)</Label>
+          <Input
+            id="mobile"
+            type="tel"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="Enter your mobile number"
           />
         </div>
         <div>

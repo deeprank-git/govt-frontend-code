@@ -20,26 +20,27 @@ type FormState = {
   name: string;
   email: string;
   username: string;
-  phone: string;
+  mobile: string;
   address: string;
   city: string;
   country: string;
-  picture: string;
+  profilePicture: string;
 };
 
 const emptyForm: FormState = {
   name: "",
   email: "",
   username: "",
-  phone: "",
+  mobile: "",
   address: "",
   city: "",
   country: "",
-  picture: "",
+  profilePicture: "",
 };
 
 function AdminProfilePage() {
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,11 +56,11 @@ function AdminProfilePage() {
             name: data.name ?? "",
             email: data.email ?? "",
             username: data.username ?? "",
-            phone: data.phone ?? "",
+            mobile: data.mobile ?? "",
             address: data.address ?? "",
             city: data.city ?? "",
             country: data.country ?? "",
-            picture: data.picture ?? "",
+            profilePicture: data.profilePicture ?? "",
           }));
         }
       })
@@ -69,36 +70,52 @@ function AdminProfilePage() {
 
   useEffect(load, []);
 
-  const uploadMut = useMutation({
-    mutationFn: (file: File) => mediaService.uploadMedia(file),
-    onSuccess: (res) => {
-      const media = unwrapItem<any>(res);
-      const url = media?.url ? mediaService.resolveMediaUrl(media.url) : "";
-      if (url) setForm((f) => ({ ...f, picture: url }));
-      toast.success("Picture uploaded — save changes to keep it, though it won't persist across logins until the backend supports it (see note below).");
-    },
-    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not upload picture"),
-  });
-
-  const saveMut = useMutation({
-    mutationFn: () => userService.updateMe(form),
-    onSuccess: (res) => {
-      const updated = unwrapItem<any>(res);
-      const token = getToken();
-      const current = getUser();
-      if (updated && token && current) {
-        setAuth(token, { ...current, name: updated.name ?? current.name, email: updated.email ?? current.email });
-      }
-      toast.success("Profile updated (name & email saved; see note below for other fields)");
-    },
-    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not update profile"),
-  });
+  const avatarSrc = pictureFile
+    ? URL.createObjectURL(pictureFile)
+    : form.profilePicture
+      ? mediaService.resolveMediaUrl(form.profilePicture)
+      : undefined;
 
   const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) uploadMut.mutate(file);
+    if (file) setPictureFile(file);
   };
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      userService.updateMe({
+        name: form.name,
+        email: form.email,
+        username: form.username,
+        mobile: form.mobile,
+        address: form.address,
+        city: form.city,
+        country: form.country,
+        profilePicture: pictureFile ?? undefined,
+      }),
+    onSuccess: (res) => {
+      const updated = unwrapItem<any>(res);
+      if (updated) {
+        setForm((f) => ({ ...f, ...updated, profilePicture: updated.profilePicture ?? f.profilePicture }));
+        setPictureFile(null);
+        const token = getToken();
+        const current = getUser();
+        if (token && current) {
+          setAuth(token, {
+            ...current,
+            name: updated.name ?? current.name,
+            email: updated.email ?? current.email,
+            mobile: updated.mobile ?? current.mobile,
+            username: updated.username ?? current.username,
+            profilePicture: updated.profilePicture ?? current.profilePicture,
+          });
+        }
+      }
+      toast.success("Profile updated");
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not update profile"),
+  });
 
   if (loading) {
     return (
@@ -119,21 +136,15 @@ function AdminProfilePage() {
       <h2 className="text-base font-semibold mb-1">Profile Settings</h2>
       <p className="text-sm text-muted-foreground mb-4">Manage your personal admin account details.</p>
 
-      <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground mb-4">
-        Name and email save immediately. Profile picture, username, phone, address, city, and country are
-        captured here but the backend doesn't store them yet — they'll reset on reload until that's added
-        (see report).
-      </div>
-
       <div className="flex items-center gap-4 mb-6">
         <Avatar className="h-16 w-16">
-          {form.picture ? <AvatarImage src={form.picture} alt={form.name} /> : null}
+          {avatarSrc && <AvatarImage src={avatarSrc} alt={form.name} />}
           <AvatarFallback className="text-lg">{(form.name || form.email || "A").slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileSelected} />
-          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}>
-            {uploadMut.isPending ? "Uploading…" : "Change Picture"}
+          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            Change Picture
           </Button>
         </div>
       </div>
@@ -145,7 +156,7 @@ function AdminProfilePage() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Username</Label><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="e.g. admin_jane" /></div>
-          <div><Label>Phone Number</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="e.g. +91 98765 43210" /></div>
+          <div><Label>Mobile Number</Label><Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} placeholder="e.g. +91 98765 43210" /></div>
         </div>
         <div><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
         <div className="grid grid-cols-2 gap-3">

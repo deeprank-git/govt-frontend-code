@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
+import * as mediaService from "@/services/mediaService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { AdminPager } from "@/components/admin/AdminPager";
@@ -21,6 +23,12 @@ import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 export const Route = createFileRoute("/admin-dashboard/test-series")({
   component: TestSeriesPage,
 });
+
+const emptySeriesForm = {
+  name: "", description: "", category: "",
+  isPublished: false, isPaid: false, price: 0,
+  negativeMarking: false, negativeMarksPerQuestion: 0, marksPerQuestion: 1,
+};
 
 function TestSeriesPage() {
   const { data: categoriesRes } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
@@ -31,20 +39,53 @@ function TestSeriesPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", description: "", category: "", isPublished: false, isPaid: false, price: 0 });
+  const [form, setForm] = useState(emptySeriesForm);
+  const [importantDates, setImportantDates] = useState<{ label: string; date: string }[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [existingImage, setExistingImage] = useState("");
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(series, ["name", "description"]);
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", description: "", category: categories[0]?._id ?? "", isPublished: false, isPaid: false, price: 0 }); setOpen(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...emptySeriesForm, category: categories[0]?._id ?? "" });
+    setImportantDates([]);
+    setImageFile(null);
+    setExistingImage("");
+    setOpen(true);
+  };
   const openEdit = (s: any) => {
     setEditing(s);
-    setForm({ name: s.name ?? "", description: s.description ?? "", category: s.category?._id ?? s.category ?? "", isPublished: !!s.isPublished, isPaid: !!s.isPaid, price: s.price ?? 0 });
+    setForm({
+      name: s.name ?? "",
+      description: s.description ?? "",
+      category: s.category?._id ?? s.category ?? "",
+      isPublished: !!s.isPublished,
+      isPaid: !!s.isPaid,
+      price: s.price ?? 0,
+      negativeMarking: !!s.negativeMarking,
+      negativeMarksPerQuestion: s.negativeMarksPerQuestion ?? 0,
+      marksPerQuestion: s.marksPerQuestion ?? 1,
+    });
+    setImportantDates(Object.entries(s.importantDates ?? {}).map(([label, date]) => ({ label, date: String(date) })));
+    setImageFile(null);
+    setExistingImage(s.image ?? "");
     setOpen(true);
   };
 
   const saveMut = useMutation({
-    mutationFn: () => (editing ? testSeriesService.updateTestSeries(editing._id, form) : testSeriesService.createTestSeries(form)),
+    mutationFn: () => {
+      const payload: testSeriesService.TestSeriesInput = {
+        ...form,
+        importantDates: importantDates.length
+          ? Object.fromEntries(importantDates.filter((d) => d.label.trim()).map((d) => [d.label, d.date]))
+          : undefined,
+        image: imageFile ?? undefined,
+      };
+      return editing ? testSeriesService.updateTestSeries(editing._id, payload) : testSeriesService.createTestSeries(payload);
+    },
     onSuccess: () => {
       toast.success(editing ? "Test series updated" : "Test series created");
       qc.invalidateQueries({ queryKey: ["ad-series"] });
@@ -101,7 +142,7 @@ function TestSeriesPage() {
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Edit Test Series" : "New Test Series"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
@@ -113,9 +154,74 @@ function TestSeriesPage() {
                 <SelectContent>{categories.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label>Image</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {(imageFile || existingImage) && (
+                  <img
+                    src={imageFile ? URL.createObjectURL(imageFile) : mediaService.resolveMediaUrl(existingImage)}
+                    alt=""
+                    className="h-14 w-14 rounded-md object-cover border border-border"
+                  />
+                )}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setImageFile(f); }}
+                />
+                <Button type="button" size="sm" variant="outline" onClick={() => imageInputRef.current?.click()}>
+                  {imageFile || existingImage ? "Replace Image" : "Upload Image"}
+                </Button>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between"><Label>Published</Label><Switch checked={form.isPublished} onCheckedChange={(v) => setForm({ ...form, isPublished: v })} /></div>
             <div className="flex items-center justify-between"><Label>Paid</Label><Switch checked={form.isPaid} onCheckedChange={(v) => setForm({ ...form, isPaid: v })} /></div>
             {form.isPaid && <div><Label>Price</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>}
+
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+              <div><Label>Marks per Question</Label><Input type="number" value={form.marksPerQuestion} onChange={(e) => setForm({ ...form, marksPerQuestion: Number(e.target.value) })} /></div>
+              <div className="flex items-center justify-between self-end pb-2"><Label>Negative Marking</Label><Switch checked={form.negativeMarking} onCheckedChange={(v) => setForm({ ...form, negativeMarking: v })} /></div>
+            </div>
+            {form.negativeMarking && (
+              <div><Label>Negative Marks per Question</Label><Input type="number" value={form.negativeMarksPerQuestion} onChange={(e) => setForm({ ...form, negativeMarksPerQuestion: Number(e.target.value) })} /></div>
+            )}
+
+            <div className="pt-2 border-t border-border">
+              <div className="flex items-center justify-between mb-2">
+                <Label>Important Dates</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setImportantDates([...importantDates, { label: "", date: "" }])}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Date
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {importantDates.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      placeholder="e.g. examDate"
+                      value={d.label}
+                      onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, label: e.target.value } : x))}
+                    />
+                    <Input
+                      type="date"
+                      value={d.date}
+                      onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, date: e.target.value } : x))}
+                    />
+                    <Button type="button" size="icon" variant="ghost" onClick={() => setImportantDates(importantDates.filter((_, xi) => xi !== i))}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

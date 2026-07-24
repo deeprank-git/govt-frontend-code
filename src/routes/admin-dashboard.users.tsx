@@ -30,7 +30,7 @@ function UsersPage() {
   // Confirm deactivation state: stores { id, isActive } of the targeted user
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; isActive: boolean } | null>(null);
 
-  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(users, ["name", "email"]);
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(users, ["name", "email", "mobile"]);
 
   const roleMut = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) => userService.updateUserByAdmin(id, { role }),
@@ -73,14 +73,15 @@ function UsersPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Mobile</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={5} />}
+          {isLoading && <LoadingRows colSpan={6} />}
           {!isLoading && paginated.map((u) => (
             <TableRow key={u._id}>
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
+              <TableCell>{u.mobile || "—"}</TableCell>
               <TableCell>
                 <Select value={u.role} onValueChange={(v) => roleMut.mutate({ id: u._id, role: v })}>
                   <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
@@ -104,7 +105,7 @@ function UsersPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && users.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No users found.</TableCell></TableRow>}
+          {!isLoading && users.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No users found.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />

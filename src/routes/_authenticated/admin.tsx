@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Papa from "papaparse";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -439,8 +440,24 @@ function QuestionsTab({ tests }: { tests: any[] }) {
   const bulkMut = useMutation({
     mutationFn: () => {
       const parsed = JSON.parse(bulkText);
-      const withTest = (Array.isArray(parsed) ? parsed : []).map((q: any) => ({ ...q, test: testId }));
-      return questionService.bulkCreateQuestions(withTest);
+      const rows = (Array.isArray(parsed) ? parsed : []).map((q: any) => ({
+        test: testId,
+        questionText: q.questionText ?? "",
+        option1: q.options?.[0]?.text ?? "",
+        option2: q.options?.[1]?.text ?? "",
+        option3: q.options?.[2]?.text ?? "",
+        option4: q.options?.[3]?.text ?? "",
+        // JSON body used a 0-based correctAnswer; the real bulk CSV endpoint expects 1-based.
+        correctAnswer: Number(q.correctAnswer) + 1,
+        marks: q.marks ?? 1,
+        explanation: q.explanation ?? "",
+        order: q.order ?? "",
+      }));
+      const csvText = Papa.unparse(rows, {
+        columns: ["test", "questionText", "option1", "option2", "option3", "option4", "correctAnswer", "marks", "explanation", "order"],
+      });
+      const blob = new Blob([csvText], { type: "text/csv" });
+      return questionService.bulkCreateQuestions(blob, "questions-bulk-upload.csv");
     },
     onSuccess: (res: any) => {
       toast.success(res?.message ?? "Questions uploaded");

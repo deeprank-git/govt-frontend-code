@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
@@ -33,7 +34,14 @@ const emptyForm = {
 };
 
 function CurrentAffairsPage() {
-  const { data: caRes, isLoading } = useQuery({ queryKey: ["ad-current-affairs"], queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 200 }) });
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { data: caRes, isLoading } = useQuery({
+    queryKey: ["ad-current-affairs", statusFilter],
+    queryFn: () => currentAffairsService.getCurrentAffairs({
+      limit: 200,
+      ...(statusFilter !== "all" ? { isPublished: statusFilter === "published" } : {}),
+    }),
+  });
   const items = unwrapList<any>(caRes);
 
   const qc = useQueryClient();
@@ -88,9 +96,19 @@ function CurrentAffairsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <h2 className="text-base font-semibold">Current Affairs</h2>
-        <Button size="sm" onClick={openCreate}>New</Button>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={openCreate}>New</Button>
+        </div>
       </div>
       <div className="mb-2">
         <Input

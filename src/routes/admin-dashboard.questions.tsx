@@ -23,33 +23,34 @@ export const Route = createFileRoute("/admin-dashboard/questions")({
   component: QuestionsPage,
 });
 
-// CSV template header — matches Question model fields exactly
-const CSV_HEADERS = "questionText,option1,option2,option3,option4,correctAnswer,explanation,marks,negativeMarks";
-
-function downloadCsvTemplate() {
-  const sample = [
-    CSV_HEADERS,
-    'Sample question text?,Option A,Option B,Option C,Option D,0,Explanation here,1,0',
-  ].join("\n");
-  const blob = new Blob([sample], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "questions_template.csv";
-  a.click();
-  URL.revokeObjectURL(url);
+// Real server-generated template — 1-based correctAnswer, requires a `test`
+// column per row (see GovtPrep-Backend-Workflow-and-Status.md §7). Blank
+// `test` cells are auto-filled with the currently selected test on import.
+async function downloadCsvTemplate() {
+  try {
+    const blob = await questionService.getBulkTemplateCsv();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "questions-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    toast.error("Could not download CSV template");
+  }
 }
 
 interface CsvRow {
+  test: string;
   questionText: string;
   option1: string;
   option2: string;
   option3: string;
   option4: string;
   correctAnswer: string;
-  explanation: string;
   marks: string;
-  negativeMarks: string;
+  explanation: string;
+  order: string;
 }
 
 function QuestionsPage() {
@@ -119,34 +120,24 @@ function QuestionsPage() {
 
   const bulkMut = useMutation({
     mutationFn: (rows: CsvRow[]) => {
-      const payload = rows.map((r) => ({
-        questionText: r.questionText,
-        options: [r.option1, r.option2, r.option3, r.option4].map((text) => ({ text })),
-        correctAnswer: Number(r.correctAnswer),
-        explanation: r.explanation ?? "",
-        marks: r.marks ? Number(r.marks) : 1,
-        negativeMarks: r.negativeMarks ? Number(r.negativeMarks) : 0,
-        test: activeTestId,
-      }));
-      return questionService.bulkCreateQuestions(payload);
+      // Blank `test` cells default to the currently selected test — the
+      // server itself requires the column populated on every row.
+      const filled = rows.map((r) => ({ ...r, test: r.test || activeTestId }));
+      const csvText = Papa.unparse(filled, {
+        columns: ["test", "questionText", "option1", "option2", "option3", "option4", "correctAnswer", "marks", "explanation", "order"],
+      });
+      const blob = new Blob([csvText], { type: "text/csv" });
+      return questionService.bulkCreateQuestions(blob, "questions-bulk-upload.csv");
     },
     onSuccess: (res: any) => {
-      const created = res?.data?.length ?? res?.length ?? "?";
-      toast.success(`${created} question(s) imported successfully`);
+      const created = res?.data?.length ?? "?";
+      toast.success(res?.message ?? `${created} question(s) imported successfully`);
       qc.invalidateQueries({ queryKey: ["ad-questions", activeTestId] });
       qc.invalidateQueries({ queryKey: ["ad-tests"] });
       setCsvOpen(false);
       setCsvPreview(null);
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? "Bulk import failed";
-      const details: string[] = err?.response?.data?.errors ?? [];
-      if (details.length) {
-        details.forEach((d, i) => toast.error(`Row ${i + 1}: ${d}`));
-      } else {
-        toast.error(msg);
-      }
-    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Bulk import failed"),
   });
 
   const handleCsvFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +153,8 @@ function QuestionsPage() {
           if (!row.questionText) errors.push(`Row ${idx + 1}: missing questionText`);
           if (!row.option1 || !row.option2 || !row.option3 || !row.option4) errors.push(`Row ${idx + 1}: all 4 options required`);
           const ca = Number(row.correctAnswer);
-          if (isNaN(ca) || ca < 0 || ca > 3) errors.push(`Row ${idx + 1}: correctAnswer must be 0–3`);
+          if (isNaN(ca) || ca < 1 || ca > 4) errors.push(`Row ${idx + 1}: correctAnswer must be 1–4`);
+          if (!row.test && !activeTestId) errors.push(`Row ${idx + 1}: no test selected and no test column in CSV`);
         });
         setCsvPreview({ rows: results.data, errors });
         setCsvOpen(true);
@@ -285,7 +277,7 @@ function QuestionsPage() {
                         <TableRow key={i}>
                           <TableCell className="text-xs">{i + 1}</TableCell>
                           <TableCell className="max-w-xs truncate text-xs">{r.questionText}</TableCell>
-                          <TableCell className="text-xs">{"ABCD"[Number(r.correctAnswer)] ?? r.correctAnswer}</TableCell>
+                          <TableCell className="text-xs">{"ABCD"[Number(r.correctAnswer) - 1] ?? r.correctAnswer}</TableCell>
                           <TableCell className="text-xs">{r.marks || 1}</TableCell>
                         </TableRow>
                       ))}

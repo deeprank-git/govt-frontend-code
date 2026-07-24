@@ -138,7 +138,12 @@ function OverviewPage() {
                   key={s._id}
                   to="/dashboard/test-series/$id"
                   params={{ id: s._id }}
-                  search={{ name: s.name, category: activeCategoryName || undefined }}
+                  search={{
+                    name: s.name,
+                    category: activeCategoryName || undefined,
+                    image: s.image || undefined,
+                    description: s.description || undefined,
+                  }}
                   className="group block"
                 >
                   <div className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition">
