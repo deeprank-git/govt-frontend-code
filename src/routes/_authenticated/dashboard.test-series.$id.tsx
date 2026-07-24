@@ -2,9 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   LayoutGrid, ClipboardList, FileText,
-  Trophy, ExternalLink, Globe, Bell, Download, ArrowLeft,
-  ChevronRight, CheckCircle2, FileSignature, IdCard, ScrollText,
-  Landmark, GraduationCap, Users, KeyRound, User, BookOpen,
+  Trophy, ExternalLink, Globe, Download, ArrowLeft,
+  CheckCircle2, FileSignature, IdCard, ScrollText,
+  Landmark, User, BookOpen,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,18 @@ import { Button } from "@/components/ui/button";
 import { ExamIcon } from "@/components/site/ExamIcon";
 import { useSidebar } from "@/components/ui/sidebar";
 import * as mediaService from "@/services/mediaService";
+import { getTestSeriesById } from "@/services/testSeriesService";
 import { cn } from "@/lib/utils";
+
+type SeriesApiData = {
+  name: string;
+  description?: string;
+  image?: string;
+  officialWebsite?: string;
+  applyLink?: string;
+  notificationPdf?: string;
+  importantDates?: Record<string, string>;
+};
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
 
@@ -52,20 +63,15 @@ const PYQ_PAPERS = [
   { id: "p4", title: "13 Sep 2025, Shift 1", date: "13 Sep 2025 (Sat)", questions: 100, marks: 200, duration: 60 },
 ];
 
-const IMPORTANT_DATES = [
-  { label: "Notification", date: "09 May 2025", icon: CheckCircle2, tint: "bg-emerald-50 text-emerald-600" },
-  { label: "Application Start", date: "09 May 2025", icon: FileSignature, tint: "bg-blue-50 text-blue-600" },
-  { label: "Last Date to Apply", date: "04 June 2025", icon: ClipboardList, tint: "bg-amber-50 text-amber-600" },
-  { label: "Admit Card", date: "July 2025", icon: IdCard, tint: "bg-violet-50 text-violet-600" },
-  { label: "Tier 1 Exam", date: "Aug - Sep 2025", icon: ScrollText, tint: "bg-rose-50 text-rose-600" },
-  { label: "Tier 1 Result", date: "Dec 2025", icon: Trophy, tint: "bg-slate-50 text-slate-600" },
+const IMPORTANT_DATES_CONFIG = [
+  { key: "notification_date",  label: "Notification",       icon: CheckCircle2,  tint: "bg-emerald-50 text-emerald-600" },
+  { key: "application_start",  label: "Application Start",  icon: FileSignature, tint: "bg-blue-50 text-blue-600" },
+  { key: "last_date_to_apply", label: "Last Date to Apply", icon: ClipboardList, tint: "bg-amber-50 text-amber-600" },
+  { key: "admit_card",         label: "Admit Card",         icon: IdCard,        tint: "bg-violet-50 text-violet-600" },
+  { key: "tier_1_exam",        label: "Tier 1 Exam",        icon: ScrollText,    tint: "bg-rose-50 text-rose-600" },
+  { key: "tier_1_result",      label: "Tier 1 Result",      icon: Trophy,        tint: "bg-slate-50 text-slate-600" },
 ];
 
-const HEADER_FACTS = [
-  { label: "Conducting Body", value: "Staff Selection Commission (SSC)", icon: Landmark },
-  { label: "Exam Level", value: "Graduate Level", icon: GraduationCap },
-  { label: "Posts", value: "Various Group B & C Posts", icon: Users },
-];
 
 const EXAM_DETAIL_SECTIONS = [
   {
@@ -91,21 +97,13 @@ const EXAM_DETAIL_SECTIONS = [
   },
 ];
 
-const QUICK_LINKS = [
-  { label: "Official Website", icon: Globe },
-  { label: "Apply Online", icon: ExternalLink },
-  { label: "Download Syllabus", icon: Download },
-  { label: "Latest Notification", icon: Bell },
-  { label: "Admit Card", icon: IdCard },
-  { label: "Result", icon: Trophy },
-  { label: "Answer Key", icon: KeyRound },
+// hrefs are filled at render time from series data; see quickLinks() below
+const QUICK_LINKS_CONFIG = [
+  { label: "Official Website", icon: Globe,        key: "officialWebsite" as const },
+  { label: "Apply Online",     icon: ExternalLink, key: "applyLink" as const },
+  { label: "Download Syllabus", icon: Download,   key: "notificationPdf" as const },
 ];
 
-const LATEST_UPDATES = [
-  { title: "2025 Notification Released", date: "09 May 2025" },
-  { title: "Application Process Started", date: "09 May 2025" },
-  { title: "Tier 1 Exam Date Announced", date: "24 Apr 2025" },
-];
 
 const RECOMMENDED_MOCKS = [
   { id: "r1", title: "Tier 1 Full Mock Test", questions: 100 },
@@ -114,22 +112,36 @@ const RECOMMENDED_MOCKS = [
 ];
 
 function TestSeriesDetailPage() {
+  const { id } = Route.useParams();
   const { name, category, image, description } = Route.useSearch();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<(typeof NAV_ITEMS)[number]["id"]>("overview");
+  const [series, setSeries] = useState<SeriesApiData | null>(null);
   const { setOpen } = useSidebar();
 
-  // Collapse the main dashboard sidebar to icon-only while this page is
-  // open — it has its own scoped nav (Overview / Mock Test / PYQ) — and
-  // restore it when the user navigates away.
   useEffect(() => {
     setOpen(false);
     return () => setOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const displayName = name ?? "Test Series";
-  const logoUrl = image ? mediaService.resolveMediaUrl(image) : undefined;
+  useEffect(() => {
+    getTestSeriesById(id).then((res) => {
+      if (res?.success && res?.data) setSeries(res.data);
+    });
+  }, [id]);
+
+  const displayName = series?.name ?? name ?? "Test Series";
+  const rawImage = series?.image ?? image;
+  const logoUrl = rawImage ? mediaService.resolveMediaUrl(rawImage) : undefined;
+  const displayDescription = series?.description ?? description;
+  const notificationPdfUrl = series?.notificationPdf
+    ? mediaService.resolveMediaUrl(series.notificationPdf)
+    : undefined;
+  const importantDates = IMPORTANT_DATES_CONFIG.map((c) => ({
+    ...c,
+    date: series?.importantDates?.[c.key] ?? "—",
+  }));
   const goToTests = () => navigate({ to: "/dashboard/mock-tests" });
 
   return (
@@ -198,60 +210,54 @@ function TestSeriesDetailPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1.5">
-                    {description ??
+                    {displayDescription ??
                       "Staff Selection Commission Combined Graduate Level Examination is conducted to recruit candidates for various Group B and Group C posts."}
                   </p>
                 </div>
               </div>
               <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
                 <Button className="flex-1 sm:flex-none" asChild>
-                  <a href="#">Apply Online <ExternalLink className="h-4 w-4 ml-1.5" /></a>
+                  <a href={series?.applyLink ?? "#"} target="_blank" rel="noopener noreferrer">
+                    Apply Online <ExternalLink className="h-4 w-4 ml-1.5" />
+                  </a>
                 </Button>
-                {/* Moved from the old "About this Test Series" card — same file, same behavior */}
                 <Button variant="outline" className="flex-1 sm:flex-none" asChild>
-                  <a href="/docs/ssc-exam-info.pdf" download={`${displayName}-notification.pdf`}>
+                  <a
+                    href={notificationPdfUrl ?? "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Download className="h-4 w-4 mr-1.5" /> Download Notification
                   </a>
                 </Button>
               </div>
             </div>
-            {/* <div className="mt-5 pt-5 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {HEADER_FACTS.map((f) => (
-                <div key={f.label} className="flex items-center gap-2.5">
-                  <span className="h-9 w-9 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                    <f.icon className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-xs text-muted-foreground">{f.label}</div>
-                    <div className="text-sm font-semibold truncate">{f.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>  */}
           </Card>
 
-          <Card className="p-5 lg:p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-display font-bold text-lg">Important Dates</h2>
-              {/* <button className="text-sm text-primary font-semibold inline-flex items-center gap-1 hover:underline">
-                View All Dates <ChevronRight className="h-4 w-4" />
-              </button> */}
-            </div>
-            <div className="relative">
-              <div className="absolute top-6 left-0 right-0 h-px bg-border" />
-              <div className="relative grid grid-cols-3 sm:grid-cols-6 gap-y-4">
-                {IMPORTANT_DATES.map((d) => (
-                  <div key={d.label} className="text-center px-1">
-                    <div className={cn("h-12 w-12 rounded-full grid place-items-center mx-auto", d.tint)}>
-                      <d.icon className="h-5 w-5" />
-                    </div>
-                    <div className="text-xs font-semibold mt-2.5 truncate">{d.label}</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{d.date}</div>
-                  </div>
-                ))}
+          {activeSection === "overview" && (
+            <Card className="p-5 lg:p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-display font-bold text-lg">Important Dates</h2>
+                {/* <button className="text-sm text-primary font-semibold inline-flex items-center gap-1 hover:underline">
+                  View All Dates <ChevronRight className="h-4 w-4" />
+                </button> */}
               </div>
-            </div>
-          </Card>
+              <div className="relative">
+                <div className="absolute top-6 left-0 right-0 h-px bg-border" />
+                <div className="relative grid grid-cols-3 sm:grid-cols-6 gap-y-4">
+                  {importantDates.map((d) => (
+                    <div key={d.label} className="text-center px-1">
+                      <div className={cn("h-12 w-12 rounded-full grid place-items-center mx-auto", d.tint)}>
+                        <d.icon className="h-5 w-5" />
+                      </div>
+                      <div className="text-xs font-semibold mt-2.5 truncate">{d.label}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{d.date}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
 
           {activeSection === "overview" && (
             <Card className="p-5 lg:p-6">
@@ -264,7 +270,7 @@ function TestSeriesDetailPage() {
                 </div>
                 {/* Same dummy info sheet for every exam until real per-series documents exist */}
                 <Button size="lg" className="h-auto py-2.5 px-5" asChild>
-                  <a href="/docs/ssc-exam-info.pdf" download={`${displayName}-info.pdf`}>
+                  <a href={notificationPdfUrl ?? "#"} target="_blank" rel="noopener noreferrer">
                     <Download className="h-5 w-5 mr-2 shrink-0" />
                     <span className="text-left leading-tight">
                       <span className="block text-sm font-semibold">Download All Details</span>
@@ -339,32 +345,31 @@ function TestSeriesDetailPage() {
           <Card className="p-4">
             <h3 className="font-display font-bold text-sm mb-3">Quick Links</h3>
             <ul className="space-y-1">
-              {QUICK_LINKS.map(({ label, icon: Icon }) => (
-                <li key={label}>
-                  <a href="#" className="flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors">
-                    <span className="flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 text-primary" />
-                      {label}
-                    </span>
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                  </a>
-                </li>
-              ))}
+              {QUICK_LINKS_CONFIG.map(({ label, icon: Icon, key }) => {
+                // notificationPdfUrl is already resolved; officialWebsite/applyLink are external URLs
+                const href = key === "notificationPdf"
+                  ? (notificationPdfUrl ?? "#")
+                  : (series?.[key] ?? "#");
+                return (
+                  <li key={label}>
+                    <a
+                      href={href}
+                      target={href !== "#" ? "_blank" : undefined}
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 text-primary" />
+                        {label}
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </Card>
 
-          {/* <Card className="p-4 border-4 border-blue-900">
-            <h3 className="font-display font-bold text-sm mb-3">Latest Updates</h3>
-            <ul className="space-y-3">
-              {LATEST_UPDATES.map((u, i) => (
-                <li key={i} className="border-b border-border last:border-0 pb-3 last:pb-0">
-                  <div className="text-sm font-semibold leading-snug">{displayName} {u.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{u.date}</div>
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" size="sm" className="w-full mt-4">View All Updates</Button>
-          </Card> */}
 
           <Card className="p-4">
             <h3 className="font-display font-bold text-sm mb-3">Recommended Mock Tests</h3>

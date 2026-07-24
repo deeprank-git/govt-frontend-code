@@ -28,8 +28,11 @@ export async function deleteMedia(id: string) {
 // get the origin the "url" field (a bare relative path) resolves against.
 export function resolveMediaUrl(url: string): string {
   if (!url) return url;
-  if (/^https?:\/\//.test(url)) return url;
   const base = (import.meta.env.VITE_API_BASE_URL as string) ?? "";
   const origin = base.replace(/\/api\/?$/, "");
-  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+  // If the stored URL is already absolute, strip its origin and re-resolve
+  // against the configured base so local dev always hits localhost instead of
+  // whatever host was set when the file was uploaded.
+  const path = /^https?:\/\//.test(url) ? new URL(url).pathname : url;
+  return `${origin}${path.startsWith("/") ? "" : "/"}${path}`;
 }
