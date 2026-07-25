@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import * as testAttemptService from "@/services/testAttemptService";
 import * as testService from "@/services/testService";
+import * as questionService from "@/services/questionService";
 import * as reportService from "@/services/reportService";
-import { unwrapItem } from "@/lib/api-unwrap";
+import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/utils";
 import {
@@ -62,12 +63,6 @@ function TestEngine() {
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
 
-  // Sections are structural metadata on the Test doc, not on individual
-  // Questions (Question has no section reference at all) — so membership is
-  // inferred by partitioning the flat, ordered question sequence using each
-  // section's no_of_questions, in array order. This matches how the backend
-  // exposes questions (by plain 0-based index) and is the only information
-  // available to make this assignment.
   const { data: testRes } = useQuery({
     queryKey: ["test-detail", testId],
     queryFn: () => testService.getTestById(testId),
@@ -75,28 +70,42 @@ function TestEngine() {
   const test = unwrapItem<any>(testRes);
   const sections: any[] = test?.sections ?? [];
 
-  const sectionRanges = useMemo(() => {
-    let cursor = 0;
-    return sections.map((s) => {
-      const start = cursor;
-      const end = cursor + (s.no_of_questions || 0) - 1;
-      cursor += s.no_of_questions || 0;
-      return { section: s, start, end };
+  // Each question now carries its own `section` (an ObjectId into
+  // test.sections[]) — fetch the full question list (index/order + section
+  // only, no answers) once so every question can be bucketed by its real
+  // section instead of guessing from the admin-configured no_of_questions
+  // counts. Sorted by `order` to line up with the attempt's 0-based index.
+  const { data: questionsRes } = useQuery({
+    queryKey: ["test-questions", testId],
+    queryFn: () => questionService.getQuestionsByTest(testId),
+  });
+  const orderedQuestions = useMemo(() => {
+    const list = unwrapList<any>(questionsRes);
+    return [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [questionsRes]);
+
+  const sectionBuckets = useMemo(() => {
+    if (sections.length === 0) return [];
+    const defaultSectionId = sections[0]._id;
+    const indicesBySection = new Map<string, number[]>(sections.map((s) => [s._id, []]));
+    orderedQuestions.forEach((q, i) => {
+      const raw = q?.section;
+      const sid = (typeof raw === "string" ? raw : raw?._id) ?? defaultSectionId;
+      const bucketId = indicesBySection.has(sid) ? sid : defaultSectionId;
+      indicesBySection.get(bucketId)!.push(i);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections.map((s) => s._id).join(",")]);
+    return sections.map((s) => ({ section: s, indices: indicesBySection.get(s._id) ?? [] }));
+  }, [sections, orderedQuestions]);
 
-  const activeSectionIdx = sectionRanges.findIndex((r) => index >= r.start && index <= r.end);
-  const activeRange = activeSectionIdx >= 0 ? sectionRanges[activeSectionIdx] : { start: 0, end: totalQuestions - 1 };
+  const activeSectionIdx = sectionBuckets.findIndex((b) => b.indices.includes(index));
+  const activeIndices = activeSectionIdx >= 0
+    ? sectionBuckets[activeSectionIdx].indices
+    : Array.from({ length: totalQuestions }, (_, k) => k);
 
-  const gotoSection = (rangeIdx: number) => {
-    const r = sectionRanges[rangeIdx];
-    if (!r) return;
-    let target = r.start;
-    for (let i = r.start; i <= r.end; i++) {
-      if (!answered.has(i)) { target = i; break; }
-    }
-    goto(target);
+  const gotoSection = (bucketIdx: number) => {
+    const b = sectionBuckets[bucketIdx];
+    if (!b || b.indices.length === 0) return;
+    goto(b.indices[0]);
   };
 
   // Start (or resume) the attempt
@@ -232,6 +241,16 @@ function TestEngine() {
     setSubmitting(true);
     try {
       await testAttemptService.submitTest(attemptId);
+      // "Marked for review" only ever exists as local UI state — there's no
+      // field for it anywhere in the backend (TestAttempt model or the
+      // result response), so it's handed to the results page this one time
+      // via sessionStorage. Only works right after this submit in the same
+      // browser session; results loaded later/elsewhere show no review marks.
+      try {
+        sessionStorage.setItem(`marked-${attemptId}`, JSON.stringify([...marked]));
+      } catch {
+        // sessionStorage unavailable (e.g. private browsing) — non-critical
+      }
       navigate({ to: "/result/$attemptId", params: { attemptId } });
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Could not submit test");
@@ -247,8 +266,6 @@ function TestEngine() {
   const mins = time !== null ? Math.floor(time / 60) : 0;
   const secs = time !== null ? time % 60 : 0;
   const answeredCount = answered.size;
-  const markedCount = marked.size;
-  const notVisited = totalQuestions - visited.size;
 
   const cellStatus = (i: number) => {
     if (answered.has(i) && marked.has(i)) return "ans-mark";
@@ -257,6 +274,13 @@ function TestEngine() {
     if (visited.has(i)) return "not-ans";
     return "not-vis";
   };
+
+  // Tally directly off cellStatus (one bucket per question) rather than the
+  // raw sets, so the legend counts never double-count a question that's both
+  // answered and marked — they always add up to totalQuestions, matching the
+  // grid 1:1.
+  const statusCounts = { "not-vis": 0, "not-ans": 0, ans: 0, mark: 0, "ans-mark": 0 };
+  for (let i = 0; i < totalQuestions; i++) statusCounts[cellStatus(i)]++;
   const cellClass: Record<string, string> = {
     ans: "bg-success text-white",
     "not-ans": "bg-orange-500 text-white",
@@ -310,20 +334,20 @@ function TestEngine() {
           <Card className="p-4 h-fit lg:order-first">
             <h4 className="font-display font-bold text-sm mb-3">Sections</h4>
             <div className="space-y-1">
-              {sectionRanges.map((r, i) => {
-                const count = r.end - r.start + 1;
-                const ansInSection = [...answered].filter((a) => a >= r.start && a <= r.end).length;
+              {sectionBuckets.map((b, i) => {
+                const count = b.indices.length;
+                const ansInSection = b.indices.filter((a) => answered.has(a)).length;
                 const active = i === activeSectionIdx;
                 return (
                   <button
-                    key={r.section._id ?? i}
+                    key={b.section._id ?? i}
                     onClick={() => gotoSection(i)}
                     className={cn(
                       "w-full flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors",
                       active ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted",
                     )}
                   >
-                    <span className="truncate">{r.section.name}</span>
+                    <span className="truncate">{b.section.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{ansInSection}/{count}</span>
                   </button>
                 );
@@ -334,7 +358,7 @@ function TestEngine() {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <span className="font-display font-semibold text-sm truncate">
-              {sections.length > 0 && activeSectionIdx >= 0 ? sectionRanges[activeSectionIdx].section.name : `Question ${index + 1} of ${totalQuestions}`}
+              {sections.length > 0 && activeSectionIdx >= 0 ? sectionBuckets[activeSectionIdx].section.name : `Question ${index + 1} of ${totalQuestions}`}
             </span>
             <div className="flex items-center gap-2 text-xs shrink-0">
               <button onClick={toggleMark} className="flex items-center gap-1 text-muted-foreground hover:text-primary">
@@ -387,17 +411,18 @@ function TestEngine() {
           <h4 className="font-display font-bold text-sm mb-3 text-primary border-b-2 border-primary inline-block pb-1.5">
             Questions
           </h4>
-          <div className="grid grid-cols-4 gap-2 text-[11px] mb-4">
-            <Legend color="bg-muted" label="Not Visited" value={notVisited} />
-            <Legend color="bg-orange-500" label="Not Answered" value={totalQuestions - answeredCount - notVisited} />
-            <Legend color="bg-success" label="Answered" value={answeredCount} />
-            <Legend color="bg-purple-500" label="Marked" value={markedCount} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2 text-[11px] mb-4">
+            <Legend color="bg-muted text-foreground" label="Not Visited" value={statusCounts["not-vis"]} />
+            <Legend color="bg-orange-500" label="Not Answered" value={statusCounts["not-ans"]} />
+            <Legend color="bg-success" label="Answered" value={statusCounts.ans} />
+            <Legend color="bg-purple-500" label="Marked" value={statusCounts.mark} />
+            <Legend color="bg-purple-500 ring-2 ring-success ring-offset-1" label="Answered & Marked" value={statusCounts["ans-mark"]} />
           </div>
           {sections.length > 0 && activeSectionIdx >= 0 && (
-            <div className="text-xs font-semibold mb-2">{sectionRanges[activeSectionIdx].section.name}</div>
+            <div className="text-xs font-semibold mb-2">{sectionBuckets[activeSectionIdx].section.name}</div>
           )}
           <div className="grid grid-cols-5 gap-2">
-            {Array.from({ length: activeRange.end - activeRange.start + 1 }, (_, k) => activeRange.start + k).map((i) => (
+            {activeIndices.map((i) => (
               <button
                 key={i}
                 onClick={() => goto(i)}
@@ -425,17 +450,17 @@ function TestEngine() {
                 <span className="text-right" title="Initial allotment from the section's duration field — not a live per-section timer">Time</span>
               </div>
               <div className="space-y-2">
-                {sectionRanges.map((r, i) => {
-                  const count = r.end - r.start + 1;
-                  const ansInSection = [...answered].filter((a) => a >= r.start && a <= r.end).length;
+                {sectionBuckets.map((b, i) => {
+                  const count = b.indices.length;
+                  const ansInSection = b.indices.filter((a) => answered.has(a)).length;
                   const pct = count ? Math.round((ansInSection / count) * 100) : 0;
                   return (
-                    <button key={r.section._id ?? i} onClick={() => gotoSection(i)} className="w-full grid grid-cols-[1fr_60px_50px] gap-2 items-center text-left">
-                      <span className="text-xs truncate">{r.section.name}</span>
+                    <button key={b.section._id ?? i} onClick={() => gotoSection(i)} className="w-full grid grid-cols-[1fr_60px_50px] gap-2 items-center text-left">
+                      <span className="text-xs truncate">{b.section.name}</span>
                       <span className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <span className="block h-full bg-primary" style={{ width: `${pct}%` }} />
                       </span>
-                      <span className="text-[11px] text-muted-foreground text-right">{r.section.duration}:00</span>
+                      <span className="text-[11px] text-muted-foreground text-right">{b.section.duration}:00</span>
                     </button>
                   );
                 })}

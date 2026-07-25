@@ -21,7 +21,6 @@ import * as testAttemptService from "@/services/testAttemptService";
 import * as currentAffairsService from "@/services/currentAffairsService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Dashboard,
@@ -108,7 +107,6 @@ function Stat({ icon: Icon, value, label, sub, tone = "primary" }: { icon: any; 
 function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [startingPyq, setStartingPyq] = useState<string | null>(null);
 
   const { data: attemptsRes } = useQuery({
     queryKey: ["my-attempts"],
@@ -131,17 +129,7 @@ function Dashboard() {
     .sort((a, b) => new Date(b.examDate ?? 0).getTime() - new Date(a.examDate ?? 0).getTime())
     .slice(0, 3);
 
-  const startPyq = async (testId: string) => {
-    setStartingPyq(testId);
-    try {
-      await testAttemptService.startTest(testId);
-      navigate({ to: "/test/$testId", params: { testId } });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Could not start test");
-    } finally {
-      setStartingPyq(null);
-    }
-  };
+  const startPyq = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
   const completed = attempts.filter((a) => a.status === "completed" || a.status === "auto-submitted");
   const attempted = attempts.length;
@@ -317,13 +305,8 @@ function Dashboard() {
                     {p.totalQuestions ?? 0} Qs · {p.totalMarks ?? 0} Marks · {p.duration ?? 0} Min
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={startingPyq === p._id}
-                  onClick={() => startPyq(p._id)}
-                >
-                  {startingPyq === p._id ? "Starting…" : "Start Test"}
+                <Button size="sm" variant="outline" onClick={() => startPyq(p._id)}>
+                  Start Test
                 </Button>
               </div>
             ))}

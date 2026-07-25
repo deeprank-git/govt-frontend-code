@@ -1,9 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ClipboardList, FileText, BookOpenCheck, TrendingUp, Database, RefreshCw } from "lucide-react";
+import { ClipboardList, Database } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,47 +11,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExamIcon } from "@/components/site/ExamIcon";
 import * as testService from "@/services/testService";
-import * as categoryService from "@/services/categoryService";
-import * as testAttemptService from "@/services/testAttemptService";
+import * as testSeriesService from "@/services/testSeriesService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/mock-tests")({
   component: MockTests,
 });
 
-const TABS = [
-  { value: "all", label: "All Tests" },
-  { value: "free", label: "Free Tests" },
-  { value: "paid", label: "Paid Tests" },
-];
-
 const PAGE_SIZE = 6;
-
-const ICONS = [
-  { bg: "bg-primary/10", fg: "text-primary", icon: FileText },
-  { bg: "bg-warning/10", fg: "text-warning", icon: BookOpenCheck },
-  { bg: "bg-success/10", fg: "text-success", icon: ClipboardList },
-  { bg: "bg-info/10", fg: "text-info", icon: TrendingUp },
-  { bg: "bg-purple-100", fg: "text-purple-600", icon: Database },
-];
 
 function MockTests() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("all");
-  const [category, setCategory] = useState("all");
-  const [duration, setDuration] = useState("all");
+  const [seriesFilter, setSeriesFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [starting, setStarting] = useState<string | null>(null);
 
-  const { data: categoriesRes } = useQuery({
-    queryKey: ["mt-categories"],
-    queryFn: () => categoryService.getCategories(),
+  const { data: seriesRes } = useQuery({
+    queryKey: ["mt-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const series = unwrapList<any>(seriesRes);
+  const seriesById = new Map(series.map((s) => [s._id, s]));
 
   const { data: testsRes, isLoading } = useQuery({
     queryKey: ["all-mock-tests"],
@@ -61,29 +43,17 @@ function MockTests() {
   const tests = unwrapList<any>(testsRes);
 
   const filtered = tests.filter((t) => {
-    if (tab === "free" && t.isPaid) return false;
-    if (tab === "paid" && !t.isPaid) return false;
-    if (category !== "all" && t.category !== category) return false;
-    if (duration === "short" && (t.duration ?? 0) > 60) return false;
-    if (duration === "medium" && ((t.duration ?? 0) <= 60 || (t.duration ?? 0) > 120)) return false;
-    if (duration === "long" && (t.duration ?? 0) <= 120) return false;
+    if (seriesFilter !== "all") {
+      const sId = t.testSeries?._id ?? t.testSeries;
+      if (sId !== seriesFilter) return false;
+    }
     return true;
   });
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const start = async (testId: string) => {
-    setStarting(testId);
-    try {
-      await testAttemptService.startTest(testId);
-      navigate({ to: "/test/$testId", params: { testId } });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Could not start test");
-    } finally {
-      setStarting(null);
-    }
-  };
+  const goToInstructions = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
   return (
     <div className="space-y-5">
@@ -98,59 +68,20 @@ function MockTests() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
           <Stat icon={ClipboardList} value={`${tests.length}`} label="Mock Tests Available" tone="primary" />
-          <Stat icon={Database} value={`${categories.length}`} label="Categories" tone="success" />
+          <Stat icon={Database} value={`${series.length}`} label="Exams" tone="success" />
         </div>
       </div>
 
-      <Tabs
-        value={tab}
-        onValueChange={(v) => {
-          setTab(v);
-          setPage(1);
-        }}
-      >
-        <TabsList className="bg-transparent p-0 h-auto flex flex-wrap gap-1 justify-start border-b border-border w-full rounded-none">
-          {TABS.map((t) => (
-            <TabsTrigger
-              key={t.value}
-              value={t.value}
-              className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
       <Card className="p-4">
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground">Select Category</label>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Duration</label>
-            <Select value={duration} onValueChange={(v) => { setDuration(v); setPage(1); }}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Durations</SelectItem>
-                <SelectItem value="short">≤ 60 min</SelectItem>
-                <SelectItem value="medium">60-120 min</SelectItem>
-                <SelectItem value="long">≥ 120 min</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end">
-            <Button variant="outline" className="w-full bg-primary/5 border-primary/30 text-primary" onClick={() => { setCategory("all"); setDuration("all"); }}>
-              <RefreshCw className="h-4 w-4 mr-1" /> Reset Filters
-            </Button>
-          </div>
+        <div className="max-w-xs">
+          <label className="text-xs text-muted-foreground">Select Exam</label>
+          <Select value={seriesFilter} onValueChange={(v) => { setSeriesFilter(v); setPage(1); }}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Exams</SelectItem>
+              {series.map((s) => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </Card>
 
@@ -172,24 +103,20 @@ function MockTests() {
           {!isLoading && pageItems.length === 0 && (
             <div className="px-5 py-10 text-center text-sm text-muted-foreground">No tests match your filters.</div>
           )}
-          {pageItems.map((t: any, i: number) => {
-            const icon = ICONS[i % ICONS.length];
-            const Icon = icon.icon;
+          {pageItems.map((t: any) => {
+            const seriesId = t.testSeries?._id ?? t.testSeries;
+            const testSeries = seriesById.get(seriesId);
+            const logoUrl = testSeries?.image ? mediaService.resolveMediaUrl(testSeries.image) : undefined;
             return (
               <div key={t._id} className="grid lg:grid-cols-[1fr_90px_70px_80px_140px] gap-3 px-5 py-4 items-center hover:bg-muted/30">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className={cn("h-10 w-10 rounded-lg grid place-items-center shrink-0", icon.bg)}
-                  >
-                    <Icon className={cn("h-5 w-5", icon.fg)} />
-                  </span>
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <ExamIcon name={testSeries?.name ?? t.title} className="h-10 w-10 shrink-0" />
+                  )}
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="font-semibold text-sm truncate">{t.title}</div>
-                      <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30 text-primary">
-                        {t.isPaid ? "Paid" : "Free"}
-                      </Badge>
-                    </div>
+                    <div className="font-semibold text-sm truncate">{t.title}</div>
                     <div className="text-xs text-muted-foreground truncate">{t.description ?? "Mock test"}</div>
                   </div>
                 </div>
@@ -197,9 +124,7 @@ function MockTests() {
                 <div className="text-center"><div className="font-semibold text-sm">{t.totalMarks}</div><div className="text-[10px] text-muted-foreground">Marks</div></div>
                 <div className="text-center"><div className="font-semibold text-sm">{t.duration}</div><div className="text-[10px] text-muted-foreground">Mins</div></div>
                 <div className="flex items-center gap-2 justify-center">
-                  <Button size="sm" onClick={() => start(t._id)} disabled={starting === t._id}>
-                    {starting === t._id ? "Starting…" : "Start Test"}
-                  </Button>
+                  <Button size="sm" onClick={() => goToInstructions(t._id)}>Start Test</Button>
                 </div>
               </div>
             );

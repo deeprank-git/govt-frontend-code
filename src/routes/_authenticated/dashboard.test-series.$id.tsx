@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
   LayoutGrid, ClipboardList, FileText,
   Trophy, ExternalLink, Globe, Download, ArrowLeft,
@@ -17,7 +16,6 @@ import { useSidebar } from "@/components/ui/sidebar";
 import * as mediaService from "@/services/mediaService";
 import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
-import * as testAttemptService from "@/services/testAttemptService";
 import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 
@@ -102,7 +100,6 @@ function TestSeriesDetailPage() {
   const { name, category, image, description } = Route.useSearch();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<(typeof NAV_ITEMS)[number]["id"]>("overview");
-  const [startingId, setStartingId] = useState<string | null>(null);
   const { setOpen } = useSidebar();
 
   // Collapse the main dashboard sidebar to icon-only while this page is
@@ -138,17 +135,7 @@ function TestSeriesDetailPage() {
     date: series?.importantDates?.[c.key] ?? "—",
   }));
 
-  const startTest = async (testId: string) => {
-    setStartingId(testId);
-    try {
-      await testAttemptService.startTest(testId);
-      navigate({ to: "/test/$testId", params: { testId } });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Could not start test");
-    } finally {
-      setStartingId(null);
-    }
-  };
+  const startTest = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
   return (
     <div className="space-y-4">
@@ -330,8 +317,8 @@ function TestSeriesDetailPage() {
                           <span>{t.duration} Minutes</span>
                         </div>
                       </div>
-                      <Button className="w-full" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
-                        {startingId === t._id ? "Starting…" : "Start Test →"}
+                      <Button className="w-full" onClick={() => startTest(t._id)}>
+                        Start Test →
                       </Button>
                     </div>
                   ))}
@@ -374,8 +361,8 @@ function TestSeriesDetailPage() {
                           <span>{t.duration} Mins</span>
                         </div>
                       </div>
-                      <Button className="w-full" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
-                        {startingId === t._id ? "Starting…" : "Start Now →"}
+                      <Button className="w-full" onClick={() => startTest(t._id)}>
+                        Start Now →
                       </Button>
                     </div>
                   ))}
@@ -431,8 +418,8 @@ function TestSeriesDetailPage() {
                       <div className="text-sm font-semibold truncate">{t.title}</div>
                       <div className="text-xs text-muted-foreground">{t.totalQuestions} Questions</div>
                     </div>
-                    <Button size="sm" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
-                      {startingId === t._id ? "…" : "Start Test"}
+                    <Button size="sm" onClick={() => startTest(t._id)}>
+                      Start Test
                     </Button>
                   </li>
                 ))}

@@ -20,9 +20,7 @@ import {
 } from "lucide-react";
 import * as testService from "@/services/testService";
 import * as testSeriesService from "@/services/testSeriesService";
-import * as testAttemptService from "@/services/testAttemptService";
 import { unwrapList } from "@/lib/api-unwrap";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/previous-year-papers")({
   component: PYQPage,
@@ -55,7 +53,6 @@ function PYQPage() {
   const [year, setYear] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
-  const [starting, setStarting] = useState<string | null>(null);
 
   const { data: seriesRes } = useQuery({
     queryKey: ["pyq-test-series"],
@@ -123,17 +120,7 @@ function PYQPage() {
     setPage(1);
   };
 
-  const start = async (testId: string) => {
-    setStarting(testId);
-    try {
-      await testAttemptService.startTest(testId);
-      navigate({ to: "/test/$testId", params: { testId } });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Could not start test");
-    } finally {
-      setStarting(null);
-    }
-  };
+  const start = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
   return (
     <div className="flex gap-6">
@@ -258,10 +245,9 @@ function PYQPage() {
                             size="sm"
                             variant="outline"
                             className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                            disabled={starting === p._id}
                             onClick={() => start(p._id)}
                           >
-                            <Play className="h-3.5 w-3.5 mr-1" /> {starting === p._id ? "Starting…" : "Start Test"}
+                            <Play className="h-3.5 w-3.5 mr-1" /> Start Test
                           </Button>
                           <Button
                             size="icon"

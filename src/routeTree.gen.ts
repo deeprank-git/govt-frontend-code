@@ -49,6 +49,7 @@ import { Route as AuthenticatedDashboardExamAlertsRouteImport } from './routes/_
 import { Route as AuthenticatedDashboardCurrentAffairsRouteImport } from './routes/_authenticated/dashboard.current-affairs'
 import { Route as AuthenticatedDashboardAttemptedTestsRouteImport } from './routes/_authenticated/dashboard.attempted-tests'
 import { Route as AuthenticatedDashboardAnswerKeyRouteImport } from './routes/_authenticated/dashboard.answer-key'
+import { Route as AuthenticatedTestTestIdInstructionsRouteImport } from './routes/_authenticated/test.$testId_.instructions'
 import { Route as AuthenticatedDashboardTestSeriesIdRouteImport } from './routes/_authenticated/dashboard.test-series.$id'
 import { Route as AuthenticatedDashboardCurrentAffairsIdRouteImport } from './routes/_authenticated/dashboard.current-affairs.$id'
 
@@ -266,6 +267,12 @@ const AuthenticatedDashboardAnswerKeyRoute =
     path: '/answer-key',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedTestTestIdInstructionsRoute =
+  AuthenticatedTestTestIdInstructionsRouteImport.update({
+    id: '/test/$testId_/instructions',
+    path: '/test/$testId/instructions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardTestSeriesIdRoute =
   AuthenticatedDashboardTestSeriesIdRouteImport.update({
     id: '/test-series/$id',
@@ -321,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
   '/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
+  '/test/$testId/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -362,6 +370,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
   '/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
+  '/test/$testId/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -407,6 +416,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
   '/_authenticated/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
+  '/_authenticated/test/$testId_/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/dashboard/current-affairs/$id'
     | '/dashboard/test-series/$id'
+    | '/test/$testId/instructions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/current-affairs/$id'
     | '/dashboard/test-series/$id'
+    | '/test/$testId/instructions'
   id:
     | '__root__'
     | '/'
@@ -537,6 +549,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/current-affairs/$id'
     | '/_authenticated/dashboard/test-series/$id'
+    | '/_authenticated/test/$testId_/instructions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -834,6 +847,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardAnswerKeyRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/test/$testId_/instructions': {
+      id: '/_authenticated/test/$testId_/instructions'
+      path: '/test/$testId/instructions'
+      fullPath: '/test/$testId/instructions'
+      preLoaderRoute: typeof AuthenticatedTestTestIdInstructionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard/test-series/$id': {
       id: '/_authenticated/dashboard/test-series/$id'
       path: '/test-series/$id'
@@ -910,6 +930,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRouteWithChildren
   AuthenticatedResultAttemptIdRoute: typeof AuthenticatedResultAttemptIdRoute
   AuthenticatedTestTestIdRoute: typeof AuthenticatedTestTestIdRoute
+  AuthenticatedTestTestIdInstructionsRoute: typeof AuthenticatedTestTestIdInstructionsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -917,6 +938,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRouteWithChildren,
   AuthenticatedResultAttemptIdRoute: AuthenticatedResultAttemptIdRoute,
   AuthenticatedTestTestIdRoute: AuthenticatedTestTestIdRoute,
+  AuthenticatedTestTestIdInstructionsRoute:
+    AuthenticatedTestTestIdInstructionsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
