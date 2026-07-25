@@ -1,10 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle, Flag } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle, Flag, FileText, Award, AlertTriangle, Pause, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,7 +72,8 @@ function TestEngine() {
     queryKey: ["test-detail", testId],
     queryFn: () => testService.getTestById(testId),
   });
-  const sections: any[] = unwrapItem<any>(testRes)?.sections ?? [];
+  const test = unwrapItem<any>(testRes);
+  const sections: any[] = test?.sections ?? [];
 
   const sectionRanges = useMemo(() => {
     let cursor = 0;
@@ -188,6 +188,20 @@ function TestEngine() {
     }
   };
 
+  // There's no API to un-save an answer (save-answer only accepts a real
+  // option index) — this clears the local selection so the UI reflects
+  // "no answer" right now, but if the user leaves without picking a new
+  // option, the previously saved answer will reappear on return since the
+  // server still has it on file. Best-effort until a real clear endpoint exists.
+  const clearResponse = () => {
+    setSelected(null);
+    setAnswered((a) => {
+      const n = new Set(a);
+      n.delete(index);
+      return n;
+    });
+  };
+
   const toggleMark = () => {
     setMarked((m) => {
       const n = new Set(m);
@@ -245,7 +259,7 @@ function TestEngine() {
   };
   const cellClass: Record<string, string> = {
     ans: "bg-success text-white",
-    "not-ans": "bg-destructive text-white",
+    "not-ans": "bg-orange-500 text-white",
     mark: "bg-purple-500 text-white",
     "ans-mark": "bg-purple-500 text-white ring-2 ring-success",
     "not-vis": "bg-muted text-foreground",
@@ -256,6 +270,12 @@ function TestEngine() {
       <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-4">
         <Logo compact />
         <div className="ml-auto flex items-center gap-2">
+          {/* No pause endpoint exists — the attempt keeps counting down
+              server-side regardless, so this stays disabled rather than
+              implying a pause that doesn't actually happen. */}
+          <Button size="sm" variant="outline" disabled title="Pausing isn't supported yet — the timer keeps running server-side">
+            <Pause className="h-4 w-4 mr-1.5" /> Pause Test
+          </Button>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive font-display font-bold tabular-nums">
             <Clock className="h-4 w-4" />
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
@@ -266,6 +286,24 @@ function TestEngine() {
           </Button>
         </div>
       </header>
+
+      {/* Test summary bar — title/stats come from the real Test doc */}
+      <div className="bg-background border-b border-border px-4 lg:px-6 py-3 flex items-center flex-wrap gap-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-8 w-8 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+            <FileText className="h-4 w-4" />
+          </span>
+          <span className="font-display font-bold text-sm truncate">{test?.title ?? "Mock Test"}</span>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground ml-auto flex-wrap">
+          <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {test?.totalQuestions ?? totalQuestions} Questions</span>
+          <span className="flex items-center gap-1.5"><Award className="h-3.5 w-3.5" /> {test?.totalMarks ?? "—"} Marks</span>
+          <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {test?.duration ?? "—"} Minutes</span>
+          {test?.negativeMarking && (
+            <span className="flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5" /> +{Number(test?.negativeMarksPerQuestion ?? 0).toFixed(2)} Negative</span>
+          )}
+        </div>
+      </div>
 
       <div className={cn("grid gap-4 p-4 lg:p-6", sections.length > 0 ? "lg:grid-cols-[220px_1fr_320px]" : "lg:grid-cols-[1fr_320px]")}>
         {sections.length > 0 && (
@@ -295,8 +333,10 @@ function TestEngine() {
         )}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <Badge variant="outline">Question {index + 1} of {totalQuestions}</Badge>
-            <div className="flex items-center gap-2 text-xs">
+            <span className="font-display font-semibold text-sm truncate">
+              {sections.length > 0 && activeSectionIdx >= 0 ? sectionRanges[activeSectionIdx].section.name : `Question ${index + 1} of ${totalQuestions}`}
+            </span>
+            <div className="flex items-center gap-2 text-xs shrink-0">
               <button onClick={toggleMark} className="flex items-center gap-1 text-muted-foreground hover:text-primary">
                 <Bookmark className={cn("h-4 w-4", marked.has(index) && "fill-primary text-primary")} />
                 Mark for Review
@@ -331,7 +371,12 @@ function TestEngine() {
             <Button variant="outline" onClick={() => goto(index - 1)} disabled={index === 0}>
               <ChevronLeft className="h-4 w-4 mr-1" />Previous
             </Button>
-            {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
+            <div className="flex items-center gap-3">
+              {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
+              <Button variant="outline" onClick={clearResponse} disabled={selected === null}>
+                <RotateCcw className="h-4 w-4 mr-1.5" /> Clear Response
+              </Button>
+            </div>
             <Button onClick={() => goto(index + 1)} disabled={index === totalQuestions - 1}>
               Save & Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
@@ -339,15 +384,18 @@ function TestEngine() {
         </Card>
 
         <Card className="p-4 h-fit">
-          <h4 className="font-display font-bold text-sm mb-3">
-            {sections.length > 0 && activeSectionIdx >= 0 ? `Questions — ${sectionRanges[activeSectionIdx].section.name}` : "Question Palette"}
+          <h4 className="font-display font-bold text-sm mb-3 text-primary border-b-2 border-primary inline-block pb-1.5">
+            Questions
           </h4>
           <div className="grid grid-cols-4 gap-2 text-[11px] mb-4">
             <Legend color="bg-muted" label="Not Visited" value={notVisited} />
-            <Legend color="bg-destructive" label="Not Answered" value={totalQuestions - answeredCount - notVisited} />
+            <Legend color="bg-orange-500" label="Not Answered" value={totalQuestions - answeredCount - notVisited} />
             <Legend color="bg-success" label="Answered" value={answeredCount} />
             <Legend color="bg-purple-500" label="Marked" value={markedCount} />
           </div>
+          {sections.length > 0 && activeSectionIdx >= 0 && (
+            <div className="text-xs font-semibold mb-2">{sectionRanges[activeSectionIdx].section.name}</div>
+          )}
           <div className="grid grid-cols-5 gap-2">
             {Array.from({ length: activeRange.end - activeRange.start + 1 }, (_, k) => activeRange.start + k).map((i) => (
               <button

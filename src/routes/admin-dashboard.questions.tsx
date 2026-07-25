@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { unwrapList } from "@/lib/api-unwrap";
+import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
 import * as testService from "@/services/testService";
 import * as questionService from "@/services/questionService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
@@ -51,6 +51,10 @@ interface CsvRow {
   marks: string;
   explanation: string;
   order: string;
+  // Optional — not yet a documented backend column (see
+  // GovtPrep-Backend-Workflow-and-Status.md §7), but passed through as-is
+  // if present so it starts working the moment the backend accepts it.
+  section?: string;
 }
 
 function QuestionsPage() {
@@ -62,8 +66,21 @@ function QuestionsPage() {
   const activeTestId = testId || tests[0]?._id || "";
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ questionText: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", marks: 1, negativeMarks: 0 });
+  const [form, setForm] = useState({ questionText: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", marks: 1, negativeMarks: 0, section: "" });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // The Tests *list* endpoint the test-selector uses above is a projected
+  // view that omits `sections` — fetch the full doc for whichever test is
+  // currently selected so the Section dropdown/column have real data.
+  const { data: activeTestRes } = useQuery({
+    queryKey: ["ad-test-detail", activeTestId],
+    enabled: !!activeTestId,
+    queryFn: () => testService.getTestById(activeTestId),
+  });
+  const activeTest = unwrapItem<any>(activeTestRes);
+  const sections: any[] = activeTest?.sections ?? [];
+  const sectionName = (sectionId: string | null | undefined) =>
+    sections.find((s) => s._id === sectionId)?.name ?? "—";
 
   // CSV state
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -79,7 +96,7 @@ function QuestionsPage() {
 
   const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(questions, ["questionText"]);
 
-  const openCreate = () => { setEditing(null); setForm({ questionText: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", marks: 1, negativeMarks: 0 }); setOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ questionText: "", options: ["", "", "", ""], correctAnswer: 0, explanation: "", marks: 1, negativeMarks: 0, section: "" }); setOpen(true); };
   const openEdit = (q: any) => {
     setEditing(q);
     setForm({
@@ -89,13 +106,22 @@ function QuestionsPage() {
       explanation: q.explanation ?? "",
       marks: q.marks ?? 1,
       negativeMarks: q.negativeMarks ?? 0,
+      // Pre-select if the API already returns a section (matched against this
+      // test's real sections); defaults to blank otherwise — the backend
+      // doesn't persist this field yet, so q.section just won't be present.
+      section: sections.some((s) => s._id === q.section) ? q.section : "",
     });
     setOpen(true);
   };
 
   const saveMut = useMutation({
     mutationFn: () => {
-      const payload = { ...form, options: form.options.map((text) => ({ text })), test: activeTestId };
+      const payload = {
+        ...form,
+        options: form.options.map((text) => ({ text })),
+        test: activeTestId,
+        section: form.section || undefined,
+      };
       return editing ? questionService.updateQuestion(editing._id, payload) : questionService.createQuestion(payload);
     },
     onSuccess: () => {
@@ -123,8 +149,17 @@ function QuestionsPage() {
       // Blank `test` cells default to the currently selected test — the
       // server itself requires the column populated on every row.
       const filled = rows.map((r) => ({ ...r, test: r.test || activeTestId }));
+      // `section` isn't a documented backend column yet — only include it if
+      // the admin's own CSV actually had values in it, so a plain upload
+      // (no section data) doesn't send an extra column the server doesn't
+      // expect.
+      const hasSection = filled.some((r) => r.section && r.section.trim());
       const csvText = Papa.unparse(filled, {
-        columns: ["test", "questionText", "option1", "option2", "option3", "option4", "correctAnswer", "marks", "explanation", "order"],
+        columns: [
+          "test", "questionText", "option1", "option2", "option3", "option4",
+          "correctAnswer", "marks", "explanation", "order",
+          ...(hasSection ? ["section"] : []),
+        ],
       });
       const blob = new Blob([csvText], { type: "text/csv" });
       return questionService.bulkCreateQuestions(blob, "questions-bulk-upload.csv");
@@ -180,6 +215,10 @@ function QuestionsPage() {
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvFile} />
         </div>
       </div>
+      <p className="text-xs text-muted-foreground mb-2">
+        Tip: the CSV can include an optional <code className="text-[11px] bg-muted px-1 py-0.5 rounded">section</code> column —
+        use the exact section name from the target test (e.g. "Quantitative Aptitude").
+      </p>
 
       {activeTestId && (
         <div className="mb-2">
@@ -194,13 +233,14 @@ function QuestionsPage() {
 
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Question</TableHead><TableHead>Correct</TableHead><TableHead>Marks</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Question</TableHead><TableHead>Section</TableHead><TableHead>Correct</TableHead><TableHead>Marks</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={4} />}
+          {isLoading && <LoadingRows colSpan={5} />}
           {!isLoading && paginated.map((q) => (
             <TableRow key={q._id}>
               <TableCell className="max-w-md truncate">{q.questionText}</TableCell>
+              <TableCell>{q.section ? sectionName(q.section) : "—"}</TableCell>
               <TableCell>{"ABCD"[q.correctAnswer] ?? "—"}</TableCell>
               <TableCell>{q.marks}</TableCell>
               <TableCell className="text-right space-x-2">
@@ -209,7 +249,7 @@ function QuestionsPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && questions.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">{activeTestId ? "No questions for this test yet." : "Select a test first."}</TableCell></TableRow>}
+          {!isLoading && questions.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">{activeTestId ? "No questions for this test yet." : "Select a test first."}</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -220,6 +260,18 @@ function QuestionsPage() {
           <DialogHeader><DialogTitle>{editing ? "Edit Question" : "New Question"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Question Text</Label><Textarea value={form.questionText} onChange={(e) => setForm({ ...form, questionText: e.target.value })} /></div>
+            {sections.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-[10px] font-normal text-muted-foreground">Section</Label>
+                <Select value={form.section || "none"} onValueChange={(v) => setForm({ ...form, section: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder="No section" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No section</SelectItem>
+                    {sections.map((s) => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {form.options.map((opt, i) => (
               <div key={i}>
                 <Label>Option {"ABCD"[i]}</Label>
