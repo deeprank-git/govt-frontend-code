@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import * as testService from "@/services/testService";
 import * as testSeriesService from "@/services/testSeriesService";
+import * as categoryService from "@/services/categoryService";
 import { unwrapList } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/_authenticated/dashboard/previous-year-papers")({
@@ -47,23 +48,59 @@ function formatCount(n: number) {
   return String(n);
 }
 
+// Pinned papers float to the top of the (already filtered) list and survive
+// a refresh — there's no backend field for this, so it's local-only,
+// namespaced to avoid clashing with any other app's localStorage keys.
+const PINNED_KEY = "gp_pinned_papers";
+
+function loadPinned(): string[] {
+  try {
+    const raw = localStorage.getItem(PINNED_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 function PYQPage() {
   const navigate = useNavigate();
+  const [category, setCategory] = useState<string | null>(null);
   const [testSeries, setTestSeries] = useState<string>("all");
   const [year, setYear] = useState<string>("all");
   const [page, setPage] = useState(1);
-  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [pinned, setPinned] = useState<string[]>(() => loadPinned());
+
+  const { data: categoriesRes } = useQuery({
+    queryKey: ["pyq-categories"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const categories = unwrapList<any>(categoriesRes);
+  // Default to SSC once categories load; falls back to the first real
+  // category if "SSC" isn't present rather than showing nothing.
+  const resolvedCategory = category
+    ?? categories.find((c) => String(c.name).trim().toLowerCase() === "ssc")?._id
+    ?? categories[0]?._id
+    ?? null;
 
   const { data: seriesRes } = useQuery({
     queryKey: ["pyq-test-series"],
     queryFn: () => testSeriesService.getTestSeries(),
   });
   const allSeries = unwrapList<any>(seriesRes);
+  const seriesById = useMemo(() => {
+    const map = new Map<string, any>();
+    allSeries.forEach((s) => map.set(s._id, s));
+    return map;
+  }, [allSeries]);
   const seriesNameById = useMemo(() => {
     const map = new Map<string, string>();
     allSeries.forEach((s) => map.set(s._id, s.name));
     return map;
   }, [allSeries]);
+  const seriesInCategory = useMemo(
+    () => allSeries.filter((s) => (s.category?._id ?? s.category) === resolvedCategory),
+    [allSeries, resolvedCategory],
+  );
 
   const { data: testsRes, isLoading } = useQuery({
     queryKey: ["pyq-tests"],
@@ -71,8 +108,16 @@ function PYQPage() {
   });
   const pyqs = unwrapList<any>(testsRes);
 
-  const toggleBookmark = (id: string) => {
-    setBookmarks((b) => (b.includes(id) ? b.filter((x) => x !== id) : [...b, id]));
+  const togglePin = (id: string) => {
+    setPinned((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [id, ...prev];
+      try {
+        localStorage.setItem(PINNED_KEY, JSON.stringify(next));
+      } catch {
+        // localStorage unavailable (e.g. private browsing) — non-critical
+      }
+      return next;
+    });
   };
 
   const years = useMemo(() => {
@@ -86,13 +131,27 @@ function PYQPage() {
   }, [pyqs]);
 
   const filtered = useMemo(() => {
-    return pyqs.filter((p) => {
-      if (testSeries !== "all" && p.testSeries !== testSeries) return false;
+    const base = pyqs.filter((p) => {
+      const sId = p.testSeries?._id ?? p.testSeries;
+      const s = seriesById.get(sId);
+      const catId = s?.category?._id ?? s?.category;
+      if (resolvedCategory && catId !== resolvedCategory) return false;
+      if (testSeries !== "all" && sId !== testSeries) return false;
       if (year !== "all" && p.examDate && String(new Date(p.examDate).getFullYear()) !== year) return false;
       if (year !== "all" && !p.examDate) return false;
       return true;
     });
-  }, [pyqs, testSeries, year]);
+    // Stable sort — pinned papers float above unpinned, most-recently-pinned
+    // first among pinned, unpinned keep their existing relative order.
+    return [...base].sort((a, b) => {
+      const ai = pinned.indexOf(a._id);
+      const bi = pinned.indexOf(b._id);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return 0;
+    });
+  }, [pyqs, seriesById, resolvedCategory, testSeries, year, pinned]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -115,6 +174,7 @@ function PYQPage() {
   ];
 
   const resetFilters = () => {
+    setCategory(null);
     setTestSeries("all");
     setYear("all");
     setPage(1);
@@ -162,9 +222,11 @@ function PYQPage() {
 
         {/* Filters */}
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <Filter label="Select Category" value={resolvedCategory ?? ""} onChange={(v) => { setCategory(v); setTestSeries("all"); setPage(1); }}
+              options={categories.map((c) => ({ v: c._id, l: c.name }))} />
             <Filter label="Select Test Series" value={testSeries} onChange={(v) => { setTestSeries(v); setPage(1); }}
-              options={[{ v: "all", l: "All Test Series" }, ...allSeries.map((s) => ({ v: s._id, l: s.name }))]} />
+              options={[{ v: "all", l: "All Test Series" }, ...seriesInCategory.map((s) => ({ v: s._id, l: s.name }))]} />
             <Filter label="Select Year" value={year} onChange={(v) => { setYear(v); setPage(1); }}
               options={[{ v: "all", l: "All Years" }, ...years.map(([y]) => ({ v: String(y), l: String(y) }))]} />
             <Button variant="outline" onClick={resetFilters} className="text-primary border-primary/40 hover:bg-primary/5">
@@ -198,7 +260,7 @@ function PYQPage() {
                 )}
                 {!isLoading && paged.map((p, i) => {
                   const tint = ICON_TINTS[i % ICON_TINTS.length];
-                  const bookmarked = bookmarks.includes(p._id);
+                  const isPinned = pinned.includes(p._id);
                   const paperYear = p.examDate ? new Date(p.examDate).getFullYear() : null;
                   const isLatest = latestYear !== null && paperYear === latestYear;
                   const seriesName = seriesNameById.get(p.testSeries);
@@ -253,10 +315,11 @@ function PYQPage() {
                             size="icon"
                             variant="outline"
                             className="h-9 w-9"
-                            onClick={() => toggleBookmark(p._id)}
-                            aria-label="Bookmark"
+                            onClick={() => togglePin(p._id)}
+                            aria-label={isPinned ? "Unpin" : "Pin to top"}
+                            title={isPinned ? "Unpin" : "Pin to top"}
                           >
-                            <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-primary text-primary" : ""}`} />
+                            <Bookmark className={`h-4 w-4 ${isPinned ? "fill-primary text-primary" : ""}`} />
                           </Button>
                         </div>
                       </td>
