@@ -38,6 +38,56 @@ const ALERTS = [
   { id: "a1", title: "SSC CGL Tier 2 Admit Card Released", alert_date: new Date().toISOString() },
 ];
 
+const WEEKDAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function toDayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getActiveDayKeys(completedAttempts: { submittedAt?: string }[]): Set<string> {
+  const keys = new Set<string>();
+  for (const a of completedAttempts) {
+    if (a.submittedAt) keys.add(toDayKey(new Date(a.submittedAt)));
+  }
+  return keys;
+}
+
+function computeStreak(activeDays: Set<string>, today: Date): number {
+  const todayKey = toDayKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = toDayKey(yesterday);
+
+  let cursor: Date;
+  if (activeDays.has(todayKey)) {
+    cursor = new Date(today);
+  } else if (activeDays.has(yesterdayKey)) {
+    cursor = new Date(yesterday);
+  } else {
+    return 0;
+  }
+
+  let streak = 0;
+  while (activeDays.has(toDayKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function getLastSevenDays(today: Date): Date[] {
+  const days: Date[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push(d);
+  }
+  return days;
+}
+
 function Stat({ icon: Icon, value, label, sub, tone = "primary" }: { icon: any; value: string; label: string; sub?: string; tone?: string }) {
   return (
     <Card className="p-4">
@@ -72,6 +122,11 @@ function Dashboard() {
 
   const completed = attempts.filter((a) => a.status === "completed" || a.status === "auto-submitted");
   const attempted = attempts.length;
+  const today = new Date();
+  const activeDayKeys = getActiveDayKeys(completed);
+  const streak = computeStreak(activeDayKeys, today);
+  const last7Days = getLastSevenDays(today);
+  const todayKey = toDayKey(today);
   const pct = (a: any) => (a.test?.totalMarks ? (Number(a.score) / Number(a.test.totalMarks)) * 100 : 0);
   const avgScore = completed.length
     ? Math.round((completed.reduce((s, a) => s + pct(a), 0) / completed.length) * 10) / 10
@@ -104,18 +159,29 @@ function Dashboard() {
         <Card className="px-4 py-2.5 flex items-center gap-3">
           <Flame className="h-5 w-5 text-warning" />
           <div>
-            <div className="font-display font-bold text-xl leading-none">7</div>
+            <div className="font-display font-bold text-xl leading-none">{streak}</div>
             <div className="text-[11px] text-muted-foreground">Day Streak</div>
           </div>
           <div className="flex gap-1 ml-3">
-            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-              <span
-                key={i}
-                className="h-6 w-6 grid place-items-center text-[10px] rounded-full bg-success/15 text-success-foreground"
-              >
-                {d}
-              </span>
-            ))}
+            {last7Days.map((d) => {
+              const key = toDayKey(d);
+              const isActive = activeDayKeys.has(key);
+              const isToday = key === todayKey;
+              return (
+                <span
+                  key={key}
+                  className={`h-6 w-6 grid place-items-center text-[10px] rounded-full ${
+                    isActive
+                      ? "bg-success/15 text-success-foreground"
+                      : isToday
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-muted/40 text-muted-foreground/60"
+                  }`}
+                >
+                  {WEEKDAY_LETTERS[d.getDay()]}
+                </span>
+              );
+            })}
           </div>
         </Card>
       </div>
