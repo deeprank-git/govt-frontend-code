@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   LayoutGrid, ClipboardList, FileText,
   Trophy, ExternalLink, Globe, Bell, Download, ArrowLeft,
@@ -9,9 +11,13 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ExamIcon } from "@/components/site/ExamIcon";
 import { useSidebar } from "@/components/ui/sidebar";
 import * as mediaService from "@/services/mediaService";
+import * as testService from "@/services/testService";
+import * as testAttemptService from "@/services/testAttemptService";
+import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
@@ -28,29 +34,15 @@ export const Route = createFileRoute("/_authenticated/dashboard/test-series/$id"
   component: TestSeriesDetailPage,
 });
 
-// No backend endpoint exists yet for per-series mock tests / previous year
-// papers — this page is fully static/dummy content until that resource is
-// added to the API. Only the header (name/category) reflects the real
-// TestSeries the user clicked, passed in via search params.
+// Mock Test / Previous Year Question Paper now list real Tests for this
+// series (there's no backend flag distinguishing "mock" from "PYQ", so both
+// tabs show the same real list). Everything else below (dates, eligibility,
+// pattern, syllabus, quick links) has no backing API yet and stays static.
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "mocks", label: "Mock Test", icon: ClipboardList },
   { id: "pyp", label: "Previous Year Question Paper", icon: FileText },
 ] as const;
-
-const FULL_MOCK_TESTS = [
-  { id: "m1", title: "Full Mock Test 1", questions: 100, marks: 200, duration: 60, attempts: "15.2K" },
-  { id: "m2", title: "Full Mock Test 2", questions: 100, marks: 200, duration: 60, attempts: "9.8K" },
-  { id: "m3", title: "Full Mock Test 3", questions: 100, marks: 200, duration: 60, attempts: "7.1K" },
-  { id: "m4", title: "Full Mock Test 4", questions: 100, marks: 200, duration: 60, attempts: "5.6K" },
-];
-
-const PYQ_PAPERS = [
-  { id: "p1", title: "12 Sep 2025, Shift 1", date: "12 Sep 2025 (Fri)", questions: 100, marks: 200, duration: 60 },
-  { id: "p2", title: "12 Sep 2025, Shift 2", date: "12 Sep 2025 (Fri)", questions: 100, marks: 200, duration: 60 },
-  { id: "p3", title: "12 Sep 2025, Shift 3", date: "12 Sep 2025 (Fri)", questions: 100, marks: 200, duration: 60 },
-  { id: "p4", title: "13 Sep 2025, Shift 1", date: "13 Sep 2025 (Sat)", questions: 100, marks: 200, duration: 60 },
-];
 
 const IMPORTANT_DATES = [
   { label: "Notification", date: "09 May 2025", icon: CheckCircle2, tint: "bg-emerald-50 text-emerald-600" },
@@ -107,16 +99,12 @@ const LATEST_UPDATES = [
   { title: "Tier 1 Exam Date Announced", date: "24 Apr 2025" },
 ];
 
-const RECOMMENDED_MOCKS = [
-  { id: "r1", title: "Tier 1 Full Mock Test", questions: 100 },
-  { id: "r2", title: "Previous Year Test", questions: 100 },
-  { id: "r3", title: "Quantitative Aptitude", questions: 25 },
-];
-
 function TestSeriesDetailPage() {
+  const { id } = Route.useParams();
   const { name, category, image, description } = Route.useSearch();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<(typeof NAV_ITEMS)[number]["id"]>("overview");
+  const [startingId, setStartingId] = useState<string | null>(null);
   const { setOpen } = useSidebar();
 
   // Collapse the main dashboard sidebar to icon-only while this page is
@@ -128,9 +116,26 @@ function TestSeriesDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const { data: testsRes, isLoading: testsLoading } = useQuery({
+    queryKey: ["series-tests", id],
+    queryFn: () => testService.getTests({ testSeries: id }),
+  });
+  const tests = unwrapList<any>(testsRes);
+
   const displayName = name ?? "Test Series";
   const logoUrl = image ? mediaService.resolveMediaUrl(image) : undefined;
-  const goToTests = () => navigate({ to: "/dashboard/mock-tests" });
+
+  const startTest = async (testId: string) => {
+    setStartingId(testId);
+    try {
+      await testAttemptService.startTest(testId);
+      navigate({ to: "/test/$testId", params: { testId } });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not start test");
+    } finally {
+      setStartingId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -299,37 +304,53 @@ function TestSeriesDetailPage() {
           {activeSection === "mocks" && (
             <Card className="p-5 lg:p-6">
               <h2 className="font-display font-bold text-lg mb-4">Full Length Mock Tests</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {FULL_MOCK_TESTS.map((t) => (
-                  <div key={t.id} className="rounded-lg border border-border p-4">
-                    <Badge variant="outline" className="text-[10px] mb-2">FULL MOCK</Badge>
-                    <div className="font-semibold text-sm">{displayName} {t.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{t.questions} Questions · {t.marks} Marks</div>
-                    <div className="text-xs text-muted-foreground">{t.duration} Minutes · {t.attempts} Attempts</div>
-                    <Button size="sm" className="w-full mt-3" onClick={goToTests}>Start Test →</Button>
-                  </div>
-                ))}
-              </div>
+              {testsLoading ? (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
+                </div>
+              ) : tests.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No tests in this series yet.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {tests.map((t) => (
+                    <div key={t._id} className="rounded-lg border border-border p-4">
+                      <Badge variant="outline" className="text-[10px] mb-2">FULL MOCK</Badge>
+                      <div className="font-semibold text-sm">{t.title}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{t.totalQuestions} Questions · {t.totalMarks} Marks</div>
+                      <div className="text-xs text-muted-foreground">{t.duration} Minutes</div>
+                      <Button size="sm" className="w-full mt-3" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
+                        {startingId === t._id ? "Starting…" : "Start Test →"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           )}
 
           {activeSection === "pyp" && (
             <Card className="p-5 lg:p-6">
               <h2 className="font-display font-bold text-lg mb-4">Previous Year Question Papers</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {PYQ_PAPERS.map((p) => (
-                  <div key={p.id} className="rounded-lg border border-border p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">{p.date}</span>
-                      <Badge className="bg-success/15 text-success-foreground border-transparent text-[10px]">FREE</Badge>
+              {testsLoading ? (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+                </div>
+              ) : tests.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">No papers in this series yet.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {tests.map((t) => (
+                    <div key={t._id} className="rounded-lg border border-border p-4">
+                      <div className="font-semibold text-sm">{t.title}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{t.totalQuestions} Questions · {t.totalMarks} Marks</div>
+                      <div className="text-xs text-muted-foreground">{t.duration} Mins</div>
+                      <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
+                        {startingId === t._id ? "Starting…" : "Start Now"}
+                      </Button>
                     </div>
-                    <div className="font-semibold text-sm mt-1">{displayName} — {p.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{p.questions} Questions · {p.marks} Marks</div>
-                    <div className="text-xs text-muted-foreground">{p.duration} Mins</div>
-                    <Button size="sm" variant="outline" className="w-full mt-3" onClick={goToTests}>Start Now</Button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
           )}
         </div>
@@ -368,17 +389,27 @@ function TestSeriesDetailPage() {
 
           <Card className="p-4">
             <h3 className="font-display font-bold text-sm mb-3">Recommended Mock Tests</h3>
-            <ul className="space-y-3">
-              {RECOMMENDED_MOCKS.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-2 border-b border-border last:border-0 pb-3 last:pb-0">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold truncate">{displayName} {t.title}</div>
-                    <div className="text-xs text-muted-foreground">{t.questions} Questions</div>
-                  </div>
-                  <Button size="sm" onClick={goToTests}>Start Test</Button>
-                </li>
-              ))}
-            </ul>
+            {testsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-md" />)}
+              </div>
+            ) : tests.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No tests yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {tests.slice(0, 3).map((t) => (
+                  <li key={t._id} className="flex items-center justify-between gap-2 border-b border-border last:border-0 pb-3 last:pb-0">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold truncate">{t.title}</div>
+                      <div className="text-xs text-muted-foreground">{t.totalQuestions} Questions</div>
+                    </div>
+                    <Button size="sm" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
+                      {startingId === t._id ? "…" : "Start Test"}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => setActiveSection("mocks")}>
               View All Mock Tests
             </Button>

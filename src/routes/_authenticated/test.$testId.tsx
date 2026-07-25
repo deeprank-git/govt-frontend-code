@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import * as testAttemptService from "@/services/testAttemptService";
+import * as testService from "@/services/testService";
 import * as reportService from "@/services/reportService";
 import { unwrapItem } from "@/lib/api-unwrap";
 import { Logo } from "@/components/site/Logo";
@@ -60,6 +62,42 @@ function TestEngine() {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
+
+  // Sections are structural metadata on the Test doc, not on individual
+  // Questions (Question has no section reference at all) — so membership is
+  // inferred by partitioning the flat, ordered question sequence using each
+  // section's no_of_questions, in array order. This matches how the backend
+  // exposes questions (by plain 0-based index) and is the only information
+  // available to make this assignment.
+  const { data: testRes } = useQuery({
+    queryKey: ["test-detail", testId],
+    queryFn: () => testService.getTestById(testId),
+  });
+  const sections: any[] = unwrapItem<any>(testRes)?.sections ?? [];
+
+  const sectionRanges = useMemo(() => {
+    let cursor = 0;
+    return sections.map((s) => {
+      const start = cursor;
+      const end = cursor + (s.no_of_questions || 0) - 1;
+      cursor += s.no_of_questions || 0;
+      return { section: s, start, end };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections.map((s) => s._id).join(",")]);
+
+  const activeSectionIdx = sectionRanges.findIndex((r) => index >= r.start && index <= r.end);
+  const activeRange = activeSectionIdx >= 0 ? sectionRanges[activeSectionIdx] : { start: 0, end: totalQuestions - 1 };
+
+  const gotoSection = (rangeIdx: number) => {
+    const r = sectionRanges[rangeIdx];
+    if (!r) return;
+    let target = r.start;
+    for (let i = r.start; i <= r.end; i++) {
+      if (!answered.has(i)) { target = i; break; }
+    }
+    goto(target);
+  };
 
   // Start (or resume) the attempt
   useEffect(() => {
@@ -229,7 +267,32 @@ function TestEngine() {
         </div>
       </header>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-4 p-4 lg:p-6">
+      <div className={cn("grid gap-4 p-4 lg:p-6", sections.length > 0 ? "lg:grid-cols-[220px_1fr_320px]" : "lg:grid-cols-[1fr_320px]")}>
+        {sections.length > 0 && (
+          <Card className="p-4 h-fit lg:order-first">
+            <h4 className="font-display font-bold text-sm mb-3">Sections</h4>
+            <div className="space-y-1">
+              {sectionRanges.map((r, i) => {
+                const count = r.end - r.start + 1;
+                const ansInSection = [...answered].filter((a) => a >= r.start && a <= r.end).length;
+                const active = i === activeSectionIdx;
+                return (
+                  <button
+                    key={r.section._id ?? i}
+                    onClick={() => gotoSection(i)}
+                    className={cn(
+                      "w-full flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors",
+                      active ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted",
+                    )}
+                  >
+                    <span className="truncate">{r.section.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{ansInSection}/{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        )}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <Badge variant="outline">Question {index + 1} of {totalQuestions}</Badge>
@@ -276,7 +339,9 @@ function TestEngine() {
         </Card>
 
         <Card className="p-4 h-fit">
-          <h4 className="font-display font-bold text-sm mb-3">Question Palette</h4>
+          <h4 className="font-display font-bold text-sm mb-3">
+            {sections.length > 0 && activeSectionIdx >= 0 ? `Questions — ${sectionRanges[activeSectionIdx].section.name}` : "Question Palette"}
+          </h4>
           <div className="grid grid-cols-4 gap-2 text-[11px] mb-4">
             <Legend color="bg-muted" label="Not Visited" value={notVisited} />
             <Legend color="bg-destructive" label="Not Answered" value={totalQuestions - answeredCount - notVisited} />
@@ -284,7 +349,7 @@ function TestEngine() {
             <Legend color="bg-purple-500" label="Marked" value={markedCount} />
           </div>
           <div className="grid grid-cols-5 gap-2">
-            {Array.from({ length: totalQuestions }).map((_, i) => (
+            {Array.from({ length: activeRange.end - activeRange.start + 1 }, (_, k) => activeRange.start + k).map((i) => (
               <button
                 key={i}
                 onClick={() => goto(i)}
@@ -298,6 +363,38 @@ function TestEngine() {
               </button>
             ))}
           </div>
+
+          {sections.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <h4 className="font-display font-bold text-sm mb-3">Quick Navigation</h4>
+              <div className="grid grid-cols-[1fr_60px_50px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase mb-1.5">
+                <span>Section</span>
+                <span>Progress</span>
+                {/* Only the overall attempt has a server-enforced expiry — this
+                    per-section value is the section's configured duration
+                    shown as a static initial allotment, not a live countdown.
+                    Confirm with backend before treating it as authoritative. */}
+                <span className="text-right" title="Initial allotment from the section's duration field — not a live per-section timer">Time</span>
+              </div>
+              <div className="space-y-2">
+                {sectionRanges.map((r, i) => {
+                  const count = r.end - r.start + 1;
+                  const ansInSection = [...answered].filter((a) => a >= r.start && a <= r.end).length;
+                  const pct = count ? Math.round((ansInSection / count) * 100) : 0;
+                  return (
+                    <button key={r.section._id ?? i} onClick={() => gotoSection(i)} className="w-full grid grid-cols-[1fr_60px_50px] gap-2 items-center text-left">
+                      <span className="text-xs truncate">{r.section.name}</span>
+                      <span className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <span className="block h-full bg-primary" style={{ width: `${pct}%` }} />
+                      </span>
+                      <span className="text-[11px] text-muted-foreground text-right">{r.section.duration}:00</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <Button className="w-full mt-4" variant="outline" onClick={() => setConfirmOpen(true)}>
             Submit Test
           </Button>

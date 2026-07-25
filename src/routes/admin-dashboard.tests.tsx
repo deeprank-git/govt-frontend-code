@@ -8,9 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { unwrapList } from "@/lib/api-unwrap";
+import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
@@ -23,7 +23,10 @@ export const Route = createFileRoute("/admin-dashboard/tests")({
   component: TestsPage,
 });
 
-type SectionForm = { name: string; no_of_questions: number; no_of_marks: number; duration: number };
+// _id is only present for sections that already exist on the server — sending
+// it back on PATCH preserves that subdocument's identity instead of Mongoose
+// minting a new one; freshly-added rows omit it so the server assigns one.
+type SectionForm = { _id?: string; name: string; no_of_questions: number; no_of_marks: number; duration: number };
 const emptySection: SectionForm = { name: "", no_of_questions: 0, no_of_marks: 0, duration: 0 };
 
 function TestsPage() {
@@ -37,6 +40,7 @@ function TestsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   const [form, setForm] = useState({
     title: "", category: "", testSeries: "", duration: 60,
     isPublished: false, isPaid: false,
@@ -62,20 +66,59 @@ function TestsPage() {
       isPublished: !!t.isPublished,
       isPaid: !!t.isPaid,
     });
-    setSections(
-      (t.sections ?? []).map((s: any) => ({
-        name: s.name ?? "",
-        no_of_questions: s.no_of_questions ?? 0,
-        no_of_marks: s.no_of_marks ?? 0,
-        duration: s.duration ?? 0,
-      })),
-    );
+    setSections([]);
     setOpen(true);
+    // The list row (used above) is a projection that omits `sections` (and
+    // may be stale on totalQuestions/totalMarks) — fetch the full doc for
+    // the edit form specifically.
+    setSectionsLoading(true);
+    testService
+      .getTestById(t._id)
+      .then((res) => {
+        const full = unwrapItem<any>(res) ?? t;
+        setEditing(full);
+        setSections(
+          (full.sections ?? []).map((s: any) => ({
+            _id: s._id,
+            name: s.name ?? "",
+            no_of_questions: s.no_of_questions ?? 0,
+            no_of_marks: s.no_of_marks ?? 0,
+            duration: s.duration ?? 0,
+          })),
+        );
+      })
+      .catch(() => toast.error("Could not load section details"))
+      .finally(() => setSectionsLoading(false));
+  };
+
+  const namedSections = sections.filter((s) => s.name.trim());
+  const sectionsInvalid = namedSections.some(
+    (s) => s.no_of_questions <= 0 || s.no_of_marks <= 0 || s.duration <= 0,
+  );
+  const sectionQuestionTotal = namedSections.reduce((sum, s) => sum + (s.no_of_questions || 0), 0);
+  const sectionMarksTotal = namedSections.reduce((sum, s) => sum + (s.no_of_marks || 0), 0);
+
+  const moveSection = (i: number, dir: -1 | 1) => {
+    const target = i + dir;
+    if (target < 0 || target >= sections.length) return;
+    const next = [...sections];
+    [next[i], next[target]] = [next[target], next[i]];
+    setSections(next);
   };
 
   const saveMut = useMutation({
     mutationFn: () => {
-      const payload = { ...form, testSeries: form.testSeries || undefined, sections: sections.filter((s) => s.name.trim()) };
+      const payload = {
+        ...form,
+        testSeries: form.testSeries || undefined,
+        sections: namedSections.map((s) => ({
+          ...(s._id ? { _id: s._id } : {}),
+          name: s.name.trim(),
+          no_of_questions: Number(s.no_of_questions),
+          no_of_marks: Number(s.no_of_marks),
+          duration: Number(s.duration),
+        })),
+      };
       return editing ? testService.updateTest(editing._id, payload) : testService.createTest(payload);
     },
     onSuccess: () => {
@@ -168,47 +211,90 @@ function TestsPage() {
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Section
                 </Button>
               </div>
-              <div className="space-y-2">
-                {sections.map((s, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_80px_80px_80px_auto] gap-2 items-center">
-                    <Input
-                      placeholder="Section name (e.g. Quant)"
-                      value={s.name}
-                      onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x))}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Qs"
-                      title="Number of questions"
-                      value={s.no_of_questions}
-                      onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, no_of_questions: Number(e.target.value) } : x))}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Marks"
-                      title="Total marks"
-                      value={s.no_of_marks}
-                      onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, no_of_marks: Number(e.target.value) } : x))}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Min"
-                      title="Duration in minutes"
-                      value={s.duration}
-                      onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, duration: Number(e.target.value) } : x))}
-                    />
-                    <Button type="button" size="icon" variant="ghost" onClick={() => setSections(sections.filter((_, xi) => xi !== i))}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {sections.length === 0 && <p className="text-xs text-muted-foreground">No sections added yet.</p>}
-              </div>
+              {sectionsLoading ? (
+                <p className="text-xs text-muted-foreground">Loading sections…</p>
+              ) : (
+                <div className="space-y-2">
+                  {sections.map((s, i) => {
+                    const named = !!s.name.trim();
+                    const rowInvalid = named && (s.no_of_questions <= 0 || s.no_of_marks <= 0 || s.duration <= 0);
+                    return (
+                      <div key={s._id ?? i} className="rounded-md border border-border p-2">
+                        <div className="flex flex-wrap items-end gap-2">
+                          <div className="flex flex-col gap-1 flex-1 min-w-[160px]">
+                            <Label className="text-[10px] font-normal text-muted-foreground">Section Name</Label>
+                            <Input
+                              placeholder="e.g. Quant"
+                              value={s.name}
+                              onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x))}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 w-24">
+                            <Label className="text-[10px] font-normal text-muted-foreground">No. of Questions</Label>
+                            <Input
+                              type="number"
+                              value={s.no_of_questions}
+                              onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, no_of_questions: Number(e.target.value) } : x))}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 w-24">
+                            <Label className="text-[10px] font-normal text-muted-foreground">Marks</Label>
+                            <Input
+                              type="number"
+                              value={s.no_of_marks}
+                              onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, no_of_marks: Number(e.target.value) } : x))}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 w-28">
+                            <Label className="text-[10px] font-normal text-muted-foreground">Duration (min)</Label>
+                            <Input
+                              type="number"
+                              value={s.duration}
+                              onChange={(e) => setSections(sections.map((x, xi) => xi === i ? { ...x, duration: Number(e.target.value) } : x))}
+                            />
+                          </div>
+                          <div className="flex flex-col shrink-0">
+                            <Button type="button" size="icon" variant="ghost" className="h-4 w-6" disabled={i === 0} onClick={() => moveSection(i, -1)}>
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button type="button" size="icon" variant="ghost" className="h-4 w-6" disabled={i === sections.length - 1} onClick={() => moveSection(i, 1)}>
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <Button type="button" size="icon" variant="ghost" className="shrink-0" onClick={() => setSections(sections.filter((_, xi) => xi !== i))}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {rowInvalid && (
+                          <p className="text-xs text-destructive mt-1">Questions, marks and duration must all be greater than 0.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {sections.length === 0 && <p className="text-xs text-muted-foreground">No sections added yet.</p>}
+                  {namedSections.length > 0 && (
+                    <p className="text-xs text-muted-foreground pt-1">
+                      Total across sections: {sectionQuestionTotal} questions · {sectionMarksTotal} marks
+                      {editing && (
+                        <>
+                          {" "}(test currently has {editing.totalQuestions ?? 0} questions / {editing.totalMarks ?? 0} marks
+                          from its question bank — these don't need to match; sections just describe the intended structure)
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.title || !form.category}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+            <Button
+              onClick={() => saveMut.mutate()}
+              disabled={saveMut.isPending || sectionsLoading || sectionsInvalid || !form.title || !form.category}
+            >
+              {saveMut.isPending ? "Saving…" : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
