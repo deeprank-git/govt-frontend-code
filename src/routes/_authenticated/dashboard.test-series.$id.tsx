@@ -26,8 +26,13 @@ type SeriesApiData = {
   officialWebsite?: string;
   applyLink?: string;
   notificationPdf?: string;
-  importantDates?: Record<string, string>;
+  importantDates?: Record<string, { from: string; to: string }>;
 };
+
+// Pinned locale (not `undefined`) so this renders identically during SSR and
+// client hydration — see the homepage hydration-mismatch fix for the same reason.
+const formatImportantDate = (d: string) =>
+  new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
 
@@ -130,10 +135,16 @@ function TestSeriesDetailPage() {
   const notificationPdfUrl = series?.notificationPdf
     ? mediaService.resolveMediaUrl(series.notificationPdf)
     : undefined;
-  const importantDates = IMPORTANT_DATES_CONFIG.map((c) => ({
-    ...c,
-    date: series?.importantDates?.[c.key] ?? "—",
-  }));
+  const importantDates = IMPORTANT_DATES_CONFIG.map((c) => {
+    const v = series?.importantDates?.[c.key];
+    let date = "—";
+    if (v?.from) {
+      date = v.to && v.to !== v.from
+        ? `${formatImportantDate(v.from)} - ${formatImportantDate(v.to)}`
+        : formatImportantDate(v.from);
+    }
+    return { ...c, date };
+  });
 
   const startTest = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 

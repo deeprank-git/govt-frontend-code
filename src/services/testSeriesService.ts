@@ -21,7 +21,7 @@ export type TestSeriesInput = {
   negativeMarking?: boolean;
   negativeMarksPerQuestion?: number;
   marksPerQuestion?: number;
-  importantDates?: Record<string, string>;
+  importantDates?: Record<string, { from: string; to: string }>;
   image?: File;
 };
 

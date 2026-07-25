@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import { resolveMediaUrl } from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -103,25 +104,32 @@ function CAPage() {
               <h2 className="font-display font-bold text-xl mb-4">Today's Top News</h2>
               <div className="space-y-4">
                 {top.map((a) => (
-                  <Card key={a._id} className="p-4 flex flex-col sm:flex-row gap-4 hover:shadow-elevate transition">
-                    <div className="sm:w-44 h-40 sm:h-32 rounded-lg bg-gradient-to-br from-primary/20 via-primary/5 to-secondary grid place-items-center text-3xl shrink-0 overflow-hidden">
-                      {a.image ? <img src={a.image} alt="" className="w-full h-full object-cover" /> : "📰"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Badge className="bg-primary/15 text-primary border-transparent">{a.category}</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(a.date).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                        </span>
+                  <Link key={a._id} to="/current-affairs/$id" params={{ id: a._id }} className="block">
+                    <Card className="p-4 flex flex-col sm:flex-row gap-4 hover:shadow-elevate transition">
+                      <div className="sm:w-44 h-40 sm:h-32 rounded-lg bg-gradient-to-br from-primary/20 via-primary/5 to-secondary grid place-items-center text-3xl shrink-0 overflow-hidden">
+                        {a.image ? <img src={resolveMediaUrl(a.image)} alt="" className="w-full h-full object-cover" /> : "📰"}
                       </div>
-                      <h3 className="font-display font-bold text-lg leading-snug">{a.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <button className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary"><Bookmark className="h-3.5 w-3.5" />Save</button>
-                        <Link to="/current-affairs/$id" params={{ id: a._id }} className="text-xs text-primary hover:underline">Read More →</Link>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Badge className="bg-primary/15 text-primary border-transparent">{a.category}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(a.date).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <h3 className="font-display font-bold text-lg leading-snug">{a.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>
+                        <div className="mt-3 flex items-center justify-between">
+                          <button
+                            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            <Bookmark className="h-3.5 w-3.5" />Save
+                          </button>
+                          <span className="text-xs text-primary">Read More →</span>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  </Link>
                 ))}
                 {top.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
               </div>

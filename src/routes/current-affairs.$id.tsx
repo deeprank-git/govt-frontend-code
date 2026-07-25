@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import { resolveMediaUrl } from "@/services/mediaService";
 import { unwrapItem } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -48,7 +49,7 @@ function CurrentAffairDetailPage() {
             <Badge className="bg-primary/15 text-primary border-transparent">{article.category}</Badge>
             <h1 className="mt-3 text-2xl md:text-3xl font-display font-extrabold">{article.title}</h1>
             <div className="text-xs text-muted-foreground mt-2">{new Date(article.date).toLocaleDateString(undefined, { day: "2-digit", month: "long", year: "numeric" })}</div>
-            {article.image && <img src={article.image} alt="" className="w-full rounded-lg mt-5 max-h-96 object-cover" />}
+            {article.image && <img src={resolveMediaUrl(article.image)} alt="" className="w-full rounded-lg mt-5 max-h-96 object-cover" />}
             {article.summary && <p className="mt-5 text-base text-muted-foreground italic">{article.summary}</p>}
             <div className="mt-5 text-[15px] leading-7 whitespace-pre-line">{article.content}</div>
           </Card>
