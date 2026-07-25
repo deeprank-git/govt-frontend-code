@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   LayoutGrid, ClipboardList, FileText,
-  Trophy, ExternalLink, Globe, Bell, Download, ArrowLeft,
-  ChevronRight, CheckCircle2, FileSignature, IdCard, ScrollText,
-  Landmark, GraduationCap, Users, KeyRound, User, BookOpen,
+  Trophy, ExternalLink, Globe, Download, ArrowLeft,
+  CheckCircle2, FileSignature, IdCard, ScrollText,
+  Landmark, User, BookOpen, Clock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +15,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExamIcon } from "@/components/site/ExamIcon";
 import { useSidebar } from "@/components/ui/sidebar";
 import * as mediaService from "@/services/mediaService";
+import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
 import * as testAttemptService from "@/services/testAttemptService";
-import { unwrapList } from "@/lib/api-unwrap";
+import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
+
+type SeriesApiData = {
+  name: string;
+  description?: string;
+  image?: string;
+  officialWebsite?: string;
+  applyLink?: string;
+  notificationPdf?: string;
+  importantDates?: Record<string, string>;
+};
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
 
@@ -34,29 +45,24 @@ export const Route = createFileRoute("/_authenticated/dashboard/test-series/$id"
   component: TestSeriesDetailPage,
 });
 
-// Mock Test / Previous Year Question Paper now list real Tests for this
-// series (there's no backend flag distinguishing "mock" from "PYQ", so both
-// tabs show the same real list). Everything else below (dates, eligibility,
-// pattern, syllabus, quick links) has no backing API yet and stays static.
+// Mock Test / Previous Year Question Paper list real Tests for this series
+// (there's no backend flag distinguishing "mock" from "PYQ", so both tabs
+// show the same real list — confirmed with the user). Header links, Quick
+// Links and Important Dates come from the real TestSeries doc. Eligibility /
+// Exam Pattern / Syllabus have no backing API yet and stay static.
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "mocks", label: "Mock Test", icon: ClipboardList },
   { id: "pyp", label: "Previous Year Question Paper", icon: FileText },
 ] as const;
 
-const IMPORTANT_DATES = [
-  { label: "Notification", date: "09 May 2025", icon: CheckCircle2, tint: "bg-emerald-50 text-emerald-600" },
-  { label: "Application Start", date: "09 May 2025", icon: FileSignature, tint: "bg-blue-50 text-blue-600" },
-  { label: "Last Date to Apply", date: "04 June 2025", icon: ClipboardList, tint: "bg-amber-50 text-amber-600" },
-  { label: "Admit Card", date: "July 2025", icon: IdCard, tint: "bg-violet-50 text-violet-600" },
-  { label: "Tier 1 Exam", date: "Aug - Sep 2025", icon: ScrollText, tint: "bg-rose-50 text-rose-600" },
-  { label: "Tier 1 Result", date: "Dec 2025", icon: Trophy, tint: "bg-slate-50 text-slate-600" },
-];
-
-const HEADER_FACTS = [
-  { label: "Conducting Body", value: "Staff Selection Commission (SSC)", icon: Landmark },
-  { label: "Exam Level", value: "Graduate Level", icon: GraduationCap },
-  { label: "Posts", value: "Various Group B & C Posts", icon: Users },
+const IMPORTANT_DATES_CONFIG = [
+  { key: "notification_date", label: "Notification", icon: CheckCircle2, tint: "bg-emerald-50 text-emerald-600" },
+  { key: "application_start", label: "Application Start", icon: FileSignature, tint: "bg-blue-50 text-blue-600" },
+  { key: "last_date_to_apply", label: "Last Date to Apply", icon: ClipboardList, tint: "bg-amber-50 text-amber-600" },
+  { key: "admit_card", label: "Admit Card", icon: IdCard, tint: "bg-violet-50 text-violet-600" },
+  { key: "tier_1_exam", label: "Tier 1 Exam", icon: ScrollText, tint: "bg-rose-50 text-rose-600" },
+  { key: "tier_1_result", label: "Tier 1 Result", icon: Trophy, tint: "bg-slate-50 text-slate-600" },
 ];
 
 const EXAM_DETAIL_SECTIONS = [
@@ -83,20 +89,12 @@ const EXAM_DETAIL_SECTIONS = [
   },
 ];
 
-const QUICK_LINKS = [
-  { label: "Official Website", icon: Globe },
-  { label: "Apply Online", icon: ExternalLink },
-  { label: "Download Syllabus", icon: Download },
-  { label: "Latest Notification", icon: Bell },
-  { label: "Admit Card", icon: IdCard },
-  { label: "Result", icon: Trophy },
-  { label: "Answer Key", icon: KeyRound },
-];
-
-const LATEST_UPDATES = [
-  { title: "2025 Notification Released", date: "09 May 2025" },
-  { title: "Application Process Started", date: "09 May 2025" },
-  { title: "Tier 1 Exam Date Announced", date: "24 Apr 2025" },
+// hrefs for officialWebsite/applyLink/notificationPdf are filled in at render
+// time from the fetched series doc.
+const QUICK_LINKS_CONFIG = [
+  { label: "Official Website", icon: Globe, key: "officialWebsite" as const },
+  { label: "Apply Online", icon: ExternalLink, key: "applyLink" as const },
+  { label: "Download Syllabus", icon: Download, key: "notificationPdf" as const },
 ];
 
 function TestSeriesDetailPage() {
@@ -116,14 +114,29 @@ function TestSeriesDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const { data: seriesRes } = useQuery({
+    queryKey: ["series-detail", id],
+    queryFn: () => testSeriesService.getTestSeriesById(id),
+  });
+  const series = unwrapItem<SeriesApiData>(seriesRes);
+
   const { data: testsRes, isLoading: testsLoading } = useQuery({
     queryKey: ["series-tests", id],
     queryFn: () => testService.getTests({ testSeries: id }),
   });
   const tests = unwrapList<any>(testsRes);
 
-  const displayName = name ?? "Test Series";
-  const logoUrl = image ? mediaService.resolveMediaUrl(image) : undefined;
+  const displayName = series?.name ?? name ?? "Test Series";
+  const rawImage = series?.image ?? image;
+  const logoUrl = rawImage ? mediaService.resolveMediaUrl(rawImage) : undefined;
+  const displayDescription = series?.description ?? description;
+  const notificationPdfUrl = series?.notificationPdf
+    ? mediaService.resolveMediaUrl(series.notificationPdf)
+    : undefined;
+  const importantDates = IMPORTANT_DATES_CONFIG.map((c) => ({
+    ...c,
+    date: series?.importantDates?.[c.key] ?? "—",
+  }));
 
   const startTest = async (testId: string) => {
     setStartingId(testId);
@@ -203,49 +216,34 @@ function TestSeriesDetailPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1.5">
-                    {description ??
+                    {displayDescription ??
                       "Staff Selection Commission Combined Graduate Level Examination is conducted to recruit candidates for various Group B and Group C posts."}
                   </p>
                 </div>
               </div>
               <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
                 <Button className="flex-1 sm:flex-none" asChild>
-                  <a href="#">Apply Online <ExternalLink className="h-4 w-4 ml-1.5" /></a>
+                  <a href={series?.applyLink ?? "#"} target="_blank" rel="noopener noreferrer">
+                    Apply Online <ExternalLink className="h-4 w-4 ml-1.5" />
+                  </a>
                 </Button>
-                {/* Moved from the old "About this Test Series" card — same file, same behavior */}
                 <Button variant="outline" className="flex-1 sm:flex-none" asChild>
-                  <a href="/docs/ssc-exam-info.pdf" download={`${displayName}-notification.pdf`}>
+                  <a href={notificationPdfUrl ?? "#"} target="_blank" rel="noopener noreferrer">
                     <Download className="h-4 w-4 mr-1.5" /> Download Notification
                   </a>
                 </Button>
               </div>
             </div>
-            {/* <div className="mt-5 pt-5 border-t border-border grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {HEADER_FACTS.map((f) => (
-                <div key={f.label} className="flex items-center gap-2.5">
-                  <span className="h-9 w-9 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                    <f.icon className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-xs text-muted-foreground">{f.label}</div>
-                    <div className="text-sm font-semibold truncate">{f.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>  */}
           </Card>
 
           <Card className="p-5 lg:p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display font-bold text-lg">Important Dates</h2>
-              {/* <button className="text-sm text-primary font-semibold inline-flex items-center gap-1 hover:underline">
-                View All Dates <ChevronRight className="h-4 w-4" />
-              </button> */}
             </div>
             <div className="relative">
               <div className="absolute top-6 left-0 right-0 h-px bg-border" />
               <div className="relative grid grid-cols-3 sm:grid-cols-6 gap-y-4">
-                {IMPORTANT_DATES.map((d) => (
+                {importantDates.map((d) => (
                   <div key={d.label} className="text-center px-1">
                     <div className={cn("h-12 w-12 rounded-full grid place-items-center mx-auto", d.tint)}>
                       <d.icon className="h-5 w-5" />
@@ -292,9 +290,6 @@ function TestSeriesDetailPage() {
                       <div className="font-display font-bold text-base">{s.title}</div>
                       <div className="text-sm text-muted-foreground mt-0.5">{s.description}</div>
                     </div>
-                    {/* <span className={cn("h-9 w-9 rounded-full grid place-items-center shrink-0", s.tint)}>
-                      <ChevronRight className="h-4 w-4" />
-                    </span> */}
                   </button>
                 ))}
               </div>
@@ -306,19 +301,36 @@ function TestSeriesDetailPage() {
               <h2 className="font-display font-bold text-lg mb-4">Full Length Mock Tests</h2>
               {testsLoading ? (
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
+                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
                 </div>
               ) : tests.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No tests in this series yet.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No mock tests available yet.</p>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3">
                   {tests.map((t) => (
-                    <div key={t._id} className="rounded-lg border border-border p-4">
-                      <Badge variant="outline" className="text-[10px] mb-2">FULL MOCK</Badge>
-                      <div className="font-semibold text-sm">{t.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{t.totalQuestions} Questions · {t.totalMarks} Marks</div>
-                      <div className="text-xs text-muted-foreground">{t.duration} Minutes</div>
-                      <Button size="sm" className="w-full mt-3" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
+                    <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                          <ClipboardList className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Badge variant="outline" className="text-[10px] mb-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50">
+                            {t.isPaid ? "PAID" : "FREE"}
+                          </Badge>
+                          <div className="font-bold text-sm leading-snug">{t.title}</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t.totalQuestions} Questions &nbsp;·&nbsp; {t.totalMarks} Marks</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t.duration} Minutes</span>
+                        </div>
+                      </div>
+                      <Button className="w-full" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
                         {startingId === t._id ? "Starting…" : "Start Test →"}
                       </Button>
                     </div>
@@ -333,19 +345,37 @@ function TestSeriesDetailPage() {
               <h2 className="font-display font-bold text-lg mb-4">Previous Year Question Papers</h2>
               {testsLoading ? (
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
                 </div>
               ) : tests.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">No papers in this series yet.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No papers available yet.</p>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3">
                   {tests.map((t) => (
-                    <div key={t._id} className="rounded-lg border border-border p-4">
-                      <div className="font-semibold text-sm">{t.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{t.totalQuestions} Questions · {t.totalMarks} Marks</div>
-                      <div className="text-xs text-muted-foreground">{t.duration} Mins</div>
-                      <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
-                        {startingId === t._id ? "Starting…" : "Start Now"}
+                    <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Badge variant="outline" className="text-[10px] mb-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50">
+                            {t.isPaid ? "PAID" : "FREE"}
+                          </Badge>
+                          <div className="font-bold text-sm leading-snug">{t.title}</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t.totalQuestions} Questions &nbsp;·&nbsp; {t.totalMarks} Marks</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <span>{t.duration} Mins</span>
+                        </div>
+                      </div>
+                      <Button className="w-full" onClick={() => startTest(t._id)} disabled={startingId === t._id}>
+                        {startingId === t._id ? "Starting…" : "Start Now →"}
                       </Button>
                     </div>
                   ))}
@@ -360,32 +390,30 @@ function TestSeriesDetailPage() {
           <Card className="p-4">
             <h3 className="font-display font-bold text-sm mb-3">Quick Links</h3>
             <ul className="space-y-1">
-              {QUICK_LINKS.map(({ label, icon: Icon }) => (
-                <li key={label}>
-                  <a href="#" className="flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors">
-                    <span className="flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 text-primary" />
-                      {label}
-                    </span>
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                  </a>
-                </li>
-              ))}
+              {QUICK_LINKS_CONFIG.map(({ label, icon: Icon, key }) => {
+                // notificationPdfUrl is already resolved; officialWebsite/applyLink are external URLs
+                const href = key === "notificationPdf"
+                  ? (notificationPdfUrl ?? "#")
+                  : (series?.[key] ?? "#");
+                return (
+                  <li key={label}>
+                    <a
+                      href={href}
+                      target={href !== "#" ? "_blank" : undefined}
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted transition-colors"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 text-primary" />
+                        {label}
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </Card>
-
-          {/* <Card className="p-4 border-4 border-blue-900">
-            <h3 className="font-display font-bold text-sm mb-3">Latest Updates</h3>
-            <ul className="space-y-3">
-              {LATEST_UPDATES.map((u, i) => (
-                <li key={i} className="border-b border-border last:border-0 pb-3 last:pb-0">
-                  <div className="text-sm font-semibold leading-snug">{displayName} {u.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{u.date}</div>
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" size="sm" className="w-full mt-4">View All Updates</Button>
-          </Card> */}
 
           <Card className="p-4">
             <h3 className="font-display font-bold text-sm mb-3">Recommended Mock Tests</h3>
