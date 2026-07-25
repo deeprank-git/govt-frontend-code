@@ -1,6 +1,6 @@
 import axiosClient from "@/api/axiosClient";
 
-export async function getTests(params?: { category?: string; testSeries?: string; isActive?: boolean; isPublished?: boolean }) {
+export async function getTests(params?: { category?: string; testSeries?: string; isActive?: boolean; isPublished?: boolean; paperType?: "mock" | "previous_year"; year?: number | string }) {
   const res = await axiosClient.get("/tests", { params });
   return res.data;
 }

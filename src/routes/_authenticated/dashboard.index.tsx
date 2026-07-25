@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Flame,
   ClipboardList,
@@ -15,22 +16,21 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import * as testService from "@/services/testService";
 import * as testAttemptService from "@/services/testAttemptService";
 import * as currentAffairsService from "@/services/currentAffairsService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Dashboard,
 });
 
-// No backend endpoint exists yet for PYQs, answer keys or exam alerts — these
+// No backend endpoint exists yet for answer keys or exam alerts — these two
 // widgets stay on static placeholder content until those resources are added
-// to the API. Current Affairs is now wired to the real backend below.
-const PYQS = [
-  { id: "p1", title: "SSC CGL Tier 1 2024", shift: "Shift 1", questions_count: 100, marks: 200, duration_minutes: 60 },
-  { id: "p2", title: "IBPS PO Prelims 2024", shift: "Shift 2", questions_count: 100, marks: 100, duration_minutes: 60 },
-];
+// to the API. Current Affairs and Previous Year Papers are wired to the real
+// backend below.
 const ANSWER_KEYS = [
   { id: "k1", title: "SSC CGL Tier 1 2024 Answer Key", released_on: new Date().toISOString() },
 ];
@@ -107,6 +107,8 @@ function Stat({ icon: Icon, value, label, sub, tone = "primary" }: { icon: any; 
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [startingPyq, setStartingPyq] = useState<string | null>(null);
 
   const { data: attemptsRes } = useQuery({
     queryKey: ["my-attempts"],
@@ -119,6 +121,27 @@ function Dashboard() {
     queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 3 }),
   });
   const currentAffairs = unwrapList<any>(caRes);
+
+  const { data: pyqRes } = useQuery({
+    queryKey: ["dashboard-home-pyq"],
+    queryFn: () => testService.getTests({ paperType: "previous_year" }),
+  });
+  const previousYearPapers = unwrapList<any>(pyqRes)
+    .slice()
+    .sort((a, b) => new Date(b.examDate ?? 0).getTime() - new Date(a.examDate ?? 0).getTime())
+    .slice(0, 3);
+
+  const startPyq = async (testId: string) => {
+    setStartingPyq(testId);
+    try {
+      await testAttemptService.startTest(testId);
+      navigate({ to: "/test/$testId", params: { testId } });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not start test");
+    } finally {
+      setStartingPyq(null);
+    }
+  };
 
   const completed = attempts.filter((a) => a.status === "completed" || a.status === "auto-submitted");
   const attempted = attempts.length;
@@ -283,17 +306,25 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {PYQS.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3">
+            {previousYearPapers.length === 0 && (
+              <p className="text-sm text-muted-foreground">No previous year papers yet.</p>
+            )}
+            {previousYearPapers.map((p) => (
+              <div key={p._id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {p.title} ({p.shift})
-                  </div>
+                  <div className="text-sm font-medium truncate">{p.title}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {p.questions_count} Qs · {p.marks} Marks · {p.duration_minutes} Min
+                    {p.totalQuestions ?? 0} Qs · {p.totalMarks ?? 0} Marks · {p.duration ?? 0} Min
                   </div>
                 </div>
-                <Button size="sm" variant="outline" disabled>Start Test</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={startingPyq === p._id}
+                  onClick={() => startPyq(p._id)}
+                >
+                  {startingPyq === p._id ? "Starting…" : "Start Test"}
+                </Button>
               </div>
             ))}
           </div>
