@@ -20,7 +20,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import * as testAttemptService from "@/services/testAttemptService";
-import * as categoryService from "@/services/categoryService";
+import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/attempted-tests"
 });
 
 function AttemptedTests() {
-  const [category, setCategory] = useState("all");
+  const [testSeries, setTestSeries] = useState("all");
   const [range, setRange] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
   const pageSize = 8;
@@ -43,19 +43,19 @@ function AttemptedTests() {
   });
   const attempts = unwrapList<any>(attemptsRes);
 
-  const { data: categoriesRes } = useQuery({
+  const { data: seriesRes } = useQuery({
     queryKey: ["exam-options"],
-    queryFn: () => categoryService.getCategories(),
+    queryFn: () => testSeriesService.getTestSeries(),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const series = unwrapList<any>(seriesRes);
 
   const { data: testsRes } = useQuery({
     queryKey: ["attended-tests-lookup"],
     queryFn: () => testService.getTests(),
   });
-  const testCategoryMap = useMemo(() => {
+  const testSeriesMap = useMemo(() => {
     const map = new Map<string, string>();
-    unwrapList<any>(testsRes).forEach((t) => map.set(t._id, t.category));
+    unwrapList<any>(testsRes).forEach((t) => map.set(t._id, t.testSeries));
     return map;
   }, [testsRes]);
 
@@ -81,7 +81,7 @@ function AttemptedTests() {
 
   const filtered = useMemo(() => {
     return attempts.filter((a) => {
-      if (category !== "all" && testCategoryMap.get(a.test?._id) !== category) return false;
+      if (testSeries !== "all" && testSeriesMap.get(a.test?._id) !== testSeries) return false;
       if (range?.from) {
         const d = new Date(a.startedAt);
         if (d < range.from) return false;
@@ -89,13 +89,13 @@ function AttemptedTests() {
       }
       return true;
     });
-  }, [attempts, category, range, testCategoryMap]);
+  }, [attempts, testSeries, range, testSeriesMap]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const reset = () => {
-    setCategory("all");
+    setTestSeries("all");
     setRange(undefined);
   };
 
@@ -139,12 +139,12 @@ function AttemptedTests() {
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
           <div>
-            <label className="text-xs text-muted-foreground">Select Category</label>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <label className="text-xs text-muted-foreground">Select Test Series</label>
+            <Select value={testSeries} onValueChange={(v) => { setTestSeries(v); setPage(1); }}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="All Test Series" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                <SelectItem value="all">All Test Series</SelectItem>
+                {series.map((s: any) => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

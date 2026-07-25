@@ -70,10 +70,11 @@ function TestSeriesPage() {
       marksPerQuestion: s.marksPerQuestion ?? 1,
     });
     setImportantDates(
-      Object.entries(s.importantDates ?? {}).map(([label, value]) => {
-        const [from = "", to = ""] = String(value).split(" to ");
-        return { label, from, to };
-      }),
+      Object.entries(s.importantDates ?? {}).map(([label, value]: [string, any]) => ({
+        label,
+        from: value?.from ?? "",
+        to: value?.to ?? "",
+      })),
     );
     setImageFile(null);
     setExistingImage(s.image ?? "");
@@ -88,7 +89,7 @@ function TestSeriesPage() {
           ? Object.fromEntries(
               importantDates
                 .filter((d) => d.label.trim() && d.from)
-                .map((d) => [d.label, d.to && d.to !== d.from ? `${d.from} to ${d.to}` : d.from]),
+                .map((d) => [d.label, { from: d.from, to: d.to || d.from }]),
             )
           : undefined,
         image: imageFile ?? undefined,

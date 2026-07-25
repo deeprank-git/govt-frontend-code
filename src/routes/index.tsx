@@ -254,7 +254,7 @@ function HomePage() {
                   <Badge className="mb-2 bg-primary/15 text-primary border-transparent">{a.category}</Badge>
                   <div className="font-semibold text-sm leading-snug">{a.title}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {new Date(a.date).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(a.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                   </div>
                 </Link>
               ))}
@@ -276,7 +276,7 @@ function HomePage() {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm leading-snug truncate">{a.title}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {a.alert_date ? new Date(a.alert_date).toLocaleDateString() : "Soon"}
+                    {a.alert_date ? new Date(a.alert_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "Soon"}
                   </div>
                 </div>
                 <Badge variant="outline" className="bg-warning/15 border-warning/40 text-warning-foreground">

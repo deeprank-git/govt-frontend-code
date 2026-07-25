@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import { resolveMediaUrl } from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/_authenticated/dashboard/current-affairs")({
@@ -188,32 +189,35 @@ function CADashboard() {
                 const t = tintFor(a.category);
                 return (
                   <motion.div key={a._id} whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
-                    <Card className="overflow-hidden flex flex-col h-full">
-                      <div className="relative h-24 bg-muted overflow-hidden group">
-                        {a.image ? (
-                          <img src={a.image} alt={a.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                        ) : (
-                          <div className={cn("w-full h-full grid place-items-center", t.bg)}>
-                            <Newspaper className={cn("h-8 w-8", t.text)} />
-                          </div>
-                        )}
-                        <Badge className={cn("absolute top-2 left-2 text-[10px] border-transparent", t.bg, t.text)}>{a.category}</Badge>
-                      </div>
-                      <div className="p-2.5 flex flex-col flex-1">
-                        <Link to="/dashboard/current-affairs/$id" params={{ id: a._id }}>
-                          <h4 className="text-xs font-semibold leading-snug line-clamp-3 hover:text-primary">{a.title}</h4>
-                        </Link>
-                        {a.summary && <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>}
-                        <div className="flex items-center justify-between mt-auto pt-2">
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <CalendarDays className="h-3 w-3" />{format(new Date(a.date), "dd MMM yyyy")}
-                          </span>
-                          <button onClick={() => toggleBookmark.mutate(a._id)} className="text-muted-foreground hover:text-primary">
-                            <Bookmark className={cn("h-3.5 w-3.5", bookmarkSet.has(a._id) && "fill-primary text-primary")} />
-                          </button>
+                    <Link to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="block h-full">
+                      <Card className="overflow-hidden flex flex-col h-full">
+                        <div className="relative h-24 bg-muted overflow-hidden group">
+                          {a.image ? (
+                            <img src={resolveMediaUrl(a.image)} alt={a.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                          ) : (
+                            <div className={cn("w-full h-full grid place-items-center", t.bg)}>
+                              <Newspaper className={cn("h-8 w-8", t.text)} />
+                            </div>
+                          )}
+                          <Badge className={cn("absolute top-2 left-2 text-[10px] border-transparent", t.bg, t.text)}>{a.category}</Badge>
                         </div>
-                      </div>
-                    </Card>
+                        <div className="p-2.5 flex flex-col flex-1">
+                          <h4 className="text-xs font-semibold leading-snug line-clamp-3 hover:text-primary">{a.title}</h4>
+                          {a.summary && <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>}
+                          <div className="flex items-center justify-between mt-auto pt-2">
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <CalendarDays className="h-3 w-3" />{format(new Date(a.date), "dd MMM yyyy")}
+                            </span>
+                            <button
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleBookmark.mutate(a._id); }}
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              <Bookmark className={cn("h-3.5 w-3.5", bookmarkSet.has(a._id) && "fill-primary text-primary")} />
+                            </button>
+                          </div>
+                        </div>
+                      </Card>
+                    </Link>
                   </motion.div>
                 );
               })}
@@ -247,7 +251,7 @@ function CADashboard() {
                   <motion.div key={a._id} whileHover={{ x: 2 }} className="flex gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="h-14 w-20 rounded-lg overflow-hidden shrink-0 bg-muted">
                       {a.image ? (
-                        <img src={a.image} alt={a.title} className="w-full h-full object-cover" />
+                        <img src={resolveMediaUrl(a.image)} alt={a.title} className="w-full h-full object-cover" />
                       ) : (
                         <div className={cn("w-full h-full grid place-items-center", t.bg)}>
                           <Newspaper className={cn("h-5 w-5", t.text)} />

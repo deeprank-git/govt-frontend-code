@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as testService from "@/services/testService";
-import * as categoryService from "@/services/categoryService";
+import * as testSeriesService from "@/services/testSeriesService";
 import * as testAttemptService from "@/services/testAttemptService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { toast } from "sonner";
@@ -43,16 +43,16 @@ const ICONS = [
 function MockTests() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("all");
-  const [category, setCategory] = useState("all");
+  const [testSeries, setTestSeries] = useState("all");
   const [duration, setDuration] = useState("all");
   const [page, setPage] = useState(1);
   const [starting, setStarting] = useState<string | null>(null);
 
-  const { data: categoriesRes } = useQuery({
-    queryKey: ["mt-categories"],
-    queryFn: () => categoryService.getCategories(),
+  const { data: seriesRes } = useQuery({
+    queryKey: ["mt-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const series = unwrapList<any>(seriesRes);
 
   const { data: testsRes, isLoading } = useQuery({
     queryKey: ["all-mock-tests"],
@@ -63,7 +63,7 @@ function MockTests() {
   const filtered = tests.filter((t) => {
     if (tab === "free" && t.isPaid) return false;
     if (tab === "paid" && !t.isPaid) return false;
-    if (category !== "all" && t.category !== category) return false;
+    if (testSeries !== "all" && t.testSeries !== testSeries) return false;
     if (duration === "short" && (t.duration ?? 0) > 60) return false;
     if (duration === "medium" && ((t.duration ?? 0) <= 60 || (t.duration ?? 0) > 120)) return false;
     if (duration === "long" && (t.duration ?? 0) <= 120) return false;
@@ -98,7 +98,7 @@ function MockTests() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
           <Stat icon={ClipboardList} value={`${tests.length}`} label="Mock Tests Available" tone="primary" />
-          <Stat icon={Database} value={`${categories.length}`} label="Categories" tone="success" />
+          <Stat icon={Database} value={`${series.length}`} label="Test Series" tone="success" />
         </div>
       </div>
 
@@ -125,12 +125,12 @@ function MockTests() {
       <Card className="p-4">
         <div className="grid md:grid-cols-3 gap-3">
           <div>
-            <label className="text-xs text-muted-foreground">Select Category</label>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
+            <label className="text-xs text-muted-foreground">Select Test Series</label>
+            <Select value={testSeries} onValueChange={(v) => { setTestSeries(v); setPage(1); }}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                <SelectItem value="all">All Test Series</SelectItem>
+                {series.map((s) => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -147,7 +147,7 @@ function MockTests() {
             </Select>
           </div>
           <div className="flex items-end">
-            <Button variant="outline" className="w-full bg-primary/5 border-primary/30 text-primary" onClick={() => { setCategory("all"); setDuration("all"); }}>
+            <Button variant="outline" className="w-full bg-primary/5 border-primary/30 text-primary" onClick={() => { setTestSeries("all"); setDuration("all"); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Reset Filters
             </Button>
           </div>

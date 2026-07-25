@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import { resolveMediaUrl } from "@/services/mediaService";
 import { unwrapItem } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/_authenticated/dashboard/current-affairs/$id")({
@@ -34,7 +35,7 @@ function CurrentAffairDetailPage() {
         <div className="text-xs text-muted-foreground mt-2">
           {new Date(article.date).toLocaleDateString(undefined, { day: "2-digit", month: "long", year: "numeric" })}
         </div>
-        {article.image && <img src={article.image} alt="" className="w-full rounded-lg mt-5 max-h-96 object-cover" />}
+        {article.image && <img src={resolveMediaUrl(article.image)} alt="" className="w-full rounded-lg mt-5 max-h-96 object-cover" />}
         {article.summary && <p className="mt-5 text-base text-muted-foreground italic">{article.summary}</p>}
         <div className="mt-5 text-[15px] leading-7 whitespace-pre-line">{article.content}</div>
       </Card>
