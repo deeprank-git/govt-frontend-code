@@ -39,8 +39,11 @@ const ITEMS = [
   { to: "/dashboard/attempted-tests" as const, label: "Attempted Tests", icon: History },
   { to: "/dashboard/previous-year-papers" as const, label: "Previous Year Papers", icon: FileText },
   { to: "/dashboard/current-affairs" as const, label: "Current Affairs", icon: Newspaper },
-  { to: "/dashboard/answer-key" as const, label: "Answer Key", icon: KeyRound },
-  { to: "/dashboard/exam-alerts" as const, label: "Exam Alerts", icon: Bell },
+  // Answer Key and Exam Alerts are still fully static/mock-data pages with no
+  // backend support — hidden from the sidebar until that's built. Not deleted,
+  // just unlinked; the routes still exist and work if navigated to directly.
+  // { to: "/dashboard/answer-key" as const, label: "Answer Key", icon: KeyRound },
+  // { to: "/dashboard/exam-alerts" as const, label: "Exam Alerts", icon: Bell },
   { to: "/dashboard/profile" as const, label: "Profile Settings", icon: Settings2 },
 ];
 

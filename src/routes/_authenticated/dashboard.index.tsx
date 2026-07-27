@@ -313,6 +313,10 @@ function Dashboard() {
           </div>
         </Card>
 
+        {/* Answer Key and Exam Alerts are still fully static/mock-data — hidden
+            from the dashboard and sidebar until real backend support exists.
+            Commented out (not deleted) so they're easy to bring back later. */}
+        {/*
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold flex items-center gap-2">
@@ -358,6 +362,7 @@ function Dashboard() {
             ))}
           </div>
         </Card>
+        */}
       </div>
     </div>
   );

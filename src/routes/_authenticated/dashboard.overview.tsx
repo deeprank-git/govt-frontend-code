@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExamIcon } from "@/components/site/ExamIcon";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 
@@ -133,7 +134,9 @@ function OverviewPage() {
             </p>
           ) : (
             <div className="grid sm:grid-cols-2 gap-3">
-              {filtered.map((s) => (
+              {filtered.map((s) => {
+                const logoUrl = s.image ? mediaService.resolveMediaUrl(s.image) : undefined;
+                return (
                 <Link
                   key={s._id}
                   to="/dashboard/test-series/$id"
@@ -147,7 +150,11 @@ function OverviewPage() {
                   className="group block"
                 >
                   <div className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition">
-                    <ExamIcon name={s.name ?? "?"} />
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <ExamIcon name={s.name ?? "?"} />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{s.name}</div>
                       <div className="text-xs text-muted-foreground truncate">{s.totalTests ?? 0} Tests</div>
@@ -155,7 +162,8 @@ function OverviewPage() {
                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

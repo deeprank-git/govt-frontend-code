@@ -53,13 +53,13 @@ function MockTests() {
 
   const { data: testsRes, isLoading: loadingTests } = useQuery({
     queryKey: ["all-mock-tests"],
-    queryFn: () => testService.getTests(),
+    queryFn: () => testService.getTests({ paperType: "mock" }),
   });
   const tests = unwrapList<any>(testsRes);
 
   const { data: seriesTestsRes, isLoading: loadingSeriesTests } = useQuery({
     queryKey: ["mt-series-tests", activeSeriesId],
-    queryFn: () => testService.getTests({ testSeries: activeSeriesId! }),
+    queryFn: () => testService.getTests({ testSeries: activeSeriesId!, paperType: "mock" }),
     enabled: !!activeSeriesId,
   });
   const seriesTests = unwrapList<any>(seriesTestsRes);
