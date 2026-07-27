@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { unwrapList } from "@/lib/api-unwrap";
+import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
@@ -23,22 +23,63 @@ function CategoriesPage() {
   const { data: categoriesRes, isLoading } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
   const categories = unwrapList<any>(categoriesRes);
 
+  // GET /api/categories (the list above) intentionally omits `description` —
+  // only GET /api/categories/:id returns the full doc. Fan out one detail
+  // fetch per row so the table and edit modal show the real saved text
+  // instead of always "—"/empty.
+  const detailQueries = useQueries({
+    queries: categories.map((c) => ({
+      queryKey: ["ad-category-detail", c._id],
+      queryFn: () => categoryService.getCategoryById(c._id),
+      enabled: !!c._id,
+    })),
+  });
+  const enrichedCategories = categories.map((c, i) => {
+    const detail = unwrapItem<any>(detailQueries[i]?.data);
+    return {
+      ...c,
+      description: detail?.description ?? c.description,
+      _descriptionLoading: detailQueries[i]?.isLoading && detail === null,
+    };
+  });
+
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", image: "" });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editLoadingId, setEditLoadingId] = useState<string | null>(null);
 
-  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(categories, ["name", "description"]);
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(enrichedCategories, ["name", "description"]);
 
   const openCreate = () => { setEditing(null); setForm({ name: "", description: "", image: "" }); setOpen(true); };
-  const openEdit = (c: any) => { setEditing(c); setForm({ name: c.name ?? "", description: c.description ?? "", image: c.image ?? "" }); setOpen(true); };
+
+  // Never trust the trimmed list row for description — always fetch the
+  // full record fresh so the modal doesn't briefly (or permanently) show an
+  // empty field for a category that does have a saved description.
+  const openEdit = async (c: any) => {
+    setEditLoadingId(c._id);
+    try {
+      const res = await categoryService.getCategoryById(c._id);
+      const full = unwrapItem<any>(res) ?? c;
+      setEditing(full);
+      setForm({ name: full.name ?? "", description: full.description ?? "", image: full.image ?? "" });
+      setOpen(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not load category details");
+    } finally {
+      setEditLoadingId(null);
+    }
+  };
 
   const saveMut = useMutation({
     mutationFn: () => (editing ? categoryService.updateCategory(editing._id, form) : categoryService.createCategory(form)),
     onSuccess: () => {
       toast.success(editing ? "Category updated" : "Category created");
       qc.invalidateQueries({ queryKey: ["ad-categories"] });
+      // Partial key match invalidates every ["ad-category-detail", id] entry,
+      // so both the table and any reopened edit modal refetch fresh data.
+      qc.invalidateQueries({ queryKey: ["ad-category-detail"] });
       setOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save category"),
@@ -78,9 +119,11 @@ function CategoriesPage() {
             <TableRow key={c._id}>
               <TableCell>{c.name}</TableCell>
               <TableCell>{c.slug}</TableCell>
-              <TableCell className="max-w-xs truncate">{c.description || "—"}</TableCell>
+              <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
               <TableCell className="text-right space-x-2">
-                <Button size="sm" variant="outline" onClick={() => openEdit(c)}>Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
+                  {editLoadingId === c._id ? "Loading…" : "Edit"}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
             </TableRow>

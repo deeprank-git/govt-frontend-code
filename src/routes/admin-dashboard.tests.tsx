@@ -155,14 +155,13 @@ function TestsPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Title</TableHead><TableHead>Category</TableHead><TableHead>Qs</TableHead><TableHead>Marks</TableHead><TableHead>Duration</TableHead><TableHead>Published</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Title</TableHead><TableHead>Qs</TableHead><TableHead>Marks</TableHead><TableHead>Duration</TableHead><TableHead>Published</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={7} />}
+          {isLoading && <LoadingRows colSpan={6} />}
           {!isLoading && paginated.map((t) => (
             <TableRow key={t._id}>
               <TableCell>{t.title}</TableCell>
-              <TableCell>{categories.find((c) => c._id === (t.category?._id ?? t.category))?.name ?? "—"}</TableCell>
               <TableCell>{t.totalQuestions}</TableCell>
               <TableCell>{t.totalMarks}</TableCell>
               <TableCell>{t.duration} Min</TableCell>
@@ -173,7 +172,7 @@ function TestsPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && tests.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No tests yet.</TableCell></TableRow>}
+          {!isLoading && tests.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No tests yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />

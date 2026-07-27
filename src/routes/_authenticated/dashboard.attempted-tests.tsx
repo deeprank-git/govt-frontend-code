@@ -210,11 +210,11 @@ function AttemptedTests() {
                 </div>
                 <div className="col-span-2 flex items-center justify-end gap-1">
                   {a.status !== "in-progress" ? (
-                    <Button size="sm" variant="ghost" className="text-primary hover:text-primary h-8 px-2" asChild>
+                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2 w-28 justify-center" asChild>
                       <Link to="/result/$attemptId" params={{ attemptId: a._id }}>View Analysis</Link>
                     </Button>
                   ) : (
-                    <Button size="sm" className="h-8 px-2" asChild>
+                    <Button size="sm" className="h-8 px-2 w-28 justify-center" asChild>
                       <Link to="/test/$testId" params={{ testId: a.test?._id }}>Resume</Link>
                     </Button>
                   )}

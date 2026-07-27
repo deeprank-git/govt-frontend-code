@@ -332,9 +332,9 @@ function ResultPage() {
                 );
               })}
             </div>
-            <Button variant="outline" className="w-full mt-4" onClick={() => selectQuestion(selected)}>
+            {/* <Button variant="outline" className="w-full mt-4" onClick={() => selectQuestion(selected)}>
               Go to Question
-            </Button>
+            </Button> */}
           </Card>
         </div>
       </div>
