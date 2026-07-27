@@ -72,6 +72,11 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
                   </SidebarMenuItem>
                 );
               })}
+              {/* Admin Panel nav item hidden from the dashboard sidebar for now,
+                  regardless of role — the `isAdmin` prop and role-based check
+                  are kept (see component signature below) so this can be
+                  restored by uncommenting, without re-deriving the pattern.
+                  The /admin route itself is untouched.
               {isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith("/admin")}>
@@ -82,6 +87,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+              */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

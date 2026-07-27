@@ -411,7 +411,11 @@ function TestEngine() {
           <h4 className="font-display font-bold text-sm mb-3 text-primary border-b-2 border-primary inline-block pb-1.5">
             Questions
           </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2 text-[11px] mb-4">
+          {/* This card is always a narrow, fixed-width column (240px_1fr_320px
+              at lg:, full-width stacked below it) — 3 columns never actually
+              fit "Not Answered"/"Answered & Marked" here, so the grid caps at
+              2 columns rather than bumping to 3 on wider viewports. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 auto-rows-fr items-stretch gap-x-4 gap-y-2 text-[11px] mb-4">
             <Legend color="bg-muted text-foreground" label="Not Visited" value={statusCounts["not-vis"]} />
             <Legend color="bg-orange-500" label="Not Answered" value={statusCounts["not-ans"]} />
             <Legend color="bg-success" label="Answered" value={statusCounts.ans} />
@@ -517,10 +521,10 @@ function TestEngine() {
 
 function Legend({ color, label, value }: { color: string; label: string; value: number }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 h-full min-w-0">
       <span
         className={cn(
-          "inline-block h-5 w-5 rounded grid place-items-center text-white text-[10px] font-bold",
+          "inline-block h-5 w-5 shrink-0 rounded grid place-items-center text-white text-[10px] font-bold",
           color,
         )}
       >
