@@ -51,7 +51,7 @@ import { Route as AuthenticatedDashboardAttemptedTestsRouteImport } from './rout
 import { Route as AuthenticatedDashboardAnswerKeyRouteImport } from './routes/_authenticated/dashboard.answer-key'
 import { Route as AuthenticatedTestTestIdInstructionsRouteImport } from './routes/_authenticated/test.$testId_.instructions'
 import { Route as AuthenticatedDashboardTestSeriesIdRouteImport } from './routes/_authenticated/dashboard.test-series.$id'
-import { Route as AuthenticatedDashboardCurrentAffairsIdRouteImport } from './routes/_authenticated/dashboard.current-affairs.$id'
+import { Route as AuthenticatedDashboardCurrentAffairsIdRouteImport } from './routes/_authenticated/dashboard.current-affairs_.$id'
 
 const ExamsRoute = ExamsRouteImport.update({
   id: '/exams',
@@ -281,9 +281,9 @@ const AuthenticatedDashboardTestSeriesIdRoute =
   } as any)
 const AuthenticatedDashboardCurrentAffairsIdRoute =
   AuthenticatedDashboardCurrentAffairsIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedDashboardCurrentAffairsRoute,
+    id: '/current-affairs_/$id',
+    path: '/current-affairs/$id',
+    getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -316,7 +316,7 @@ export interface FileRoutesByFullPath {
   '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/dashboard/answer-key': typeof AuthenticatedDashboardAnswerKeyRoute
   '/dashboard/attempted-tests': typeof AuthenticatedDashboardAttemptedTestsRoute
-  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
+  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRoute
   '/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
   '/dashboard/overview': typeof AuthenticatedDashboardOverviewRoute
@@ -358,7 +358,7 @@ export interface FileRoutesByTo {
   '/admin-dashboard': typeof AdminDashboardIndexRoute
   '/dashboard/answer-key': typeof AuthenticatedDashboardAnswerKeyRoute
   '/dashboard/attempted-tests': typeof AuthenticatedDashboardAttemptedTestsRoute
-  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
+  '/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRoute
   '/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
   '/dashboard/overview': typeof AuthenticatedDashboardOverviewRoute
@@ -404,7 +404,7 @@ export interface FileRoutesById {
   '/admin-dashboard/': typeof AdminDashboardIndexRoute
   '/_authenticated/dashboard/answer-key': typeof AuthenticatedDashboardAnswerKeyRoute
   '/_authenticated/dashboard/attempted-tests': typeof AuthenticatedDashboardAttemptedTestsRoute
-  '/_authenticated/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
+  '/_authenticated/dashboard/current-affairs': typeof AuthenticatedDashboardCurrentAffairsRoute
   '/_authenticated/dashboard/exam-alerts': typeof AuthenticatedDashboardExamAlertsRoute
   '/_authenticated/dashboard/mock-tests': typeof AuthenticatedDashboardMockTestsRoute
   '/_authenticated/dashboard/overview': typeof AuthenticatedDashboardOverviewRoute
@@ -414,7 +414,7 @@ export interface FileRoutesById {
   '/_authenticated/result/$attemptId': typeof AuthenticatedResultAttemptIdRoute
   '/_authenticated/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
-  '/_authenticated/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/_authenticated/dashboard/current-affairs_/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
   '/_authenticated/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
   '/_authenticated/test/$testId_/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
@@ -547,7 +547,7 @@ export interface FileRouteTypes {
     | '/_authenticated/result/$attemptId'
     | '/_authenticated/test/$testId'
     | '/_authenticated/dashboard/'
-    | '/_authenticated/dashboard/current-affairs/$id'
+    | '/_authenticated/dashboard/current-affairs_/$id'
     | '/_authenticated/dashboard/test-series/$id'
     | '/_authenticated/test/$testId_/instructions'
   fileRoutesById: FileRoutesById
@@ -861,35 +861,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardTestSeriesIdRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
-    '/_authenticated/dashboard/current-affairs/$id': {
-      id: '/_authenticated/dashboard/current-affairs/$id'
-      path: '/$id'
+    '/_authenticated/dashboard/current-affairs_/$id': {
+      id: '/_authenticated/dashboard/current-affairs_/$id'
+      path: '/current-affairs/$id'
       fullPath: '/dashboard/current-affairs/$id'
       preLoaderRoute: typeof AuthenticatedDashboardCurrentAffairsIdRouteImport
-      parentRoute: typeof AuthenticatedDashboardCurrentAffairsRoute
+      parentRoute: typeof AuthenticatedDashboardRoute
     }
   }
 }
 
-interface AuthenticatedDashboardCurrentAffairsRouteChildren {
-  AuthenticatedDashboardCurrentAffairsIdRoute: typeof AuthenticatedDashboardCurrentAffairsIdRoute
-}
-
-const AuthenticatedDashboardCurrentAffairsRouteChildren: AuthenticatedDashboardCurrentAffairsRouteChildren =
-  {
-    AuthenticatedDashboardCurrentAffairsIdRoute:
-      AuthenticatedDashboardCurrentAffairsIdRoute,
-  }
-
-const AuthenticatedDashboardCurrentAffairsRouteWithChildren =
-  AuthenticatedDashboardCurrentAffairsRoute._addFileChildren(
-    AuthenticatedDashboardCurrentAffairsRouteChildren,
-  )
-
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardAnswerKeyRoute: typeof AuthenticatedDashboardAnswerKeyRoute
   AuthenticatedDashboardAttemptedTestsRoute: typeof AuthenticatedDashboardAttemptedTestsRoute
-  AuthenticatedDashboardCurrentAffairsRoute: typeof AuthenticatedDashboardCurrentAffairsRouteWithChildren
+  AuthenticatedDashboardCurrentAffairsRoute: typeof AuthenticatedDashboardCurrentAffairsRoute
   AuthenticatedDashboardExamAlertsRoute: typeof AuthenticatedDashboardExamAlertsRoute
   AuthenticatedDashboardMockTestsRoute: typeof AuthenticatedDashboardMockTestsRoute
   AuthenticatedDashboardOverviewRoute: typeof AuthenticatedDashboardOverviewRoute
@@ -897,6 +882,7 @@ interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardProfileRoute: typeof AuthenticatedDashboardProfileRoute
   AuthenticatedDashboardRankRoute: typeof AuthenticatedDashboardRankRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
+  AuthenticatedDashboardCurrentAffairsIdRoute: typeof AuthenticatedDashboardCurrentAffairsIdRoute
   AuthenticatedDashboardTestSeriesIdRoute: typeof AuthenticatedDashboardTestSeriesIdRoute
 }
 
@@ -906,7 +892,7 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardAttemptedTestsRoute:
       AuthenticatedDashboardAttemptedTestsRoute,
     AuthenticatedDashboardCurrentAffairsRoute:
-      AuthenticatedDashboardCurrentAffairsRouteWithChildren,
+      AuthenticatedDashboardCurrentAffairsRoute,
     AuthenticatedDashboardExamAlertsRoute:
       AuthenticatedDashboardExamAlertsRoute,
     AuthenticatedDashboardMockTestsRoute: AuthenticatedDashboardMockTestsRoute,
@@ -916,6 +902,8 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardProfileRoute: AuthenticatedDashboardProfileRoute,
     AuthenticatedDashboardRankRoute: AuthenticatedDashboardRankRoute,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
+    AuthenticatedDashboardCurrentAffairsIdRoute:
+      AuthenticatedDashboardCurrentAffairsIdRoute,
     AuthenticatedDashboardTestSeriesIdRoute:
       AuthenticatedDashboardTestSeriesIdRoute,
   }
