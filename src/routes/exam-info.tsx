@@ -67,7 +67,7 @@ function ExamInfoPage() {
                 <div className="font-display font-bold">{e.short_name ?? e.name}</div>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2 min-h-[2lh]">{e.conducting_body}</p>
                 <Button asChild variant="outline" size="sm" className="mt-3 w-full">
-                  <Link to="/exams/$slug" params={{ slug: e.slug }}>View Details →</Link>
+                  <Link to="/exams">View Details →</Link>
                 </Button>
               </Card>
             ))}

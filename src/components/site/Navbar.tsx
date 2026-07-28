@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { to: "/exams" as const, label: "Exams" },
   { to: "/current-affairs" as const, label: "Current Affairs" },
-  { to: "/exam-info" as const, label: "Exam Info" },
+  // { to: "/exam-info" as const, label: "Exam Info" },
   { to: "/about-us" as const, label: "About Us" },
 ];
 
@@ -79,7 +79,11 @@ export function Navbar() {
       <div className="container mx-auto px-4 lg:px-6 h-16 flex items-center gap-4">
         <Logo />
 
-        <nav className="hidden lg:flex items-center gap-1 ml-6">
+        {/* flex-1 + justify-center so the links sit centered in the remaining
+            space between the logo and the right-side actions, instead of
+            hugging the logo (there's no search form left to eat that space —
+            see below). */}
+        <nav className="hidden lg:flex flex-1 items-center justify-center gap-1">
           {NAV.map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (
@@ -99,6 +103,9 @@ export function Navbar() {
           })}
         </nav>
 
+        {/* Search bar disabled for now — kept here commented out in case it's
+            reinstated. Supporting state/handlers below are left in place too
+            since they don't cause build errors when unused.
         <form onSubmit={onSearch} className="hidden md:flex flex-1 max-w-md ml-auto relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -144,8 +151,11 @@ export function Navbar() {
             </div>
           )}
         </form>
+        */}
 
-        <div className="ml-auto md:ml-0 flex items-center gap-2">
+        {/* ml-auto (not just md:ml-0) since the search form that used to
+            provide this right-push at md+ is commented out above. */}
+        <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
               <DropdownMenu>

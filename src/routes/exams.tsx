@@ -1,33 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { ChevronRight, Search, BookOpen, Users as UsersIcon, FileText, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { ChevronRight, Search, BookOpen, FileText, ClipboardList, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { ExamIcon } from "@/components/site/ExamIcon";
+import * as categoryService from "@/services/categoryService";
+import * as testSeriesService from "@/services/testSeriesService";
+import * as mediaService from "@/services/mediaService";
+import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
-
-// No backend endpoint exists yet for exams/categories browsing — this page
-// stays on static placeholder content until that resource is added to the API.
-const CATEGORIES = [
-  { id: "cat1", name: "SSC" },
-  { id: "cat2", name: "Banking" },
-  { id: "cat3", name: "Railways" },
-];
-const EXAMS = [
-  { id: "ex1", slug: "ssc-cgl", name: "SSC CGL", short_name: "SSC CGL", category_id: "cat1", test_count: 42, conducting_body: "Staff Selection Commission" },
-  { id: "ex2", slug: "ssc-chsl", name: "SSC CHSL", short_name: "SSC CHSL", category_id: "cat1", test_count: 30, conducting_body: "Staff Selection Commission" },
-  { id: "ex3", slug: "ibps-po", name: "IBPS PO", short_name: "IBPS PO", category_id: "cat2", test_count: 25, conducting_body: "IBPS" },
-  { id: "ex4", slug: "rrb-ntpc", name: "RRB NTPC", short_name: "RRB NTPC", category_id: "cat3", test_count: 18, conducting_body: "Railway Recruitment Board" },
-];
 
 export const Route = createFileRoute("/exams")({
   head: () => ({
     meta: [
       { title: "All Government Exams — GovtPrep" },
-      { name: "description", content: "Browse 150+ government exams across SSC, Banking, Railways, UPSC, Defence, State PSC and more." },
+      { name: "description", content: "Browse government exams across SSC, Banking, Railways, UPSC and more — free mock tests, previous year papers and exam details." },
       { property: "og:title", content: "All Government Exams — GovtPrep" },
       { property: "og:description", content: "Find the right exam, syllabus and free mock tests." },
     ],
@@ -35,118 +26,158 @@ export const Route = createFileRoute("/exams")({
   component: ExamsPage,
 });
 
-const STATS = [
-  { icon: BookOpen, value: "150+", label: "Exams" },
-  { icon: UsersIcon, value: "50,000+", label: "Students Preparing" },
-  { icon: FileText, value: "1,000+", label: "Mock Tests" },
-  { icon: Sparkles, value: "100%", label: "Free for All" },
-];
-
 function ExamsPage() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
-  const categories = CATEGORIES;
-  const exams = EXAMS;
+  const { data: categoriesRes, isLoading: loadingCats } = useQuery({
+    queryKey: ["exams-categories"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const categories = unwrapList<any>(categoriesRes);
+
+  const { data: seriesRes, isLoading: loadingSeries } = useQuery({
+    queryKey: ["exams-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
+  });
+  const series = unwrapList<any>(seriesRes);
+
+  const isLoading = loadingCats || loadingSeries;
+
+  // Default to the first category once loaded — there's no "All" option here,
+  // same as the equivalent logged-in Overview page.
+  const resolvedCat = activeCat ?? categories[0]?._id ?? null;
+  const activeCategoryName = categories.find((c) => c._id === resolvedCat)?.name ?? "";
 
   const filtered = useMemo(() => {
-    return exams.filter((e) => {
-      if (activeCat && e.category_id !== activeCat) return false;
-      if (q && !(e.name + e.short_name).toLowerCase().includes(q.toLowerCase())) return false;
+    return series.filter((s) => {
+      const catId = s.category?._id ?? s.category;
+      if (resolvedCat && catId !== resolvedCat) return false;
+      if (q && !String(s.name ?? "").toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
-  }, [exams, activeCat, q]);
+  }, [series, resolvedCat, q]);
+
+  const totalTests = series.reduce((sum, s) => sum + (s.totalTests ?? 0), 0);
+  const freePct = series.length ? Math.round((series.filter((s) => !s.isPaid).length / series.length) * 100) : 0;
+
+  const STATS = [
+    { icon: BookOpen, value: `${categories.length}`, label: "Categories" },
+    { icon: FileText, value: `${series.length}`, label: "Test Series" },
+    { icon: ClipboardList, value: `${totalTests}`, label: "Mock Tests" },
+    { icon: Sparkles, value: `${freePct}%`, label: "Free Access" },
+  ];
 
   return (
     <SiteShell>
       <div className="container mx-auto px-4 lg:px-6 pt-6 pb-16">
-        <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Exams", to: "/exams" }, { label: "All Exams" }]} />
+        <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Exams" }]} />
 
-        <div className="mt-6 grid lg:grid-cols-[1fr_auto] gap-6 items-start">
+        <div className="mt-6 grid lg:grid-cols-[1fr_auto] gap-4 items-start">
           <div>
             <h1 className="text-3xl md:text-4xl font-display font-extrabold">All Exams</h1>
             <p className="mt-2 text-muted-foreground">
-              Explore and prepare for 150+ government exams across different categories.
+              Browse exam categories and jump straight into a test series.
             </p>
           </div>
-          <Card className="p-3 sm:p-4 grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3">
+          <Card className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-3">
             {STATS.map((s) => (
               <div key={s.label} className="flex items-center gap-2.5">
-                <span className="h-9 w-9 grid place-items-center rounded-md bg-primary/10 text-primary"><s.icon className="h-4 w-4" /></span>
+                <span className="h-9 w-9 grid place-items-center rounded-md bg-primary/10 text-primary shrink-0">
+                  <s.icon className="h-4 w-4" />
+                </span>
                 <div>
                   <div className="font-display font-bold text-base leading-tight">{s.value}</div>
-                  <div className="text-xs text-muted-foreground">{s.label}</div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">{s.label}</div>
                 </div>
               </div>
             ))}
           </Card>
         </div>
 
-        <div className="mt-8 grid lg:grid-cols-[260px_1fr] gap-6">
-          {/* Sidebar */}
+        <div className="mt-8 grid lg:grid-cols-[260px_1fr] gap-6 items-start">
+          {/* Categories */}
           <Card className="p-4 h-fit">
             <h3 className="font-display font-semibold mb-3 text-sm">Exam Categories</h3>
-            <button
-              onClick={() => setActiveCat(null)}
-              className={cn(
-                "w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between",
-                !activeCat ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
-              )}
-            >
-              All Exams <span className="text-xs text-muted-foreground">{exams.length}</span>
-            </button>
-            {categories.map((c) => {
-              const count = exams.filter((e) => e.category_id === c.id).length;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveCat(c.id)}
-                  className={cn(
-                    "w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between mt-0.5",
-                    activeCat === c.id ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
-                  )}
-                >
-                  {c.name}
-                  <span className="text-xs text-muted-foreground">{count}+</span>
-                </button>
-              );
-            })}
+            {isLoading ? (
+              <div className="space-y-1.5">
+                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 rounded-md" />)}
+              </div>
+            ) : categories.length === 0 ? (
+              <p className="text-xs text-muted-foreground px-1 py-2">No categories yet.</p>
+            ) : (
+              categories.map((c) => {
+                const count = series.filter((s) => (s.category?._id ?? s.category) === c._id).length;
+                const active = resolvedCat === c._id;
+                return (
+                  <button
+                    key={c._id}
+                    onClick={() => setActiveCat(c._id)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between mt-0.5",
+                      active ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted",
+                    )}
+                  >
+                    {c.name}
+                    <span className="text-xs text-muted-foreground">{count}</span>
+                  </button>
+                );
+              })
+            )}
           </Card>
 
-          {/* List */}
+          {/* Test series for the selected category */}
           <Card className="p-4 sm:p-5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
-              <h2 className="font-display font-bold text-lg">{filtered.length}+ Government Exams</h2>
+              <h2 className="font-display font-bold text-lg">
+                {filtered.length} Test Series{activeCategoryName ? ` in ${activeCategoryName}` : ""}
+              </h2>
               <div className="relative md:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exam name…" className="pl-9" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search test series…" className="pl-9" />
               </div>
             </div>
 
-            {filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No exams match your filters.</p>
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                {series.length === 0 ? "No test series available yet." : "No test series match your search."}
+              </p>
             ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-                {filtered.map((e, i) => (
-                  <motion.div
-                    key={e.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(i * 0.02, 0.2), duration: 0.25 }}
-                    whileHover={{ y: -3 }}
-                  >
-                    <Link to="/exams/$slug" params={{ slug: e.slug }} className="group block">
+              <div className="grid sm:grid-cols-2 gap-3">
+                {filtered.map((s) => {
+                  const logoUrl = s.image ? mediaService.resolveMediaUrl(s.image) : undefined;
+                  return (
+                    <Link
+                      key={s._id}
+                      to="/exams/$id"
+                      params={{ id: s._id }}
+                      search={{
+                        name: s.name,
+                        category: activeCategoryName || undefined,
+                        image: s.image || undefined,
+                        description: s.description || undefined,
+                      }}
+                      className="group block"
+                    >
                       <div className="rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition">
-                        <ExamIcon name={e.short_name ?? e.name} />
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <ExamIcon name={s.name ?? "?"} />
+                        )}
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{e.short_name ?? e.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{e.test_count ?? 0} Tests</div>
+                          <div className="font-medium truncate">{s.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{s.totalTests ?? 0} Tests</div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                       </div>
                     </Link>
-                  </motion.div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
