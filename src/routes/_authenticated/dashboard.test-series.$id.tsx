@@ -234,7 +234,7 @@ function TestSeriesDetailPage() {
             </div>
           </Card>
 
-          <Card className="p-5 lg:p-6">
+          {activeSection === "overview" && <Card className="p-5 lg:p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display font-bold text-lg">Important Dates</h2>
             </div>
@@ -252,7 +252,7 @@ function TestSeriesDetailPage() {
                 ))}
               </div>
             </div>
-          </Card>
+          </Card>}
 
           {activeSection === "overview" && (
             <Card className="p-5 lg:p-6">
