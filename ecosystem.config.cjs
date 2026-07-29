@@ -2,9 +2,9 @@ module.exports = {
   apps: [
     {
       name: "govt-frontend",
-      script: ".output/server/index.mjs",
+      script: "dist/server/index.mjs",
       interpreter: "node",
-      cwd: "/root/govt-frontend",
+      cwd: "/root/govt-prep/govt-frontend-code",
       env: {
         PORT: 5005,
         NODE_ENV: "production",
