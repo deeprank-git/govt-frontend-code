@@ -34,16 +34,14 @@ const COLS = [
 
 export function Footer() {
   return (
-    <footer className="relative mt-24 bg-primary text-primary-foreground overflow-hidden">
+    <footer className="relative mt-24 bg-footer-bg text-primary-foreground overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 -top-12 select-none text-center text-[20vw] leading-none font-display font-extrabold text-white/[0.04]">
         GovtPrep
       </div>
       <div className="relative container mx-auto px-4 lg:px-6 pt-16 pb-10">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <div className="[&_*]:text-primary-foreground">
-              <Logo size="h-12" boxClassName="py-1 px-4" />
-            </div>
+            <Logo size="h-12" />
             <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm">
               Building the future of government exam preparation — free mock tests, previous year papers,
               current affairs, and analytics in one place.

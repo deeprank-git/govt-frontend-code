@@ -159,7 +159,7 @@ function HomePage() {
           <div>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight text-foreground">
               Your Journey to a <br />
-              <span className="text-primary">Government Job</span> <br />
+              <span className="text-gradient-primary">Government Job</span> <br />
               Starts Here
             </h1>
             <p className="mt-5 text-base md:text-lg text-muted-foreground max-w-xl">

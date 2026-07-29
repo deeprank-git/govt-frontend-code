@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
+import { TopStoryCard } from "@/components/site/TopStoryCard";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -199,42 +200,16 @@ function CADashboard() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {visibleTop.map((a: any) => {
-                    const t = tintFor(a.category);
-                    return (
-                      <motion.div key={a._id} whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
-                        <Link to="/current-affairs/$id" params={{ id: a._id }} className="block h-full">
-                          <Card className="overflow-hidden flex flex-col h-full">
-                            <div className="relative h-24 bg-muted overflow-hidden group">
-                              {a.image ? (
-                                <img src={resolveMediaUrl(a.image)} alt={a.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                              ) : (
-                                <div className={cn("w-full h-full grid place-items-center", t.bg)}>
-                                  <Newspaper className={cn("h-8 w-8", t.text)} />
-                                </div>
-                              )}
-                              <Badge className={cn("absolute top-2 left-2 text-[10px] border-transparent", t.bg, t.text)}>{a.category}</Badge>
-                            </div>
-                            <div className="p-2.5 flex flex-col flex-1">
-                              <h4 className="text-xs font-semibold leading-snug line-clamp-3 hover:text-primary">{a.title}</h4>
-                              {a.summary && <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>}
-                              <div className="flex items-center justify-between mt-auto pt-2">
-                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                  <CalendarDays className="h-3 w-3" />{format(new Date(a.date), "dd MMM yyyy")}
-                                </span>
-                                <button
-                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleBookmark.mutate(a._id); }}
-                                  className="text-muted-foreground hover:text-primary"
-                                >
-                                  <Bookmark className={cn("h-3.5 w-3.5", bookmarkSet.has(a._id) && "fill-primary text-primary")} />
-                                </button>
-                              </div>
-                            </div>
-                          </Card>
-                        </Link>
-                      </motion.div>
-                    );
-                  })}
+                  {visibleTop.map((a: any) => (
+                    <TopStoryCard
+                      key={a._id}
+                      article={a}
+                      tint={tintFor(a.category)}
+                      to="/current-affairs/$id"
+                      isBookmarked={bookmarkSet.has(a._id)}
+                      onToggleBookmark={(id) => toggleBookmark.mutate(id)}
+                    />
+                  ))}
                   {visibleTop.length === 0 && (
                     <div className="col-span-full text-center text-sm text-muted-foreground py-10">No stories yet.</div>
                   )}

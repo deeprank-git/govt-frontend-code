@@ -131,7 +131,7 @@ function AboutPage() {
       </section>
 
       <section className="container mx-auto px-4 lg:px-6 pb-16">
-        <Card className="p-6 sm:p-8 bg-primary text-primary-foreground flex flex-col md:flex-row items-center justify-between gap-4">
+        <Card className="p-6 sm:p-8 bg-footer-bg text-primary-foreground flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Award className="h-10 w-10" />
             <div>
