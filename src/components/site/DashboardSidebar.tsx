@@ -53,7 +53,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 py-3 border-b border-sidebar-border">
-        <Logo />
+        <Logo size="h-14" boxClassName="py-0.5" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

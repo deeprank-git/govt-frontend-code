@@ -292,7 +292,7 @@ function TestEngine() {
   return (
     <div className="min-h-screen bg-surface-muted">
       <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-4">
-        <Logo compact />
+        <Logo size="h-7" />
         <div className="ml-auto flex items-center gap-2">
           {/* No pause endpoint exists — the attempt keeps counting down
               server-side regardless, so this stays disabled rather than

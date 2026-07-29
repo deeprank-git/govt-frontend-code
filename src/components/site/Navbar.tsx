@@ -77,7 +77,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="container mx-auto px-4 lg:px-6 h-16 flex items-center gap-4">
-        <Logo />
+        <Logo size="h-12" />
 
         {/* flex-1 + justify-center so the links sit centered in the remaining
             space between the logo and the right-side actions, instead of

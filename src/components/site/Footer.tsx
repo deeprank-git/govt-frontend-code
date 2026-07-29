@@ -42,7 +42,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="[&_*]:text-primary-foreground">
-              <Logo />
+              <Logo size="h-12" boxClassName="py-1 px-4" />
             </div>
             <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm">
               Building the future of government exam preparation — free mock tests, previous year papers,

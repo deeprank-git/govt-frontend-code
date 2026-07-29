@@ -52,7 +52,7 @@ function TestInstructionsPage() {
   return (
     <div className="min-h-screen bg-surface-muted">
       <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-4">
-        <Logo compact />
+        <Logo size="h-7" />
         <Button variant="ghost" size="sm" asChild className="ml-auto">
           <Link to="/dashboard/mock-tests"><ArrowLeft className="h-4 w-4 mr-1" />Back to Mock Tests</Link>
         </Button>
