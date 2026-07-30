@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Newspaper, CalendarDays, Bookmark } from "lucide-react";
+import { CalendarDays, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { resolveMediaUrl } from "@/services/mediaService";
+import { ArticleImage } from "@/components/site/ArticleImage";
 
 export function TopStoryCard({
   article,
@@ -21,29 +20,17 @@ export function TopStoryCard({
   isBookmarked: boolean;
   onToggleBookmark: (id: string) => void;
 }) {
-  // Tracks a broken/failed image load (bad URL, upstream fetch error, etc.)
-  // independently of whether `article.image` is set, so a URL that 404s/503s
-  // degrades to the same placeholder as "no image" instead of a broken-image icon.
-  const [imgError, setImgError] = useState(false);
-  const showImage = !!article.image && !imgError;
-
   return (
     <motion.div whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
       <Link to={to} params={{ id: article._id }} className="block h-full">
         <Card className="overflow-hidden flex flex-col h-full">
-          <div className="relative h-24 bg-muted overflow-hidden group">
-            {showImage ? (
-              <img
-                src={resolveMediaUrl(article.image)}
-                alt={article.title}
-                onError={() => setImgError(true)}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-              />
-            ) : (
-              <div className={cn("w-full h-full grid place-items-center", tint.bg)}>
-                <Newspaper className={cn("h-8 w-8", tint.text)} />
-              </div>
-            )}
+          <div className="relative h-24 overflow-hidden group">
+            <ArticleImage
+              image={article.image}
+              alt={article.title}
+              className="h-full w-full transition-transform duration-300 group-hover:scale-110"
+              compact
+            />
             <Badge
               className={cn(
                 "absolute top-2 left-2 text-[10px] border-transparent truncate max-w-[70%] whitespace-nowrap",

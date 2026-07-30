@@ -24,9 +24,9 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import * as currentAffairsService from "@/services/currentAffairsService";
-import { resolveMediaUrl } from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { TopStoryCard } from "@/components/site/TopStoryCard";
+import { ArticleImage } from "@/components/site/ArticleImage";
 
 export const Route = createFileRoute("/_authenticated/dashboard/current-affairs")({
   component: CADashboard,
@@ -224,15 +224,7 @@ function CADashboard() {
                 const t = tintFor(a.category);
                 return (
                   <motion.div key={a._id} whileHover={{ x: 2 }} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="h-14 w-20 rounded-lg overflow-hidden shrink-0 bg-muted">
-                      {a.image ? (
-                        <img src={resolveMediaUrl(a.image)} alt={a.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className={cn("w-full h-full grid place-items-center", t.bg)}>
-                          <Newspaper className={cn("h-5 w-5", t.text)} />
-                        </div>
-                      )}
-                    </div>
+                    <ArticleImage image={a.image} alt={a.title} className="h-14 w-20 rounded-lg" compact />
                     <Link to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex-1 min-w-0">
                       <Badge className={cn("text-[10px] border-transparent mb-1", t.bg, t.text)}>{a.category}</Badge>
                       <h4 className="text-sm font-semibold leading-snug hover:text-primary">{a.title}</h4>

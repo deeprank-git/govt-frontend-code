@@ -36,3 +36,17 @@ export function resolveMediaUrl(url: string): string {
   const path = /^https?:\/\//.test(url) ? new URL(url).pathname : url;
   return `${origin}${path.startsWith("/") ? "" : "/"}${path}`;
 }
+
+// CurrentAffairs.image is the one field in the API that can legitimately be a
+// full external URL (GKToday-scraped articles live on gktoday.in, not on our
+// backend) instead of a backend-relative "/uploads/..." path — render those
+// as-is and never run them through resolveMediaUrl, which would strip the
+// external host and re-prepend our own origin, producing a broken URL.
+// Empty/missing is common for Drishti-scraped articles and admin drafts with
+// no upload — callers should treat a null return as "show a placeholder",
+// not an error.
+export function resolveCurrentAffairsImageUrl(image?: string | null): string | null {
+  if (!image || !image.trim()) return null;
+  if (/^https?:\/\//i.test(image)) return image;
+  return resolveMediaUrl(image);
+}

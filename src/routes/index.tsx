@@ -18,7 +18,6 @@ import {
   Shield,
   Sparkles,
   ChevronRight,
-  Newspaper,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SiteShell } from "@/components/site/SiteShell";
 import { ExamIcon } from "@/components/site/ExamIcon";
+import { ArticleImage } from "@/components/site/ArticleImage";
 import { toast } from "sonner";
 import heroImg from "@/assets/hero-student.png";
 
@@ -347,13 +347,7 @@ function HomePage() {
                 params={{ id: a._id }}
                 className="flex gap-3 rounded-lg border border-border p-2.5 hover:border-primary transition"
               >
-                <div className="h-14 w-14 rounded-lg overflow-hidden shrink-0 bg-muted grid place-items-center">
-                  {a.image ? (
-                    <img src={mediaService.resolveMediaUrl(a.image)} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <Newspaper className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
+                <ArticleImage image={a.image} alt={a.title} className="h-14 w-14 rounded-lg" compact />
                 <div className="min-w-0 flex-1">
                   <Badge className="mb-1 bg-primary/15 text-primary border-transparent text-[10px]">{a.category}</Badge>
                   <div className="font-semibold text-sm leading-snug line-clamp-2">{a.title}</div>

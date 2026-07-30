@@ -13,11 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as currentAffairsService from "@/services/currentAffairsService";
-import * as mediaService from "@/services/mediaService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { AdminPager } from "@/components/admin/AdminPager";
 import { usePaginatedSearch } from "@/hooks/use-paginated-search";
+import { ArticleImage } from "@/components/site/ArticleImage";
 
 export const Route = createFileRoute("/admin-dashboard/current-affairs")({
   component: CurrentAffairsPage,
@@ -180,13 +180,15 @@ function CurrentAffairsPage() {
             <div>
               <Label>Image</Label>
               <div className="flex items-center gap-3 mt-1">
-                {(imageFile || existingImage) && (
+                {imageFile ? (
                   <img
-                    src={imageFile ? URL.createObjectURL(imageFile) : mediaService.resolveMediaUrl(existingImage)}
+                    src={URL.createObjectURL(imageFile)}
                     alt=""
                     className="h-14 w-14 rounded-md object-cover border border-border"
                   />
-                )}
+                ) : existingImage ? (
+                  <ArticleImage image={existingImage} alt="" className="h-14 w-14 rounded-md border border-border" compact />
+                ) : null}
                 <input
                   ref={imageInputRef}
                   type="file"

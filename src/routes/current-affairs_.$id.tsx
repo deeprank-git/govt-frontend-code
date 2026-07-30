@@ -1,14 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Eye, CalendarDays, Tag as TagIcon, AlertTriangle, FileQuestion, RotateCcw } from "lucide-react";
+import { ArrowLeft, AlertTriangle, FileQuestion, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
+import { ArticleDetail } from "@/components/site/ArticleDetail";
 import * as currentAffairsService from "@/services/currentAffairsService";
-import { resolveMediaUrl } from "@/services/mediaService";
 import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/current-affairs_/$id")({
@@ -101,69 +100,8 @@ function CurrentAffairDetailPage() {
         )}
 
         {!isLoading && !notFound && !isError && article && (
-          <div className="grid xl:grid-cols-[1fr_320px] gap-5 items-start mt-6">
-            <Card className="p-6 lg:p-8 min-w-0">
-              <Badge className="bg-primary/15 text-primary border-transparent">{article.category}</Badge>
-              <h1 className="mt-3 text-2xl md:text-3xl font-display font-extrabold">{article.title}</h1>
-              <div className="flex items-center flex-wrap gap-4 text-xs text-muted-foreground mt-2">
-                <span className="flex items-center gap-1.5">
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  {new Date(article.date).toLocaleDateString(undefined, { day: "2-digit", month: "long", year: "numeric" })}
-                </span>
-                {typeof article.views === "number" && (
-                  <span className="flex items-center gap-1.5">
-                    <Eye className="h-3.5 w-3.5" />
-                    {article.views.toLocaleString()} view{article.views === 1 ? "" : "s"}
-                  </span>
-                )}
-              </div>
-              {article.image && <img src={resolveMediaUrl(article.image)} alt="" className="w-full rounded-lg mt-5 max-h-96 object-cover" />}
-              {article.summary && <p className="mt-5 text-base text-muted-foreground italic">{article.summary}</p>}
-              <div className="mt-5 text-[15px] leading-7 whitespace-pre-line max-w-[70ch]">{article.content}</div>
-              {Array.isArray(article.tags) && article.tags.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 mt-6 pt-5 border-t border-border">
-                  <TagIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                  {article.tags.map((tag: string) => (
-                    <Badge key={tag} variant="outline" className="text-xs font-normal">{tag}</Badge>
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            <aside className="space-y-4">
-              <Card className="p-4">
-                <h3 className="font-display font-bold text-sm mb-3">More in {article.category}</h3>
-                {more.length > 0 ? (
-                  <div className="divide-y divide-border">
-                    {more.map((a: any) => (
-                      <Link
-                        key={a._id}
-                        to="/current-affairs/$id"
-                        params={{ id: a._id }}
-                        className="block py-3 first:pt-0 last:pb-0 hover:text-primary transition-colors"
-                      >
-                        <div className="text-sm font-medium leading-snug line-clamp-2">{a.title}</div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
-                          {new Date(a.date).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">No other articles in this category yet.</p>
-                )}
-              </Card>
-
-              <Card className="p-4">
-                <h3 className="font-display font-bold text-sm mb-1">Explore Current Affairs</h3>
-                <p className="text-xs text-muted-foreground">
-                  Browse every category and catch up on the latest updates.
-                </p>
-                <Button asChild className="w-full mt-3" size="sm">
-                  <Link to="/current-affairs">Browse All</Link>
-                </Button>
-              </Card>
-            </aside>
+          <div className="mt-6">
+            <ArticleDetail article={article} more={more} variant="public" />
           </div>
         )}
       </div>
