@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
-  TrendingUp,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -57,6 +56,7 @@ function CADashboard() {
   const [subscribed, setSubscribed] = useState(false);
   const [topIndex, setTopIndex] = useState(0);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [showAllNews, setShowAllNews] = useState(false);
 
   const { data: caRes } = useQuery({
     queryKey: ["dashboard-current-affairs"],
@@ -86,7 +86,7 @@ function CADashboard() {
   // No `is_featured` field on the real model — take the most recent items instead.
   const topStories = useMemo(() => ca.slice(0, 10), [ca]);
 
-  const latest = filtered.slice(0, 6);
+  const latest = showAllNews ? filtered : filtered.slice(0, 6);
 
   const stats = [
     { value: `${Math.max(ca.length, 1248)}+`, label: "News Articles", icon: Newspaper, tint: "bg-blue-100 text-blue-600" },
@@ -95,11 +95,8 @@ function CADashboard() {
     { value: "85.7K+", label: "Learners Updated Today", icon: Users, tint: "bg-violet-100 text-violet-600" },
   ];
 
-  const trending = useMemo(() => {
-    const counts: Record<string, number> = {};
-    ca.forEach((a: any) => { counts[a.category] = (counts[a.category] ?? 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [ca]);
+  // trending computed here previously — unused now that the Trending Topics
+  // card below is commented out.
 
   // Streak (simulated: 18-day)
   const streak = 18;
@@ -245,7 +242,7 @@ function CADashboard() {
             </div>
             {filtered.length > latest.length && (
               <div className="text-center mt-3 pt-3 border-t border-border">
-                <button className="text-sm text-primary font-medium hover:underline">View All News</button>
+                <button onClick={() => setShowAllNews(true)} className="text-sm text-primary font-medium hover:underline">View All News</button>
               </div>
             )}
           </Card>
