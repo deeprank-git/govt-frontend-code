@@ -314,7 +314,7 @@ function CADashboard() {
             </div>
           </Card>
 
-          {/* Trending Topics */}
+          {/* Trending Topics — hidden for now
           <Card className="p-4">
             <h3 className="font-display font-bold text-sm flex items-center gap-2 mb-3">
               <span className="h-4 w-1 bg-primary rounded-full" /> Trending Topics
@@ -333,6 +333,7 @@ function CADashboard() {
             </div>
             <button className="mt-3 text-xs text-primary font-medium hover:underline w-full text-center">View All Topics</button>
           </Card>
+          */}
         </div>
       </div>
     </motion.div>

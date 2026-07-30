@@ -401,9 +401,15 @@ function TestEngine() {
                 <RotateCcw className="h-4 w-4 mr-1.5" /> Clear Response
               </Button>
             </div>
-            <Button onClick={() => goto(index + 1)} disabled={index === totalQuestions - 1}>
-              Save & Next <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+            {index === totalQuestions - 1 ? (
+              <Button onClick={() => setConfirmOpen(true)}>
+                Submit Test
+              </Button>
+            ) : (
+              <Button onClick={() => goto(index + 1)}>
+                Save & Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -471,10 +477,6 @@ function TestEngine() {
               </div>
             </div>
           )}
-
-          <Button className="w-full mt-4" variant="outline" onClick={() => setConfirmOpen(true)}>
-            Submit Test
-          </Button>
         </Card>
       </div>
 
