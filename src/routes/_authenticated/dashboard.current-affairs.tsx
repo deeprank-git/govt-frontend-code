@@ -221,7 +221,7 @@ function CADashboard() {
                 const t = tintFor(a.category);
                 return (
                   <motion.div key={a._id} whileHover={{ x: 2 }} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                    <ArticleImage image={a.image} alt={a.title} className="h-14 w-20 rounded-lg" compact />
+                    <ArticleImage image={a.image} alt={a.title} className="h-14 w-20 rounded-lg" />
                     <Link to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex-1 min-w-0">
                       <Badge className={cn("text-[10px] border-transparent mb-1", t.bg, t.text)}>{a.category}</Badge>
                       <h4 className="text-sm font-semibold leading-snug hover:text-primary">{a.title}</h4>

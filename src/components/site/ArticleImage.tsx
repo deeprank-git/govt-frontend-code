@@ -1,28 +1,35 @@
 import { useState } from "react";
-import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveCurrentAffairsImageUrl } from "@/services/mediaService";
+import noImagePlaceholder from "@/assets/no-image-placeholder.png";
 
-// Shared image-resolution + fallback logic for CurrentAffairs.image, used by
-// both the article card/list view and the article detail hero so a
-// broken/missing image degrades identically everywhere: absolute gktoday.in
-// URLs render as-is, relative admin-uploaded paths get the API host
-// prepended, and anything empty (or that fails to load) shows a clean
-// "No image for this article" placeholder instead of a broken-image icon.
+// Sampled from the placeholder PNG's own background (~#fcfcfd) so a
+// letterboxed/pillarboxed edge blends into the illustration instead of
+// showing a harsh color break.
+const PLACEHOLDER_BG = "#fcfcfd";
+
+// Shared image-resolution + fallback logic for CurrentAffairs.image — the
+// single place every article thumbnail (Top Stories, Latest Updates,
+// category-filtered lists, "More in category", the article detail hero, and
+// the admin edit preview) goes through, so they can't drift out of sync the
+// way "Latest Updates" once did: absolute gktoday.in URLs render as-is,
+// relative admin-uploaded paths get the API host prepended, and anything
+// empty (or that fails to load) shows the same hardcoded placeholder graphic
+// — never a per-category icon or a broken <img>.
+//
+// Real photos use object-cover (arbitrary aspect ratio, cropping is fine and
+// expected). The placeholder is a square illustration with its own baked-in
+// "NEWS" heading and caption text, so it uses object-contain instead — cover
+// would crop that text off depending on the container's aspect ratio. This
+// branch lives here (not per call site) so every context stays consistent.
 export function ArticleImage({
   image,
   alt,
   className,
-  iconClassName,
-  compact = false,
 }: {
   image?: string | null;
   alt: string;
   className?: string;
-  iconClassName?: string;
-  /** Icon-only placeholder, no label text — for small thumbnails where the
-      full "No image for this article" sentence can't fit. */
-  compact?: boolean;
 }) {
   const [errored, setErrored] = useState(false);
   const url = resolveCurrentAffairsImageUrl(image);
@@ -38,11 +45,15 @@ export function ArticleImage({
           className="w-full h-full object-cover"
         />
       ) : (
-        <div className="w-full h-full grid place-items-center gap-1 bg-linear-to-br from-muted to-muted/60 text-muted-foreground">
-          <ImageOff className={cn("h-6 w-6", iconClassName)} />
-          {!compact && (
-            <span className="text-[11px] font-medium px-3 text-center leading-snug">No image for this article</span>
-          )}
+        <div
+          className="w-full h-full flex items-center justify-center p-3"
+          style={{ backgroundColor: PLACEHOLDER_BG }}
+        >
+          <img
+            src={noImagePlaceholder}
+            alt="No image available for this article"
+            className="max-w-full max-h-full object-contain"
+          />
         </div>
       )}
     </div>

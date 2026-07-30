@@ -148,7 +148,7 @@ export function ArticleDetail({ article, more, variant }: { article: any; more: 
 function MoreItem({ article: a, to }: { article: any; to: "/current-affairs/$id" | "/dashboard/current-affairs/$id" }) {
   return (
     <Link to={to} params={{ id: a._id }} className="flex gap-3 group">
-      <ArticleImage image={a.image} alt={a.title} className="h-14 w-14 rounded-md" iconClassName="h-4 w-4" compact />
+      <ArticleImage image={a.image} alt={a.title} className="h-14 w-14 rounded-md" />
       <div className="min-w-0">
         <div className="text-sm font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {a.title}

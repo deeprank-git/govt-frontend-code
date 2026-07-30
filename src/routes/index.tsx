@@ -324,7 +324,7 @@ function HomePage() {
                 params={{ id: a._id }}
                 className="flex gap-3 rounded-lg border border-border p-2.5 hover:border-primary transition"
               >
-                <ArticleImage image={a.image} alt={a.title} className="h-14 w-14 rounded-lg" compact />
+                <ArticleImage image={a.image} alt={a.title} className="h-14 w-14 rounded-lg" />
                 <div className="min-w-0 flex-1">
                   <Badge className="mb-1 bg-primary/15 text-primary border-transparent text-[10px]">{a.category}</Badge>
                   <div className="font-semibold text-sm leading-snug line-clamp-2">{a.title}</div>

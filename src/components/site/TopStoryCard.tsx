@@ -29,7 +29,6 @@ export function TopStoryCard({
               image={article.image}
               alt={article.title}
               className="h-full w-full transition-transform duration-300 group-hover:scale-110"
-              compact
             />
             <Badge
               className={cn(

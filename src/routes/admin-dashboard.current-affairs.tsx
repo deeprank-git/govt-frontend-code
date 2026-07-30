@@ -187,7 +187,7 @@ function CurrentAffairsPage() {
                     className="h-14 w-14 rounded-md object-cover border border-border"
                   />
                 ) : existingImage ? (
-                  <ArticleImage image={existingImage} alt="" className="h-14 w-14 rounded-md border border-border" compact />
+                  <ArticleImage image={existingImage} alt="" className="h-14 w-14 rounded-md border border-border" />
                 ) : null}
                 <input
                   ref={imageInputRef}
