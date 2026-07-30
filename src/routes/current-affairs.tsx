@@ -13,11 +13,9 @@ import {
   FolderOpen,
   Users,
   Bookmark,
-  Flame,
   ChevronLeft,
   ChevronRight,
   Mail,
-  TrendingUp,
   Check,
 } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
@@ -67,6 +65,7 @@ function CADashboard() {
   const [subscribed, setSubscribed] = useState(false);
   const [topIndex, setTopIndex] = useState(0);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [showAllNews, setShowAllNews] = useState(false);
 
   // Public endpoint as of 2026-07-28 — no auth needed, fetched for every visitor.
   const { data: caRes } = useQuery({
@@ -97,7 +96,7 @@ function CADashboard() {
   // No `is_featured` field on the real model — take the most recent items instead.
   const topStories = useMemo(() => ca.slice(0, 10), [ca]);
 
-  const latest = filtered.slice(0, 6);
+  const latest = showAllNews ? filtered : filtered.slice(0, 6);
 
   const stats = [
     { value: `${ca.length}+`, label: "News Articles", icon: Newspaper, tint: "bg-blue-100 text-blue-600" },
@@ -106,17 +105,8 @@ function CADashboard() {
     { value: "85.7K+", label: "Learners Updated Today", icon: Users, tint: "bg-violet-100 text-violet-600" },
   ];
 
-  const trending = useMemo(() => {
-    const counts: Record<string, number> = {};
-    ca.forEach((a: any) => { counts[a.category] = (counts[a.category] ?? 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [ca]);
-
-  // Streak (simulated: 18-day)
-  const streak = 18;
-  const days = ["M", "T", "W", "T", "F", "S", "S"];
-  const today = new Date().getDay(); // 0 Sun..6 Sat
-  const todayIdx = (today + 6) % 7; // M=0
+  // trending / streak computed here previously — unused now that the
+  // Trending Topics and Streak cards below are commented out.
   const visibleTop = topStories.slice(topIndex, topIndex + 5);
 
   const handleSubscribe = (e: React.FormEvent) => {
@@ -267,7 +257,7 @@ function CADashboard() {
                 </div>
                 {filtered.length > latest.length && (
                   <div className="text-center mt-3 pt-3 border-t border-border">
-                    <button className="text-sm text-primary font-medium hover:underline">View All News</button>
+                    <button onClick={() => setShowAllNews(true)} className="text-sm text-primary font-medium hover:underline">View All News</button>
                   </div>
                 )}
               </Card>
@@ -299,7 +289,8 @@ function CADashboard() {
                 </form>
               </Card>
 
-              {/* Streak */}
+              {/* Streak — hidden on the public landing page: not logged in, so
+                  there's no real per-user streak to show here.
               <Card className="p-4">
                 <h3 className="font-display font-bold text-sm flex items-center gap-2">
                   <span className="h-4 w-1 bg-primary rounded-full" /> Current Affairs Streak
@@ -327,6 +318,7 @@ function CADashboard() {
                   })}
                 </div>
               </Card>
+              */}
 
               {/* Trending Topics — hidden for now
               <Card className="p-4">
