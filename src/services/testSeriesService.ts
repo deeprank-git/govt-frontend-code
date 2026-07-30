@@ -23,6 +23,7 @@ export type TestSeriesInput = {
   marksPerQuestion?: number;
   importantDates?: Record<string, { from: string; to: string }>;
   image?: File;
+  notificationPdf?: File;
 };
 
 // Create/update are multipart/form-data (see GovtPrep-Backend-Workflow-and-Status.md

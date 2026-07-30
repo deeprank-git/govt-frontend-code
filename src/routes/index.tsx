@@ -79,28 +79,8 @@ function tabLabel(name: string) {
 
 // Total grid cells (3 cols x 4 rows). The last card-bearing slot is always
 // reserved for the "Explore all exams" cell, so at most MAX_POPULAR_SERIES - 1
-// real/dummy test-series cards are shown before it.
+// test-series cards are shown before it.
 const MAX_POPULAR_SERIES = 12;
-
-// TODO: DUMMY DATA for UI testing — remove once backend returns multiple SSC test series.
-// Mirrors the shape returned by GET /api/test-series (id, name, category, image, description)
-// so it can flow through the same card/link rendering as real data. Only merged into the
-// SSC tab below — every other category renders real backend data exclusively.
-// 11 items: combined with the 1 real "SSC CGL Tier 1 2026" series, this fills exactly the
-// 11 card slots so "Explore all exams" naturally lands in the grid's 12th (last) cell.
-const SSC_DUMMY_TEST_SERIES = [
-  { _id: "dummy-ssc-1", name: "SSC CGL Tier 1 2026", category: "SSC", image: undefined, description: "Combined Graduate Level Tier 1 mock series." },
-  { _id: "dummy-ssc-2", name: "SSC CHSL Tier 1 2026", category: "SSC", image: undefined, description: "Combined Higher Secondary Level Tier 1 mock series." },
-  { _id: "dummy-ssc-3", name: "SSC MTS 2026", category: "SSC", image: undefined, description: "Multi Tasking Staff exam mock series." },
-  { _id: "dummy-ssc-4", name: "SSC CPO Tier 1 2026", category: "SSC", image: undefined, description: "Central Police Organization Tier 1 mock series." },
-  { _id: "dummy-ssc-5", name: "SSC Stenographer 2026", category: "SSC", image: undefined, description: "Stenographer Grade C & D mock series." },
-  { _id: "dummy-ssc-6", name: "SSC JE 2026", category: "SSC", image: undefined, description: "Junior Engineer exam mock series." },
-  { _id: "dummy-ssc-7", name: "SSC GD Constable 2026", category: "SSC", image: undefined, description: "General Duty Constable mock series." },
-  { _id: "dummy-ssc-8", name: "SSC CGL Tier 2 2026", category: "SSC", image: undefined, description: "Combined Graduate Level Tier 2 mock series." },
-  { _id: "dummy-ssc-9", name: "SSC Selection Post 2026", category: "SSC", image: undefined, description: "Selection Post Phase mock series." },
-  { _id: "dummy-ssc-10", name: "SSC JHT 2026", category: "SSC", image: undefined, description: "Junior Hindi Translator mock series." },
-  { _id: "dummy-ssc-11", name: "SSC Constable (Delhi Police) 2026", category: "SSC", image: undefined, description: "Delhi Police Constable mock series." },
-];
 
 function HomePage() {
   const { user } = useAuth();
@@ -249,12 +229,9 @@ function HomePage() {
             </TabsList>
             {categories.map((c) => {
               const realList = series.filter((s) => (s.category?._id ?? s.category) === c._id);
-              // TODO: DUMMY DATA for UI testing — remove this merge once the backend returns
-              // multiple SSC test series; every other category is unaffected.
-              const fullList = /ssc/i.test(c.name ?? "") ? [...realList, ...SSC_DUMMY_TEST_SERIES] : realList;
               // Reserve the last grid cell for "Explore all exams" — it always follows
               // immediately after the last card, whichever cell that happens to be.
-              const list = fullList.slice(0, MAX_POPULAR_SERIES - 1);
+              const list = realList.slice(0, MAX_POPULAR_SERIES - 1);
               return (
                 <TabsContent key={c._id} value={c._id} className="m-0">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-4 gap-4">

@@ -100,9 +100,9 @@ function CADashboard() {
   const latest = filtered.slice(0, 6);
 
   const stats = [
-    { value: `${Math.max(ca.length, 1248)}+`, label: "News Articles", icon: Newspaper, tint: "bg-blue-100 text-blue-600" },
+    { value: `${ca.length}+`, label: "News Articles", icon: Newspaper, tint: "bg-blue-100 text-blue-600" },
     { value: "30", label: "Days Covered", icon: CalendarDays, tint: "bg-emerald-100 text-emerald-600" },
-    { value: String(new Set(ca.map((a: any) => a.category)).size || 26), label: "Topics", icon: FolderOpen, tint: "bg-amber-100 text-amber-600" },
+    { value: String(new Set(ca.map((a: any) => a.category)).size), label: "Topics", icon: FolderOpen, tint: "bg-amber-100 text-amber-600" },
     { value: "85.7K+", label: "Learners Updated Today", icon: Users, tint: "bg-violet-100 text-violet-600" },
   ];
 
@@ -328,7 +328,7 @@ function CADashboard() {
                 </div>
               </Card>
 
-              {/* Trending Topics */}
+              {/* Trending Topics — hidden for now
               <Card className="p-4">
                 <h3 className="font-display font-bold text-sm flex items-center gap-2 mb-3">
                   <span className="h-4 w-1 bg-primary rounded-full" /> Trending Topics
@@ -347,6 +347,7 @@ function CADashboard() {
                 </div>
                 <button className="mt-3 text-xs text-primary font-medium hover:underline w-full text-center">View All Topics</button>
               </Card>
+              */}
             </div>
           </div>
         </motion.div>

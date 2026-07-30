@@ -44,6 +44,9 @@ function TestSeriesPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImage, setExistingImage] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [notificationPdfFile, setNotificationPdfFile] = useState<File | null>(null);
+  const [existingNotificationPdf, setExistingNotificationPdf] = useState("");
+  const notificationPdfInputRef = useRef<HTMLInputElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(series, ["name", "description"]);
@@ -54,6 +57,8 @@ function TestSeriesPage() {
     setImportantDates([]);
     setImageFile(null);
     setExistingImage("");
+    setNotificationPdfFile(null);
+    setExistingNotificationPdf("");
     setOpen(true);
   };
   const openEdit = (s: any) => {
@@ -78,6 +83,8 @@ function TestSeriesPage() {
     );
     setImageFile(null);
     setExistingImage(s.image ?? "");
+    setNotificationPdfFile(null);
+    setExistingNotificationPdf(s.notificationPdf ?? "");
     setOpen(true);
   };
 
@@ -93,6 +100,7 @@ function TestSeriesPage() {
             )
           : undefined,
         image: imageFile ?? undefined,
+        notificationPdf: notificationPdfFile ?? undefined,
       };
       return editing ? testSeriesService.updateTestSeries(editing._id, payload) : testSeriesService.createTestSeries(payload);
     },
@@ -184,6 +192,32 @@ function TestSeriesPage() {
                 />
                 <Button type="button" size="sm" variant="outline" onClick={() => imageInputRef.current?.click()}>
                   {imageFile || existingImage ? "Replace Image" : "Upload Image"}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label>Notification PDF</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {(notificationPdfFile || existingNotificationPdf) && (
+                  <a
+                    href={notificationPdfFile ? URL.createObjectURL(notificationPdfFile) : mediaService.resolveMediaUrl(existingNotificationPdf)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline truncate max-w-[160px]"
+                  >
+                    {notificationPdfFile ? notificationPdfFile.name : "View current PDF"}
+                  </a>
+                )}
+                <input
+                  ref={notificationPdfInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setNotificationPdfFile(f); }}
+                />
+                <Button type="button" size="sm" variant="outline" onClick={() => notificationPdfInputRef.current?.click()}>
+                  {notificationPdfFile || existingNotificationPdf ? "Replace PDF" : "Upload PDF"}
                 </Button>
               </div>
             </div>
