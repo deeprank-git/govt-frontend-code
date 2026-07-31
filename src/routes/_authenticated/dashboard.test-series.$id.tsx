@@ -48,11 +48,10 @@ export const Route = createFileRoute("/_authenticated/dashboard/test-series/$id"
   component: TestSeriesDetailPage,
 });
 
-// Mock Test / Previous Year Question Paper list real Tests for this series
-// (there's no backend flag distinguishing "mock" from "PYQ", so both tabs
-// show the same real list — confirmed with the user). Header links, Quick
-// Links and Important Dates come from the real TestSeries doc. Eligibility /
-// Exam Pattern / Syllabus have no backing API yet and stay static.
+// Mock Test / Previous Year Question Paper tabs both list real Tests for
+// this series, split by Test.paperType ("mock" vs "previous_year"). Header
+// links, Quick Links and Important Dates come from the real TestSeries doc.
+// Eligibility / Exam Pattern / Syllabus have no backing API yet and stay static.
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "mocks", label: "Mock Test", icon: ClipboardList },
@@ -127,6 +126,8 @@ function TestSeriesDetailPage() {
     queryFn: () => testService.getTests({ testSeries: id }),
   });
   const tests = unwrapList<any>(testsRes);
+  const mockTests = tests.filter((t) => t.paperType !== "previous_year");
+  const pypTests = tests.filter((t) => t.paperType === "previous_year");
 
   const displayName = series?.name ?? name ?? "Test Series";
   const rawImage = series?.image ?? image;
@@ -301,11 +302,11 @@ function TestSeriesDetailPage() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
                 </div>
-              ) : tests.length === 0 ? (
+              ) : mockTests.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No mock tests available yet.</p>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {tests.map((t) => (
+                  {mockTests.map((t) => (
                     <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
@@ -345,11 +346,11 @@ function TestSeriesDetailPage() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
                 </div>
-              ) : tests.length === 0 ? (
+              ) : pypTests.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No papers available yet.</p>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {tests.map((t) => (
+                  {pypTests.map((t) => (
                     <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
@@ -419,11 +420,11 @@ function TestSeriesDetailPage() {
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-md" />)}
               </div>
-            ) : tests.length === 0 ? (
+            ) : mockTests.length === 0 ? (
               <p className="text-xs text-muted-foreground">No tests yet.</p>
             ) : (
               <ul className="space-y-3">
-                {tests.slice(0, 3).map((t) => (
+                {mockTests.slice(0, 3).map((t) => (
                   <li key={t._id} className="flex items-center justify-between gap-2 border-b border-border last:border-0 pb-3 last:pb-0">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold truncate">{t.title}</div>
