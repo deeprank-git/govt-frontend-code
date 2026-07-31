@@ -4,7 +4,7 @@ No Docker. Pull the repo onto the VPS, build there with npm (overriding the defa
 
 **VPS state:** Ubuntu, Nginx, Node, PM2, and Certbot already installed. IP `89.116.20.193`.
 
-Replace `your-domain.com` and `<PORT>` everywhere below with the actual domain and port for this project.
+Replace `testopy.com` and `<PORT>` everywhere below with the actual domain and port for this project.
 
 ---
 
@@ -125,13 +125,13 @@ curl -I http://localhost:<PORT>
 ## 7. Nginx site config
 
 ```bash
-sudo tee /etc/nginx/sites-available/your-domain.com > /dev/null <<'EOF'
+sudo tee /etc/nginx/sites-available/testopy.com > /dev/null <<'EOF'
 server {
     listen 80;
-    server_name your-domain.com www.your-domain.com;
+    server_name testopy.com www.testopy.com;
 
     location / {
-        proxy_pass http://localhost:<PORT>;
+        proxy_pass http://localhost:5005;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -144,19 +144,19 @@ server {
 }
 EOF
 
-sudo ln -s /etc/nginx/sites-available/your-domain.com /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/testopy.com /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-At this point `http://your-domain.com` should load the app (once DNS has propagated).
+At this point `http://testopy.com` should load the app (once DNS has propagated).
 
 ---
 
 ## 8. SSL via Let's Encrypt
 
 ```bash
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d testopy.com -d www.testopy.com
 ```
 
 Certbot rewrites the site file to add the `listen 443 ssl` block and an HTTP → HTTPS redirect, and sets up auto-renewal via a systemd timer (`sudo systemctl status certbot.timer` to confirm).
