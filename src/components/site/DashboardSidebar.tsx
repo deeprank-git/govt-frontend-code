@@ -107,6 +107,8 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
             </Button>
           </Card>
         ) : pathname.startsWith("/dashboard/current-affairs") ? (
+          null
+          /* Daily Current Affairs Quiz card — commented out per request 2026-07-31
           <Card className="p-3 bg-success/5 border-success/20 text-center">
             <div className="mx-auto h-14 w-14 rounded-2xl bg-success/10 grid place-items-center">
               <ClipboardCheck className="h-7 w-7 text-success" />
@@ -119,6 +121,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
               <Link to="/dashboard/mock-tests">Start Quiz</Link>
             </Button>
           </Card>
+          */
         ) : pathname.startsWith("/dashboard/answer-key") ? (
           <Card className="p-3 bg-primary/5 border-primary/20 text-center">
             <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center">
@@ -147,6 +150,8 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
             </Button>
           </Card>
         ) : pathname.startsWith("/dashboard/profile") ? (
+          null
+          /* Secure Your Account / Enable 2FA card — commented out per request 2026-07-31
           <Card className="p-3 bg-primary/5 border-primary/20 text-center">
             <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 grid place-items-center relative">
               <Shield className="h-7 w-7 text-primary" />
@@ -162,6 +167,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
               Enable 2FA
             </Button>
           </Card>
+          */
         ) : (
           <Card className="p-3 bg-primary/5 border-primary/20 text-center">
             <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center">
