@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Menu, X, Bell, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Menu, X, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "./Logo";
 import { useAuth } from "@/hooks/use-auth";
 import * as authService from "@/services/authService";
-import * as notificationService from "@/services/notificationService";
 import * as searchService from "@/services/searchService";
-import { unwrapList } from "@/lib/api-unwrap";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +29,6 @@ const NAV = [
 export function Navbar() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -51,23 +48,6 @@ export function Navbar() {
   const searchGroups = searchRes?.data as
     | { categories: any[]; tests: any[]; testSeries: any[]; currentAffairs: any[] }
     | undefined;
-
-  const { data: notifRes } = useQuery({
-    queryKey: ["my-notifications"],
-    queryFn: () => notificationService.getMyNotifications({ limit: 10 }),
-    enabled: !!user,
-  });
-  const notifications = unwrapList<any>(notifRes);
-  const unreadCount = notifRes?.unreadCount ?? 0;
-
-  const onNotificationClick = async (id: string) => {
-    try {
-      await notificationService.markNotificationRead(id);
-      qc.invalidateQueries({ queryKey: ["my-notifications"] });
-    } catch {
-      // non-critical — ignore
-    }
-  };
 
   const initials = (user?.name || user?.email || "U")
     .split(/[\s@]/)[0]
@@ -158,32 +138,6 @@ export function Navbar() {
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="ghost" className="relative" aria-label="Notifications">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive" />}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {notifications.length === 0 && (
-                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">No notifications yet.</div>
-                  )}
-                  {notifications.map((n) => (
-                    <DropdownMenuItem
-                      key={n._id}
-                      onSelect={() => onNotificationClick(n._id)}
-                      className={cn("flex flex-col items-start gap-0.5 whitespace-normal", !n.isRead && "bg-primary/5")}
-                    >
-                      <span className={cn("text-sm", !n.isRead && "font-semibold")}>{n.title}</span>
-                      <span className="text-xs text-muted-foreground line-clamp-2">{n.message}</span>
-                      <span className="text-[10px] text-muted-foreground">{new Date(n.createdAt).toLocaleDateString()}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 hover:bg-muted transition">

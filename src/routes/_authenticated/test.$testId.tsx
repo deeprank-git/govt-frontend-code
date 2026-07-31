@@ -425,8 +425,8 @@ function TestEngine() {
             <Legend color="bg-muted text-foreground" label="Not Visited" value={statusCounts["not-vis"]} />
             <Legend color="bg-orange-500" label="Not Answered" value={statusCounts["not-ans"]} />
             <Legend color="bg-success" label="Answered" value={statusCounts.ans} />
-            <Legend color="bg-purple-500" label="Marked" value={statusCounts.mark} />
-            <Legend color="bg-purple-500 ring-2 ring-success ring-offset-1" label="Answered & Marked" value={statusCounts["ans-mark"]} />
+            <Legend color="bg-purple-500" label="Marked for Review" value={statusCounts.mark} />
+            <Legend color="bg-purple-500 ring-2 ring-success ring-offset-1" label="Answered & Marked for Review" value={statusCounts["ans-mark"]} />
           </div>
           {sections.length > 0 && activeSectionIdx >= 0 && (
             <div className="text-xs font-semibold mb-2">{sectionBuckets[activeSectionIdx].section.name}</div>
