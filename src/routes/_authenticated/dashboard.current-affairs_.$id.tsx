@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { ArrowLeft, AlertTriangle, FileQuestion, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,11 @@ export const Route = createFileRoute("/_authenticated/dashboard/current-affairs_
 function CurrentAffairDetailPage() {
   const { id } = Route.useParams();
 
+  // Only the authenticated dashboard route pings the streak endpoint —
+  // ArticleDetail itself is deliberately auth-agnostic (shared with the
+  // public /current-affairs/$id route), so this lives here instead.
+  const pingedIdRef = useRef<string | null>(null);
+
   const { data: res, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["current-affair", id],
     queryFn: () => currentAffairsService.getCurrentAffairById(id),
@@ -27,6 +33,19 @@ function CurrentAffairDetailPage() {
   });
   const article = unwrapItem<any>(res);
   const notFound = (error as any)?.response?.status === 404;
+
+  // Fires once per article (guarded by ref, not a query) once the article
+  // has genuinely loaded — never blocks rendering, and a failure here is
+  // logged but otherwise swallowed so a dead streak endpoint can't break
+  // reading the article. No client-side "already pinged today" dedupe by
+  // design — the backend is the source of truth for that.
+  useEffect(() => {
+    if (!article || pingedIdRef.current === id) return;
+    pingedIdRef.current = id;
+    currentAffairsService.recordCurrentAffairView(id, new Date().toISOString()).catch((err) => {
+      console.error("Failed to record current affair view for streak", err);
+    });
+  }, [article, id]);
 
   const { data: moreRes } = useQuery({
     queryKey: ["current-affair-more", article?.category, id],

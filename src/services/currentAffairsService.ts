@@ -10,6 +10,25 @@ export async function getCurrentAffairById(id: string) {
   return res.data;
 }
 
+// Fire-and-forget streak ping — call once per article-view mount, never
+// blocks rendering the article. `clientDate` lets the backend reconcile
+// "today" against the reader's local timezone rather than server time.
+export async function recordCurrentAffairView(id: string, clientDate: string) {
+  const res = await axiosClient.post(`/current-affairs/${id}/record-view`, { date: clientDate });
+  return res.data;
+}
+
+export type CurrentAffairsStreak = {
+  currentStreak: number;
+  longestStreak: number;
+  weekActivity: { date: string; label: string; completed: boolean }[];
+};
+
+export async function getCurrentAffairsStreak() {
+  const res = await axiosClient.get("/current-affairs/streak");
+  return res.data;
+}
+
 export type CurrentAffairInput = {
   title?: string;
   content?: string;
