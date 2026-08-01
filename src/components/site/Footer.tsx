@@ -40,9 +40,9 @@ export function Footer() {
       </div>
       <div className="relative container mx-auto px-4 lg:px-6 pt-16 pb-10">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-2 flex flex-col items-center">
-            <Logo size="h-12" />
-            <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm text-center">
+          <div className="lg:col-span-2 flex flex-col items-start">
+            <Logo size="h-14" />
+            <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm text-left">
               Building the future of government exam preparation — free mock tests, previous year papers,
               current affairs, and analytics in one place.
             </p>

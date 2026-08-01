@@ -21,6 +21,7 @@ import * as testAttemptService from "@/services/testAttemptService";
 import * as currentAffairsService from "@/services/currentAffairsService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
+import { ArticleImage } from "@/components/site/ArticleImage";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Dashboard,
@@ -253,36 +254,6 @@ function Dashboard() {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold flex items-center gap-2">
-              <Newspaper className="h-4 w-4 text-primary" />
-              Daily Current Affairs
-            </h3>
-            <Link to="/dashboard/current-affairs" className="text-xs text-primary hover:underline">
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {currentAffairs.map((a) => (
-              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex items-start gap-2.5 hover:bg-muted/40 -mx-1 px-1 py-0.5 rounded transition">
-                <Badge variant="outline" className="mt-0.5 text-[10px]">
-                  {a.category}
-                </Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium leading-snug line-clamp-2">{a.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {new Date(a.date).toLocaleDateString()}
-                  </div>
-                </div>
-              </Link>
-            ))}
-            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-5">
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
               Previous Year Papers
             </h3>
@@ -310,6 +281,37 @@ function Dashboard() {
                 </Button>
               </div>
             ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-5">
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-bold flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-primary" />
+              Daily Current Affairs
+            </h3>
+            <Link to="/dashboard/current-affairs" className="text-xs text-primary hover:underline">
+              View All
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {currentAffairs.map((a) => (
+              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex items-start gap-2.5 hover:bg-muted/40 -mx-1 px-1 py-0.5 rounded transition">
+                <ArticleImage image={a.image} alt={a.title} className="h-10 w-14 rounded-md" />
+                <div className="flex-1 min-w-0">
+                  <Badge variant="outline" className="text-[10px]">
+                    {a.category}
+                  </Badge>
+                  <div className="text-sm font-medium leading-snug line-clamp-2 mt-0.5">{a.title}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {new Date(a.date).toLocaleDateString()}
+                  </div>
+                </div>
+              </Link>
+            ))}
+            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
           </div>
         </Card>
 
