@@ -32,10 +32,10 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s) => search.parse(s),
   head: () => ({
     meta: [
-      { title: "Login / Sign Up — GovtPrep" },
+      { title: "Login / Sign Up — Testopy" },
       {
         name: "description",
-        content: "Access your GovtPrep account to track your preparation and take mock tests.",
+        content: "Access your Testopy account to track your preparation and take mock tests.",
       },
     ],
   }),
@@ -332,11 +332,11 @@ function SignupForm() {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={accept} onCheckedChange={(v) => setAccept(!!v)} />I agree to the{" "}
-          <a href="#" className="text-primary">
+          <a href="/pages/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Terms & Conditions
           </a>{" "}
           and{" "}
-          <a href="#" className="text-primary">
+          <a href="/pages/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Privacy Policy
           </a>
           .

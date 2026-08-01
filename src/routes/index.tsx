@@ -42,13 +42,13 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "GovtPrep — Your Journey to a Government Job Starts Here" },
+      { title: "Testopy — Your Journey to a Government Job Starts Here" },
       {
         name: "description",
         content:
           "Free mock tests, previous year papers, current affairs and exam alerts for SSC, Banking, Railways, UPSC and more.",
       },
-      { property: "og:title", content: "GovtPrep — Prepare. Practice. Succeed." },
+      { property: "og:title", content: "Testopy — Prepare. Practice. Succeed." },
       {
         property: "og:description",
         content: "10L+ aspirants prepare with our free mock tests, PYQ papers and analytics.",

@@ -27,7 +27,8 @@ const COLS = [
       { label: "About Us", to: "/about-us" },
       { label: "Careers", to: "/about-us" },
       { label: "Contact", to: "/about-us" },
-      { label: "Privacy", to: "/pages/$slug", params: { slug: "privacy-policy" } },
+      { label: "Privacy Policy", to: "/pages/$slug", params: { slug: "privacy-policy" } },
+      { label: "Terms & Conditions", to: "/pages/$slug", params: { slug: "terms-and-conditions" } },
     ],
   },
 ];
@@ -36,13 +37,13 @@ export function Footer() {
   return (
     <footer className="relative mt-24 bg-footer-bg text-primary-foreground overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 -top-12 select-none text-center text-[20vw] leading-none font-display font-extrabold text-white/[0.04]">
-        GovtPrep
+        Testopy
       </div>
       <div className="relative container mx-auto px-4 lg:px-6 pt-16 pb-10">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 flex flex-col items-center">
             <Logo size="h-12" />
-            <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm">
+            <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm text-center">
               Building the future of government exam preparation — free mock tests, previous year papers,
               current affairs, and analytics in one place.
             </p>
@@ -65,7 +66,7 @@ export function Footer() {
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-primary-foreground/70">
-            © {new Date().getFullYear()} GovtPrep. All rights reserved.
+            © {new Date().getFullYear()} Testopy. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
             {[Instagram, Linkedin, Twitter, Youtube].map((Icon, i) => (

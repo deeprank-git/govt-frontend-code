@@ -61,7 +61,7 @@ function OverviewPage() {
     <div className="space-y-6">
       <div className="grid lg:grid-cols-[1fr_auto] gap-4 items-start">
         <div>
-          <h1 className="text-2xl md:text-3xl font-display font-extrabold">Overview</h1>
+          <h1 className="text-2xl md:text-3xl font-display font-extrabold">Exams Overview</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Browse exam categories and jump straight into a test series.
           </p>

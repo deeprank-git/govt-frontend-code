@@ -7,6 +7,8 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import * as pageService from "@/services/pageService";
 import { unwrapItem } from "@/lib/api-unwrap";
+import { PrivacyPolicy } from "@/components/site/PrivacyPolicy";
+import { TermsAndConditions } from "@/components/site/TermsAndConditions";
 
 export const Route = createFileRoute("/pages/$slug")({
   component: StaticPage,
@@ -15,11 +17,33 @@ export const Route = createFileRoute("/pages/$slug")({
 function StaticPage() {
   const { slug } = Route.useParams();
 
+  const isPrivacyPolicy = slug === "privacy-policy";
+  const isTerms = slug === "terms-and-conditions";
+  const isHardcoded = isPrivacyPolicy || isTerms;
+
   const { data: res, isLoading } = useQuery({
     queryKey: ["page", slug],
     queryFn: () => pageService.getPageBySlug(slug),
+    enabled: !isHardcoded,
   });
   const page = unwrapItem<any>(res);
+
+  if (isHardcoded) {
+    const label = isPrivacyPolicy ? "Privacy Policy" : "Terms & Conditions";
+    return (
+      <SiteShell>
+        <div className="container mx-auto px-4 lg:px-6 py-10 max-w-3xl">
+          <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: label }]} />
+          <Button variant="ghost" size="sm" asChild className="mt-4 -ml-2">
+            <Link to="/"><ArrowLeft className="h-4 w-4 mr-1" />Back to Home</Link>
+          </Button>
+          <Card className="p-6 lg:p-8 mt-6">
+            {isPrivacyPolicy ? <PrivacyPolicy /> : <TermsAndConditions />}
+          </Card>
+        </div>
+      </SiteShell>
+    );
+  }
 
   return (
     <SiteShell>

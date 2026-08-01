@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "govt-frontend",
-      script: "dist/server/index.mjs",
+      script: ".output/server/index.mjs",
       interpreter: "node",
       cwd: "/root/govt-prep/govt-frontend-code",
       env: {

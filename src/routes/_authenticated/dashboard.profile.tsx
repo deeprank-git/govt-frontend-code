@@ -310,18 +310,20 @@ function ProfilePage() {
         {activeTab === "Privacy & Security" && (
           <Card className="p-6 shadow-sm space-y-4">
             <h3 className="font-display font-bold">Privacy & Security</h3>
-            <Button variant="outline" onClick={() => setPwdOpen(true)}>
-              <KeyRound className="h-4 w-4 mr-2" /> Change Password
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                authService.logout();
-                navigate({ to: "/" });
-              }}
-            >
-              Sign out
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" onClick={() => setPwdOpen(true)}>
+                <KeyRound className="h-4 w-4 mr-2" /> Change Password
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  authService.logout();
+                  navigate({ to: "/" });
+                }}
+              >
+                Sign out
+              </Button>
+            </div>
           </Card>
         )}
 
@@ -520,7 +522,7 @@ function SupportForm({ onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-3 text-sm">
       <p className="text-muted-foreground">Please reach out to us at the email below and we'll get back to you.</p>
-      <p className="font-semibold text-primary">support@govtprep.com</p>
+      <p className="font-semibold text-primary">support@testopy.com</p>
       <DialogFooter>
         <Button onClick={onClose}>Close</Button>
       </DialogFooter>

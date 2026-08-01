@@ -19,7 +19,7 @@ export function Logo({
       to={to}
       className={cn("flex items-center justify-center group", boxClassName)}
     >
-      <img src="/docs/testopy-logo.png" alt="GovtPrep" className={cn(size, "w-auto object-contain")} />
+      <img src="/docs/testopy-logo.png" alt="Testopy" className={cn(size, "w-auto object-contain")} />
     </Link>
   );
 }
