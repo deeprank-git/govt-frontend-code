@@ -169,9 +169,11 @@ function ResultPage() {
           </div>
         </div>
         <div className="ml-auto flex gap-2">
+          {/* Download Report button — commented out per request 2026-07-31
           <Button size="sm" variant="outline" disabled title="Report generation isn't available yet">
             <Download className="h-4 w-4 mr-1" /> Download Report
           </Button>
+          */}
           <Button size="sm" asChild>
             <Link to="/test/$testId/instructions" params={{ testId: String(testId) }}><RotateCcw className="h-4 w-4 mr-1" />Retake Test</Link>
           </Button>

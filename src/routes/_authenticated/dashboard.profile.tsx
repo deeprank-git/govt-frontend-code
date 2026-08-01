@@ -408,7 +408,7 @@ function ProfilePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Contact Support</DialogTitle>
-            <DialogDescription>Tell us what's going on and we'll get back to you.</DialogDescription>
+            <DialogDescription>We're happy to help.</DialogDescription>
           </DialogHeader>
           <SupportForm onClose={() => setSupportOpen(false)} />
         </DialogContent>
@@ -517,27 +517,12 @@ function ChangePasswordForm({ onClose }: { onClose: () => void }) {
 }
 
 function SupportForm({ onClose }: { onClose: () => void }) {
-  const [msg, setMsg] = useState("");
   return (
-    <div className="space-y-3">
-      <textarea
-        rows={5}
-        value={msg}
-        onChange={(e) => setMsg(e.target.value)}
-        placeholder="Describe your issue..."
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-      />
+    <div className="space-y-3 text-sm">
+      <p className="text-muted-foreground">Please reach out to us at the email below and we'll get back to you.</p>
+      <p className="font-semibold text-primary">support@govtprep.com</p>
       <DialogFooter>
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button
-          disabled={!msg}
-          onClick={() => {
-            toast.success("Support request sent. We'll be in touch soon.");
-            onClose();
-          }}
-        >
-          Send Message
-        </Button>
+        <Button onClick={onClose}>Close</Button>
       </DialogFooter>
     </div>
   );
