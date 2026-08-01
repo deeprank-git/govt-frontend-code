@@ -9,9 +9,9 @@ import aboutImg from "@/assets/about-hero.png";
 export const Route = createFileRoute("/about-us")({
   head: () => ({
     meta: [
-      { title: "About Us — GovtPrep" },
-      { name: "description", content: "GovtPrep is India's most trusted online platform for government exam preparation." },
-      { property: "og:title", content: "About GovtPrep" },
+      { title: "About Us — Testopy" },
+      { name: "description", content: "Testopy is India's most trusted online platform for government exam preparation." },
+      { property: "og:title", content: "About Testopy" },
       { property: "og:description", content: "Empowering aspirants, building futures with quality test prep." },
     ],
   }),
@@ -31,7 +31,7 @@ const REASONS = [
   { icon: Target, title: "Exam-Oriented Practice", desc: "Mock tests and PYQ papers designed as per the latest exam pattern." },
   { icon: BarChart3, title: "Performance Analytics", desc: "In-depth reports help you identify strengths and improve weak areas." },
   { icon: Bell, title: "Timely Updates", desc: "Stay updated with the latest notifications, exam dates and important alerts." },
-  { icon: Shield, title: "Trusted by Millions", desc: "10M+ aspirants trust GovtPrep for their preparation journey." },
+  { icon: Shield, title: "Trusted by Millions", desc: "10M+ aspirants trust Testopy for their preparation journey." },
 ];
 
 const TEAM = [
@@ -56,7 +56,7 @@ function AboutPage() {
                 Empowering Aspirants,<br /><span className="text-primary">Building Futures</span>
               </h1>
               <p className="mt-5 text-muted-foreground max-w-xl">
-                GovtPrep is India's most trusted online platform for government exam preparation. We provide
+                Testopy is India's most trusted online platform for government exam preparation. We provide
                 the right resources, practice and guidance to help aspirants achieve their goals and build
                 successful careers.
               </p>
@@ -64,7 +64,7 @@ function AboutPage() {
                 <Link to="/exams">Explore Exams <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
             </div>
-            <img src={aboutImg} alt="GovtPrep mission" width={1024} height={896} loading="lazy" className="w-full max-w-md mx-auto" />
+            <img src={aboutImg} alt="Testopy mission" width={1024} height={896} loading="lazy" className="w-full max-w-md mx-auto" />
           </div>
         </div>
       </section>
@@ -103,7 +103,7 @@ function AboutPage() {
       </section>
 
       <section className="container mx-auto px-4 lg:px-6 py-10">
-        <h2 className="text-2xl md:text-3xl font-display font-bold text-center">Why Choose GovtPrep?</h2>
+        <h2 className="text-2xl md:text-3xl font-display font-bold text-center">Why Choose Testopy?</h2>
         <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {REASONS.map((r) => (
             <Card key={r.title} className="p-5 text-center">
@@ -136,7 +136,7 @@ function AboutPage() {
             <Award className="h-10 w-10" />
             <div>
               <div className="font-display font-bold text-xl">Your Dream Job is Closer Than You Think</div>
-              <div className="text-sm text-primary-foreground/85">Join millions of aspirants who trust GovtPrep.</div>
+              <div className="text-sm text-primary-foreground/85">Join millions of aspirants who trust Testopy.</div>
             </div>
           </div>
           <Button variant="secondary" size="lg" asChild>

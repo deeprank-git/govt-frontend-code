@@ -31,9 +31,9 @@ import { unwrapList } from "@/lib/api-unwrap";
 export const Route = createFileRoute("/current-affairs")({
   head: () => ({
     meta: [
-      { title: "Current Affairs — SSC, Banking, UPSC | GovtPrep" },
+      { title: "Current Affairs — SSC, Banking, UPSC | Testopy" },
       { name: "description", content: "Stay updated with the latest current affairs for SSC, Banking, Railways, UPSC, State PSC, Defence and other government exams." },
-      { property: "og:title", content: "Latest Current Affairs — GovtPrep" },
+      { property: "og:title", content: "Latest Current Affairs — Testopy" },
       { property: "og:description", content: "Daily news, categories and trending topics for government exam aspirants." },
     ],
   }),

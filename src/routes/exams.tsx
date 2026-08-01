@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/exams")({
   head: () => ({
     meta: [
-      { title: "All Government Exams — GovtPrep" },
+      { title: "All Government Exams — Testopy" },
       { name: "description", content: "Browse government exams across SSC, Banking, Railways, UPSC and more — free mock tests, previous year papers and exam details." },
-      { property: "og:title", content: "All Government Exams — GovtPrep" },
+      { property: "og:title", content: "All Government Exams — Testopy" },
       { property: "og:description", content: "Find the right exam, syllabus and free mock tests." },
     ],
   }),

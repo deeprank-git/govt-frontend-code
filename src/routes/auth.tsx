@@ -32,10 +32,10 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s) => search.parse(s),
   head: () => ({
     meta: [
-      { title: "Login / Sign Up — GovtPrep" },
+      { title: "Login / Sign Up — Testopy" },
       {
         name: "description",
-        content: "Access your GovtPrep account to track your preparation and take mock tests.",
+        content: "Access your Testopy account to track your preparation and take mock tests.",
       },
     ],
   }),

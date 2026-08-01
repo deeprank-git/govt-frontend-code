@@ -79,21 +79,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GovtPrep — Government Exam Preparation Platform" },
+      { title: "Testopy — Government Exam Preparation Platform" },
       {
         name: "description",
         content:
           "Free mock tests, previous year papers, current affairs and exam alerts for SSC, Banking, Railways, UPSC and more.",
       },
-      { name: "author", content: "GovtPrep" },
-      { property: "og:title", content: "GovtPrep — Government Exam Preparation Platform" },
+      { name: "author", content: "Testopy" },
+      { property: "og:title", content: "Testopy — Government Exam Preparation Platform" },
       {
         property: "og:description",
         content: "Your one-stop platform for government job exam preparation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "GovtPrep — Government Exam Preparation Platform" },
+      { name: "twitter:title", content: "Testopy — Government Exam Preparation Platform" },
       { name: "description", content: "Exam Success Hub is a comprehensive platform for government exam preparation." },
       { property: "og:description", content: "Exam Success Hub is a comprehensive platform for government exam preparation." },
       { name: "twitter:description", content: "Exam Success Hub is a comprehensive platform for government exam preparation." },

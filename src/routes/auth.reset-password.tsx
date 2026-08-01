@@ -20,10 +20,10 @@ export const Route = createFileRoute("/auth/reset-password")({
     validateSearch: (s) => search.parse(s),
     head: () => ({
         meta: [
-            { title: "Reset Password — GovtPrep" },
+            { title: "Reset Password — Testopy" },
             {
                 name: "description",
-                content: "Reset your GovtPrep account password.",
+                content: "Reset your Testopy account password.",
             },
         ],
     }),

@@ -36,7 +36,7 @@ export function Footer() {
   return (
     <footer className="relative mt-24 bg-footer-bg text-primary-foreground overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 -top-12 select-none text-center text-[20vw] leading-none font-display font-extrabold text-white/[0.04]">
-        GovtPrep
+        Testopy
       </div>
       <div className="relative container mx-auto px-4 lg:px-6 pt-16 pb-10">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
@@ -65,7 +65,7 @@ export function Footer() {
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-primary-foreground/70">
-            © {new Date().getFullYear()} GovtPrep. All rights reserved.
+            © {new Date().getFullYear()} Testopy. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
             {[Instagram, Linkedin, Twitter, Youtube].map((Icon, i) => (

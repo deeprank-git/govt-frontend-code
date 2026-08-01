@@ -1,4 +1,4 @@
-# GovtPrep Backend — API Reference
+# Testopy Backend — API Reference
 
 Generated from the codebase (`index.js`, `routes/`, `controllers/`, `middleware/`, `models/`) for frontend integration. Every endpoint below reflects the **actual current implementation**, including inconsistencies — read the "Known Inconsistencies" section before integrating a generic API client/error handler.
 
@@ -634,10 +634,10 @@ Any subset of `slug/title/content/status`.
 
 ### GET `/api/settings` (public, no auth)
 Singleton document, auto-created with defaults on first call.
-**Success — 200**: `{ "success": true, "data": { "siteName":"GovtPrep", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
+**Success — 200**: `{ "success": true, "data": { "siteName":"Testopy", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
 
 ### PUT `/api/admin/settings` (admin)
-**Body** (all optional, only provided keys applied): `{ "siteName": "GovtPrep", "contactEmail": "support@govtprep.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
+**Body** (all optional, only provided keys applied): `{ "siteName": "Testopy", "contactEmail": "support@govtprep.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
 **Success — 200**: `{ "success": true, "message": "Settings updated", "data": { ...settings... } }`
 
 ---
