@@ -78,7 +78,7 @@ function CADashboard() {
             Stay updated with the latest current affairs for all government exams.
           </p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 xl:max-w-3xl xl:flex-1">
+        {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 xl:max-w-3xl xl:flex-1">
           {stats.map((s) => (
             <motion.div key={s.label} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
               <Card className="p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
@@ -92,7 +92,7 @@ function CADashboard() {
               </Card>
             </motion.div>
           ))}
-        </div>
+        </div> */}
       </div>
 
       {/* Category tabs */}
