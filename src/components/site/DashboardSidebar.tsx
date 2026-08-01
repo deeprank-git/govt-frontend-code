@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 
 const ITEMS = [
   { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/overview" as const, label: "Overview", icon: Gauge },
+  { to: "/dashboard/overview" as const, label: "Exams Overview", icon: Gauge },
   { to: "/dashboard/rank" as const, label: "All India Rank", icon: Trophy },
   { to: "/dashboard/mock-tests" as const, label: "Mock Tests", icon: ClipboardList },
   { to: "/dashboard/attempted-tests" as const, label: "Attempted Tests", icon: History },
@@ -168,6 +168,19 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
             </Button>
           </Card>
           */
+        ) : pathname.startsWith("/dashboard/previous-year-papers") ? (
+          <Card className="p-3 bg-primary/5 border-primary/20 text-center">
+            <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center">
+              <ClipboardList className="h-7 w-7 text-primary" />
+            </div>
+            <div className="font-display font-semibold text-sm mt-2">Practice Mock Tests</div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Evaluate your preparation with full-length mock tests.
+            </p>
+            <Button asChild size="sm" className="mt-3 w-full">
+              <Link to="/dashboard/mock-tests">Explore Tests</Link>
+            </Button>
+          </Card>
         ) : (
           <Card className="p-3 bg-primary/5 border-primary/20 text-center">
             <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 grid place-items-center">
