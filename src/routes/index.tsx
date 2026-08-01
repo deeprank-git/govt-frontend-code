@@ -261,7 +261,7 @@ function HomePage() {
                             ) : (
                               <ExamIcon name={s.name ?? "?"} />
                             )}
-                            <span className="font-medium flex-1 truncate">{s.name}</span>
+                            <span className="font-medium flex-1 min-w-0 truncate">{s.name}</span>
                             <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                           </Card>
                         </Link>

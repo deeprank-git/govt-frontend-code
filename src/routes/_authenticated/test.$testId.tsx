@@ -325,7 +325,7 @@ function TestEngine() {
               <FileText className="h-4 w-4" />
             </span>
           )}
-          <span className="font-display font-bold text-sm truncate">{test?.title ?? "Mock Test"}</span>
+          <span className="font-display font-bold text-sm truncate min-w-0">{test?.title ?? "Mock Test"}</span>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground ml-auto flex-wrap">
           <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {test?.totalQuestions ?? totalQuestions} Questions</span>
@@ -355,7 +355,7 @@ function TestEngine() {
                       active ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted",
                     )}
                   >
-                    <span className="truncate">{b.section.name}</span>
+                    <span className="truncate min-w-0">{b.section.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{ansInSection}/{count}</span>
                   </button>
                 );
@@ -365,7 +365,7 @@ function TestEngine() {
         )}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <span className="font-display font-semibold text-sm truncate">
+            <span className="font-display font-semibold text-sm truncate min-w-0">
               {sections.length > 0 && activeSectionIdx >= 0 ? sectionBuckets[activeSectionIdx].section.name : `Question ${index + 1} of ${totalQuestions}`}
             </span>
             <div className="flex items-center gap-2 text-xs shrink-0">
@@ -474,7 +474,7 @@ function TestEngine() {
                   const pct = count ? Math.round((ansInSection / count) * 100) : 0;
                   return (
                     <button key={b.section._id ?? i} onClick={() => gotoSection(i)} className="w-full grid grid-cols-[1fr_60px_50px] gap-2 items-center text-left">
-                      <span className="text-xs truncate">{b.section.name}</span>
+                      <span className="text-xs truncate min-w-0">{b.section.name}</span>
                       <span className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <span className="block h-full bg-primary" style={{ width: `${pct}%` }} />
                       </span>

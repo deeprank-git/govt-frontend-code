@@ -198,7 +198,7 @@ function TestSeriesDetailPage() {
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate min-w-0">{item.label}</span>
                   </button>
                 );
               })}

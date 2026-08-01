@@ -161,7 +161,7 @@ function ResultPage() {
         </Button>
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display font-bold truncate">{result.test?.title}</h1>
+            <h1 className="font-display font-bold truncate min-w-0">{result.test?.title}</h1>
             <Badge className="bg-success/15 text-success-foreground border-transparent capitalize">{result.status?.replace("-", " ")}</Badge>
           </div>
           <div className="text-xs text-muted-foreground">
@@ -224,7 +224,7 @@ function ResultPage() {
                   return (
                     <div key={r.section._id ?? r.section.name} className="text-sm">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium truncate">{r.section.name}</span>
+                        <span className="font-medium truncate min-w-0">{r.section.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">{sectionScore}/{sectionMax} · {acc}% · {attempted}/{slice.length}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -373,7 +373,7 @@ function StatCard({ icon: Icon, label, value, sub, tone = "primary" }: { icon: a
         <span className={cn("h-8 w-8 rounded-lg grid place-items-center shrink-0", toneMap[tone])}>
           <Icon className="h-4 w-4" />
         </span>
-        <span className="text-xs text-muted-foreground truncate">{label}</span>
+        <span className="text-xs text-muted-foreground truncate min-w-0">{label}</span>
       </div>
       <div className="text-xl font-display font-bold mt-2">{value}</div>
       {sub && <div className="text-[11px] text-muted-foreground truncate">{sub}</div>}
