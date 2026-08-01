@@ -22,6 +22,7 @@ import {
 import * as testAttemptService from "@/services/testAttemptService";
 import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -184,6 +185,8 @@ function AttemptedTests() {
         <div className="divide-y divide-border">
           {pageItems.map((a: any) => {
             const scorePct = a.test?.totalMarks ? Math.round((Number(a.score) / Number(a.test.totalMarks)) * 1000) / 10 : 0;
+            const seriesImage = a.test?.testSeries?.image;
+            const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
             return (
               <motion.div
                 key={a._id}
@@ -191,9 +194,13 @@ function AttemptedTests() {
                 className="grid grid-cols-12 gap-3 items-center px-4 py-3 text-sm"
               >
                 <div className="col-span-4 flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-lg grid place-items-center shrink-0 bg-primary/10 text-primary">
-                    <FileText className="h-5 w-5" />
-                  </div>
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <div className="h-10 w-10 rounded-lg grid place-items-center shrink-0 bg-primary/10 text-primary">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="font-semibold truncate">{a.test?.title ?? "Test"}</div>
                     <div className="text-[11px] text-muted-foreground">{a.test?.totalMarks ?? 0} Marks</div>

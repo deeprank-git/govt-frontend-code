@@ -50,6 +50,7 @@ function MockTests() {
     [series, resolvedCategory],
   );
   const activeSeries = series.find((s) => s._id === activeSeriesId) ?? null;
+  const seriesLogoUrl = activeSeries?.image ? mediaService.resolveMediaUrl(activeSeries.image) : undefined;
 
   const { data: testsRes, isLoading: loadingTests } = useQuery({
     queryKey: ["all-mock-tests"],
@@ -189,9 +190,13 @@ function MockTests() {
                 {seriesTests.map((t) => (
                   <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
-                        <ClipboardList className="h-5 w-5 text-blue-600" />
-                      </div>
+                      {seriesLogoUrl ? (
+                        <img src={seriesLogoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                          <ClipboardList className="h-5 w-5 text-blue-600" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm leading-snug">{t.title}</div>
                         <div className="text-xs text-muted-foreground truncate mt-0.5">{t.description ?? "Mock test"}</div>
