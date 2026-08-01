@@ -296,14 +296,9 @@ function TestEngine() {
       <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-4">
         <Logo size="h-7" />
         <div className="ml-auto flex items-center gap-2">
-          {/* Pause Test button — commented out per request 2026-07-31
-          No pause endpoint exists — the attempt keeps counting down
-          server-side regardless, so this stayed disabled rather than
-          implying a pause that doesn't actually happen.
           <Button size="sm" variant="outline" disabled title="Pausing isn't supported yet — the timer keeps running server-side">
             <Pause className="h-4 w-4 mr-1.5" /> Pause Test
           </Button>
-          */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive font-display font-bold tabular-nums">
             <Clock className="h-4 w-4" />
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}

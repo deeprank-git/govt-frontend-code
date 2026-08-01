@@ -51,6 +51,7 @@ import { Route as AuthenticatedDashboardAttemptedTestsRouteImport } from './rout
 import { Route as AuthenticatedDashboardAnswerKeyRouteImport } from './routes/_authenticated/dashboard.answer-key'
 import { Route as AuthenticatedTestTestIdInstructionsRouteImport } from './routes/_authenticated/test.$testId_.instructions'
 import { Route as AuthenticatedDashboardTestSeriesIdRouteImport } from './routes/_authenticated/dashboard.test-series.$id'
+import { Route as AuthenticatedDashboardCurrentAffairsBookmarkedRouteImport } from './routes/_authenticated/dashboard.current-affairs_.bookmarked'
 import { Route as AuthenticatedDashboardCurrentAffairsIdRouteImport } from './routes/_authenticated/dashboard.current-affairs_.$id'
 
 const ExamsRoute = ExamsRouteImport.update({
@@ -279,6 +280,12 @@ const AuthenticatedDashboardTestSeriesIdRoute =
     path: '/test-series/$id',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardCurrentAffairsBookmarkedRoute =
+  AuthenticatedDashboardCurrentAffairsBookmarkedRouteImport.update({
+    id: '/current-affairs_/bookmarked',
+    path: '/current-affairs/bookmarked',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const AuthenticatedDashboardCurrentAffairsIdRoute =
   AuthenticatedDashboardCurrentAffairsIdRouteImport.update({
     id: '/current-affairs_/$id',
@@ -327,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/dashboard/current-affairs/bookmarked': typeof AuthenticatedDashboardCurrentAffairsBookmarkedRoute
   '/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
   '/test/$testId/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
@@ -369,6 +377,7 @@ export interface FileRoutesByTo {
   '/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/dashboard/current-affairs/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/dashboard/current-affairs/bookmarked': typeof AuthenticatedDashboardCurrentAffairsBookmarkedRoute
   '/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
   '/test/$testId/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
@@ -415,6 +424,7 @@ export interface FileRoutesById {
   '/_authenticated/test/$testId': typeof AuthenticatedTestTestIdRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/_authenticated/dashboard/current-affairs_/$id': typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  '/_authenticated/dashboard/current-affairs_/bookmarked': typeof AuthenticatedDashboardCurrentAffairsBookmarkedRoute
   '/_authenticated/dashboard/test-series/$id': typeof AuthenticatedDashboardTestSeriesIdRoute
   '/_authenticated/test/$testId_/instructions': typeof AuthenticatedTestTestIdInstructionsRoute
 }
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/test/$testId'
     | '/dashboard/'
     | '/dashboard/current-affairs/$id'
+    | '/dashboard/current-affairs/bookmarked'
     | '/dashboard/test-series/$id'
     | '/test/$testId/instructions'
   fileRoutesByTo: FileRoutesByTo
@@ -503,6 +514,7 @@ export interface FileRouteTypes {
     | '/test/$testId'
     | '/dashboard'
     | '/dashboard/current-affairs/$id'
+    | '/dashboard/current-affairs/bookmarked'
     | '/dashboard/test-series/$id'
     | '/test/$testId/instructions'
   id:
@@ -548,6 +560,7 @@ export interface FileRouteTypes {
     | '/_authenticated/test/$testId'
     | '/_authenticated/dashboard/'
     | '/_authenticated/dashboard/current-affairs_/$id'
+    | '/_authenticated/dashboard/current-affairs_/bookmarked'
     | '/_authenticated/dashboard/test-series/$id'
     | '/_authenticated/test/$testId_/instructions'
   fileRoutesById: FileRoutesById
@@ -863,6 +876,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardTestSeriesIdRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/current-affairs_/bookmarked': {
+      id: '/_authenticated/dashboard/current-affairs_/bookmarked'
+      path: '/current-affairs/bookmarked'
+      fullPath: '/dashboard/current-affairs/bookmarked'
+      preLoaderRoute: typeof AuthenticatedDashboardCurrentAffairsBookmarkedRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/_authenticated/dashboard/current-affairs_/$id': {
       id: '/_authenticated/dashboard/current-affairs_/$id'
       path: '/current-affairs/$id'
@@ -885,6 +905,7 @@ interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardRankRoute: typeof AuthenticatedDashboardRankRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardCurrentAffairsIdRoute: typeof AuthenticatedDashboardCurrentAffairsIdRoute
+  AuthenticatedDashboardCurrentAffairsBookmarkedRoute: typeof AuthenticatedDashboardCurrentAffairsBookmarkedRoute
   AuthenticatedDashboardTestSeriesIdRoute: typeof AuthenticatedDashboardTestSeriesIdRoute
 }
 
@@ -906,6 +927,8 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
     AuthenticatedDashboardCurrentAffairsIdRoute:
       AuthenticatedDashboardCurrentAffairsIdRoute,
+    AuthenticatedDashboardCurrentAffairsBookmarkedRoute:
+      AuthenticatedDashboardCurrentAffairsBookmarkedRoute,
     AuthenticatedDashboardTestSeriesIdRoute:
       AuthenticatedDashboardTestSeriesIdRoute,
   }
