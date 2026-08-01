@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import * as testService from "@/services/testService";
 import * as testAttemptService from "@/services/testAttemptService";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
 import { ArticleImage } from "@/components/site/ArticleImage";
@@ -221,9 +222,15 @@ function Dashboard() {
             )}
             {attempts.slice(0, 4).map((a) => {
               const score = Math.round(pct(a));
+              const seriesImage = a.test?.testSeries?.image;
+              const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
               return (
                 <div key={a._id} className="flex items-start gap-3">
-                  <FileText className="h-4 w-4 text-primary mt-1" />
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="" className="h-6 w-6 rounded object-cover mt-0.5 shrink-0" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-primary mt-1 shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{a.test?.title ?? "Test"}</div>
                     <div className="text-xs text-muted-foreground">Attempted on {new Date(a.startedAt).toLocaleDateString()}</div>

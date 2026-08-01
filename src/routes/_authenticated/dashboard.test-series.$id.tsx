@@ -309,9 +309,13 @@ function TestSeriesDetailPage() {
                   {mockTests.map((t) => (
                     <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
                       <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
-                          <ClipboardList className="h-5 w-5 text-blue-600" />
-                        </div>
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                            <ClipboardList className="h-5 w-5 text-blue-600" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <Badge variant="outline" className="text-[10px] mb-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50">
                             {t.isPaid ? "PAID" : "FREE"}
@@ -353,9 +357,13 @@ function TestSeriesDetailPage() {
                   {pypTests.map((t) => (
                     <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
                       <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
-                          <FileText className="h-5 w-5 text-blue-600" />
-                        </div>
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                            <FileText className="h-5 w-5 text-blue-600" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <Badge variant="outline" className="text-[10px] mb-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50">
                             {t.isPaid ? "PAID" : "FREE"}
@@ -426,9 +434,18 @@ function TestSeriesDetailPage() {
               <ul className="space-y-3">
                 {mockTests.slice(0, 3).map((t) => (
                   <li key={t._id} className="flex items-center justify-between gap-2 border-b border-border last:border-0 pb-3 last:pb-0">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold truncate">{t.title}</div>
-                      <div className="text-xs text-muted-foreground">{t.totalQuestions} Questions</div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="" className="h-8 w-8 rounded-md object-cover shrink-0" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-md bg-blue-50 grid place-items-center shrink-0">
+                          <ClipboardList className="h-4 w-4 text-blue-600" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold truncate">{t.title}</div>
+                        <div className="text-xs text-muted-foreground">{t.totalQuestions} Questions</div>
+                      </div>
                     </div>
                     <Button size="sm" onClick={() => startTest(t._id)}>
                       Start Test

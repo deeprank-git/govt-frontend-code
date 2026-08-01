@@ -27,7 +27,8 @@ const COLS = [
       { label: "About Us", to: "/about-us" },
       { label: "Careers", to: "/about-us" },
       { label: "Contact", to: "/about-us" },
-      { label: "Privacy", to: "/pages/$slug", params: { slug: "privacy-policy" } },
+      { label: "Privacy Policy", to: "/pages/$slug", params: { slug: "privacy-policy" } },
+      { label: "Terms & Conditions", to: "/pages/$slug", params: { slug: "terms-and-conditions" } },
     ],
   },
 ];

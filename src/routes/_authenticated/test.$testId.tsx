@@ -11,6 +11,7 @@ import * as testAttemptService from "@/services/testAttemptService";
 import * as testService from "@/services/testService";
 import * as questionService from "@/services/questionService";
 import * as reportService from "@/services/reportService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ function TestEngine() {
   });
   const test = unwrapItem<any>(testRes);
   const sections: any[] = test?.sections ?? [];
+  const seriesLogoUrl = test?.testSeries?.image ? mediaService.resolveMediaUrl(test.testSeries.image) : undefined;
 
   // Each question now carries its own `section` (an ObjectId into
   // test.sections[]) — fetch the full question list (index/order + section
@@ -316,9 +318,13 @@ function TestEngine() {
       {/* Test summary bar — title/stats come from the real Test doc */}
       <div className="bg-background border-b border-border px-4 lg:px-6 py-3 flex items-center flex-wrap gap-4">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="h-8 w-8 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
-            <FileText className="h-4 w-4" />
-          </span>
+          {seriesLogoUrl ? (
+            <img src={seriesLogoUrl} alt="" className="h-8 w-8 rounded-md object-cover shrink-0" />
+          ) : (
+            <span className="h-8 w-8 rounded-md bg-primary/10 text-primary grid place-items-center shrink-0">
+              <FileText className="h-4 w-4" />
+            </span>
+          )}
           <span className="font-display font-bold text-sm truncate">{test?.title ?? "Mock Test"}</span>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground ml-auto flex-wrap">
