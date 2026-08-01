@@ -332,11 +332,11 @@ function SignupForm() {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={accept} onCheckedChange={(v) => setAccept(!!v)} />I agree to the{" "}
-          <a href="#" className="text-primary">
+          <a href="/pages/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Terms & Conditions
           </a>{" "}
           and{" "}
-          <a href="#" className="text-primary">
+          <a href="/pages/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Privacy Policy
           </a>
           .
