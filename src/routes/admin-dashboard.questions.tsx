@@ -23,6 +23,8 @@ export const Route = createFileRoute("/admin-dashboard/questions")({
   component: QuestionsPage,
 });
 
+const OPTION_LETTERS = "ABCDE";
+
 // Real server-generated template — 1-based correctAnswer, requires a `test`
 // column per row (see GovtPrep-Backend-Workflow-and-Status.md §7). Blank
 // `test` cells are auto-filled with the currently selected test on import.
@@ -47,6 +49,9 @@ interface CsvRow {
   option2: string;
   option3: string;
   option4: string;
+  // Optional 5th option — banking-style exams (e.g. IBPS) use 5 options
+  // (a-e); the backend accepts 4 or 5.
+  option5?: string;
   correctAnswer: string;
   marks: string;
   explanation: string;
@@ -154,9 +159,11 @@ function QuestionsPage() {
       // (no section data) doesn't send an extra column the server doesn't
       // expect.
       const hasSection = filled.some((r) => r.section && r.section.trim());
+      const hasOption5 = filled.some((r) => r.option5 && r.option5.trim());
       const csvText = Papa.unparse(filled, {
         columns: [
           "test", "questionText", "option1", "option2", "option3", "option4",
+          ...(hasOption5 ? ["option5"] : []),
           "correctAnswer", "marks", "explanation", "order",
           ...(hasSection ? ["section"] : []),
         ],
@@ -186,9 +193,10 @@ function QuestionsPage() {
         const errors: string[] = [];
         results.data.forEach((row, idx) => {
           if (!row.questionText) errors.push(`Row ${idx + 1}: missing questionText`);
-          if (!row.option1 || !row.option2 || !row.option3 || !row.option4) errors.push(`Row ${idx + 1}: all 4 options required`);
+          if (!row.option1 || !row.option2 || !row.option3 || !row.option4) errors.push(`Row ${idx + 1}: options 1-4 are required (option5 is optional)`);
+          const maxOption = row.option5 && row.option5.trim() ? 5 : 4;
           const ca = Number(row.correctAnswer);
-          if (isNaN(ca) || ca < 1 || ca > 4) errors.push(`Row ${idx + 1}: correctAnswer must be 1–4`);
+          if (isNaN(ca) || ca < 1 || ca > maxOption) errors.push(`Row ${idx + 1}: correctAnswer must be 1–${maxOption}`);
           if (!row.test && !activeTestId) errors.push(`Row ${idx + 1}: no test selected and no test column in CSV`);
         });
         setCsvPreview({ rows: results.data, errors });
@@ -241,7 +249,7 @@ function QuestionsPage() {
             <TableRow key={q._id}>
               <TableCell className="max-w-md truncate">{q.questionText}</TableCell>
               <TableCell>{q.section ? sectionName(q.section) : "—"}</TableCell>
-              <TableCell>{"ABCD"[q.correctAnswer] ?? "—"}</TableCell>
+              <TableCell>{OPTION_LETTERS[q.correctAnswer] ?? "—"}</TableCell>
               <TableCell>{q.marks}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(q)}>Edit</Button>
@@ -274,15 +282,35 @@ function QuestionsPage() {
             )}
             {form.options.map((opt, i) => (
               <div key={i}>
-                <Label>Option {"ABCD"[i]}</Label>
-                <Input value={opt} onChange={(e) => { const next = [...form.options]; next[i] = e.target.value; setForm({ ...form, options: next }); }} />
+                <Label>Option {OPTION_LETTERS[i]}</Label>
+                <div className="flex items-center gap-2">
+                  <Input value={opt} onChange={(e) => { const next = [...form.options]; next[i] = e.target.value; setForm({ ...form, options: next }); }} />
+                  {i === 4 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const next = form.options.slice(0, 4);
+                        setForm({ ...form, options: next, correctAnswer: form.correctAnswer > 3 ? 0 : form.correctAnswer });
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
+            {form.options.length < 5 && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, options: [...form.options, ""] })}>
+                + Add Option {OPTION_LETTERS[form.options.length]}
+              </Button>
+            )}
             <div>
               <Label>Correct Answer</Label>
               <Select value={String(form.correctAnswer)} onValueChange={(v) => setForm({ ...form, correctAnswer: Number(v) })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{form.options.map((_, i) => <SelectItem key={i} value={String(i)}>{"ABCD"[i]}</SelectItem>)}</SelectContent>
+                <SelectContent>{form.options.map((_, i) => <SelectItem key={i} value={String(i)}>{OPTION_LETTERS[i]}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Explanation (optional)</Label><Textarea value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} /></div>
@@ -329,7 +357,7 @@ function QuestionsPage() {
                         <TableRow key={i}>
                           <TableCell className="text-xs">{i + 1}</TableCell>
                           <TableCell className="max-w-xs truncate text-xs">{r.questionText}</TableCell>
-                          <TableCell className="text-xs">{"ABCD"[Number(r.correctAnswer) - 1] ?? r.correctAnswer}</TableCell>
+                          <TableCell className="text-xs">{OPTION_LETTERS[Number(r.correctAnswer) - 1] ?? r.correctAnswer}</TableCell>
                           <TableCell className="text-xs">{r.marks || 1}</TableCell>
                         </TableRow>
                       ))}

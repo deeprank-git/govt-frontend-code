@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/result/$attemptId")({
   component: ResultPage,
 });
 
-const OPTION_LETTERS = ["A", "B", "C", "D"];
+const OPTION_LETTERS = ["A", "B", "C", "D", "E"];
 const TABS = ["all", "correct", "incorrect", "skipped", "review"] as const;
 
 function formatDuration(ms: number) {

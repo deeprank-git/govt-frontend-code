@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/test/$testId_/instructions
 
 const GENERAL_INSTRUCTIONS = [
   "The test contains multiple sections, each with its own set of questions — you can switch between sections anytime from the sidebar.",
-  "Each question has four options; select the one you believe is correct.",
+  "Each question has multiple options; select the one you believe is correct.",
   "Use \"Save & Next\" to save your response and move to the next question.",
   "Use \"Clear Response\" to deselect your chosen answer for the current question.",
   "Use \"Mark for Review\" to flag a question you want to revisit before submitting.",

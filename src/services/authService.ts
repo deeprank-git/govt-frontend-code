@@ -44,7 +44,7 @@ export async function requestPasswordReset(data: { email: string }) {
   return res.data;
 }
 
-export async function resetPassword(data: { token: string; newPassword: string }) {
+export async function resetPassword(data: { email: string; otp: string; newPassword: string }) {
   const res = await axiosClient.post("/auth/reset-password", data);
   return res.data;
 }
