@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle, Flag, FileText, Award, AlertTriangle, Pause, RotateCcw } from "lucide-react";
+import { Clock, ChevronLeft, ChevronRight, Bookmark, AlertCircle, Flag, FileText, Award, AlertTriangle, Pause, Play, Loader2, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -57,6 +57,9 @@ function TestEngine() {
   const [visited, setVisited] = useState<Set<number>>(new Set());
 
   const [time, setTime] = useState<number | null>(null);
+  const [status, setStatus] = useState<"in-progress" | "paused">("in-progress");
+  const [pausing, setPausing] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -120,8 +123,18 @@ function TestEngine() {
         const attempt = unwrapItem<any>(res);
         if (!attempt) throw new Error("Could not start test");
         setAttemptId(attempt._id);
-        setExpiresAt(attempt.expiresAt);
         setIndex(attempt.currentQuestionIndex ?? 0);
+        // Reload / navigate-away-and-back mid-test lands here too (this call
+        // resumes an existing in-progress attempt) — if the attempt was left
+        // paused, render the paused state immediately with the server's
+        // frozen remainingSeconds instead of starting a running countdown.
+        if (attempt.status === "paused") {
+          setStatus("paused");
+          if (typeof attempt.remainingSeconds === "number") setTime(attempt.remainingSeconds);
+        } else {
+          setStatus("in-progress");
+          setExpiresAt(attempt.expiresAt);
+        }
       })
       .catch((err) => {
         toast.error(err?.response?.data?.message ?? "Could not start this test");
@@ -151,7 +164,13 @@ function TestEngine() {
         if (data.selectedOption !== null && data.selectedOption !== undefined) {
           setAnswered((a) => new Set(a).add(index));
         }
-        setExpiresAt(data.expiresAt);
+        // This endpoint doesn't carry pause state — only sync the running
+        // deadline while actually in progress, so a pause established by the
+        // start call above (or a pause/resume click) never gets clobbered by
+        // a stale expiresAt from here.
+        if (status !== "paused") {
+          setExpiresAt(data.expiresAt);
+        }
         setVisited((v) => new Set(v).add(index));
       })
       .catch((err) => {
@@ -172,8 +191,11 @@ function TestEngine() {
   // Timer — driven by expiresAt from the start-attempt response. A 400 from
   // any test-attempt call is treated as authoritative and wins over the local
   // clock (the server may finalize slightly before/after our countdown hits 0).
+  // Gated on status so pausing stops the interval outright — this is also
+  // what keeps auto-submit-on-zero from ever firing while paused, since tick()
+  // (and the `left === 0` check inside it) simply doesn't run.
   useEffect(() => {
-    if (!expiresAt) return;
+    if (!expiresAt || status !== "in-progress") return;
     const tick = () => {
       const left = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
       setTime(left);
@@ -183,10 +205,10 @@ function TestEngine() {
     const i = setInterval(tick, 1000);
     return () => clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expiresAt]);
+  }, [expiresAt, status]);
 
   const choose = async (optionIdx: number) => {
-    if (!attemptId || !question) return;
+    if (!attemptId || !question || status === "paused") return;
     setSelected(optionIdx);
     setSaving(true);
     try {
@@ -205,6 +227,7 @@ function TestEngine() {
   // option, the previously saved answer will reappear on return since the
   // server still has it on file. Best-effort until a real clear endpoint exists.
   const clearResponse = () => {
+    if (status === "paused") return;
     setSelected(null);
     setAnswered((a) => {
       const n = new Set(a);
@@ -214,6 +237,7 @@ function TestEngine() {
   };
 
   const toggleMark = () => {
+    if (status === "paused") return;
     setMarked((m) => {
       const n = new Set(m);
       n.has(index) ? n.delete(index) : n.add(index);
@@ -221,7 +245,10 @@ function TestEngine() {
     });
   };
 
-  const goto = (i: number) => setIndex(Math.max(0, Math.min(totalQuestions - 1, i)));
+  const goto = (i: number) => {
+    if (status === "paused") return;
+    setIndex(Math.max(0, Math.min(totalQuestions - 1, i)));
+  };
 
   const submitReport = async () => {
     if (!question || !reportReason.trim()) return;
@@ -239,7 +266,7 @@ function TestEngine() {
   };
 
   const submit = async () => {
-    if (!attemptId || submitting) return;
+    if (!attemptId || submitting || status === "paused") return;
     setSubmitting(true);
     try {
       await testAttemptService.submitTest(attemptId);
@@ -257,6 +284,50 @@ function TestEngine() {
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Could not submit test");
       setSubmitting(false);
+    }
+  };
+
+  // The contract for pause/resume isn't nailed down to a wrapper shape yet —
+  // unwrapItem handles the usual `{ success, data: {...} }` response, and the
+  // `?? body` fallback covers the same top-level-fields-no-`data`-key shape
+  // save-answer already uses, so either convention the backend ships with
+  // still surfaces remainingSeconds/status correctly.
+  const pause = async () => {
+    if (!attemptId || pausing || status === "paused") return;
+    setPausing(true);
+    try {
+      const body = await testAttemptService.pauseTest(attemptId);
+      const payload = unwrapItem<any>(body) ?? body ?? {};
+      // Local timer state only changes after the server confirms — if this
+      // throws, none of the below runs and the live countdown just keeps going.
+      setStatus("paused");
+      if (typeof payload.remainingSeconds === "number") setTime(payload.remainingSeconds);
+      toast.success("Test paused");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not pause the test");
+    } finally {
+      setPausing(false);
+    }
+  };
+
+  const resume = async () => {
+    if (!attemptId || resuming || status !== "paused") return;
+    setResuming(true);
+    try {
+      const body = await testAttemptService.resumeTest(attemptId);
+      const payload = unwrapItem<any>(body) ?? body ?? {};
+      setStatus("in-progress");
+      // Resume only hands back a point-in-time remainingSeconds, not a fresh
+      // expiresAt — recompute the deadline locally so the existing
+      // expiresAt-driven countdown effect can keep ticking against it unchanged.
+      if (typeof payload.remainingSeconds === "number") {
+        setExpiresAt(new Date(Date.now() + payload.remainingSeconds * 1000).toISOString());
+      }
+      toast.success("Test resumed");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not resume the test");
+    } finally {
+      setResuming(false);
     }
   };
 
@@ -296,20 +367,27 @@ function TestEngine() {
       <header className="h-14 bg-background border-b border-border flex items-center px-4 lg:px-6 gap-4">
         <Logo size="h-7" />
         <div className="ml-auto flex items-center gap-2">
-          {/* Pause Test button — commented out per request 2026-07-31
-          No pause endpoint exists — the attempt keeps counting down
-          server-side regardless, so this stayed disabled rather than
-          implying a pause that doesn't actually happen.
-          <Button size="sm" variant="outline" disabled title="Pausing isn't supported yet — the timer keeps running server-side">
-            <Pause className="h-4 w-4 mr-1.5" /> Pause Test
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pausing || resuming}
+            onClick={status === "paused" ? resume : pause}
+          >
+            {status === "paused" ? (
+              resuming ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Play className="h-4 w-4 mr-1.5" />
+            ) : (
+              pausing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Pause className="h-4 w-4 mr-1.5" />
+            )}
+            {status === "paused" ? "Resume Test" : "Pause Test"}
           </Button>
-          */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/10 text-destructive font-display font-bold tabular-nums">
+          <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-md font-display font-bold tabular-nums", status === "paused" ? "bg-muted text-muted-foreground" : "bg-destructive/10 text-destructive")}>
             <Clock className="h-4 w-4" />
             {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
-            <span className="text-[10px] font-normal text-destructive/70 ml-1">Time Left</span>
+            <span className={cn("text-[10px] font-normal ml-1", status === "paused" ? "text-muted-foreground" : "text-destructive/70")}>
+              {status === "paused" ? "Paused" : "Time Left"}
+            </span>
           </div>
-          <Button size="sm" onClick={() => setConfirmOpen(true)}>
+          <Button size="sm" onClick={() => setConfirmOpen(true)} disabled={status === "paused"}>
             Submit Test
           </Button>
         </div>
@@ -325,7 +403,7 @@ function TestEngine() {
               <FileText className="h-4 w-4" />
             </span>
           )}
-          <span className="font-display font-bold text-sm truncate">{test?.title ?? "Mock Test"}</span>
+          <span className="font-display font-bold text-sm truncate min-w-0">{test?.title ?? "Mock Test"}</span>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground ml-auto flex-wrap">
           <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {test?.totalQuestions ?? totalQuestions} Questions</span>
@@ -337,6 +415,7 @@ function TestEngine() {
         </div>
       </div>
 
+      <div className="relative">
       <div className={cn("grid gap-4 p-4 lg:p-6", sections.length > 0 ? "lg:grid-cols-[220px_1fr_320px]" : "lg:grid-cols-[1fr_320px]")}>
         {sections.length > 0 && (
           <Card className="p-4 h-fit lg:order-first">
@@ -355,7 +434,7 @@ function TestEngine() {
                       active ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted",
                     )}
                   >
-                    <span className="truncate">{b.section.name}</span>
+                    <span className="truncate min-w-0">{b.section.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0">{ansInSection}/{count}</span>
                   </button>
                 );
@@ -365,7 +444,7 @@ function TestEngine() {
         )}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <span className="font-display font-semibold text-sm truncate">
+            <span className="font-display font-semibold text-sm truncate min-w-0">
               {sections.length > 0 && activeSectionIdx >= 0 ? sectionBuckets[activeSectionIdx].section.name : `Question ${index + 1} of ${totalQuestions}`}
             </span>
             <div className="flex items-center gap-2 text-xs shrink-0">
@@ -474,7 +553,7 @@ function TestEngine() {
                   const pct = count ? Math.round((ansInSection / count) * 100) : 0;
                   return (
                     <button key={b.section._id ?? i} onClick={() => gotoSection(i)} className="w-full grid grid-cols-[1fr_60px_50px] gap-2 items-center text-left">
-                      <span className="text-xs truncate">{b.section.name}</span>
+                      <span className="text-xs truncate min-w-0">{b.section.name}</span>
                       <span className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <span className="block h-full bg-primary" style={{ width: `${pct}%` }} />
                       </span>
@@ -486,6 +565,28 @@ function TestEngine() {
             </div>
           )}
         </Card>
+      </div>
+
+      {status === "paused" && (
+        <div className="absolute inset-0 z-10 flex items-start justify-center pt-16 lg:pt-24 px-4 bg-background/70 backdrop-blur-sm">
+          <Card className="text-center p-8 max-w-sm shadow-lg">
+            <div className="mx-auto h-14 w-14 rounded-2xl bg-warning/10 grid place-items-center">
+              <Pause className="h-7 w-7 text-warning" />
+            </div>
+            <h3 className="font-display font-bold text-lg mt-4">Test Paused</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Your timer is frozen at {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}. Answers, navigation, and submission are locked until you resume.
+            </p>
+            <Button className="mt-5" onClick={resume} disabled={resuming}>
+              {resuming ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Resuming…</>
+              ) : (
+                <><Play className="h-4 w-4 mr-1.5" />Resume Test</>
+              )}
+            </Button>
+          </Card>
+        </div>
+      )}
       </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

@@ -642,7 +642,7 @@ Singleton document, auto-created with defaults on first call.
 **Success — 200**: `{ "success": true, "data": { "siteName":"Testopy", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
 
 ### PUT `/api/admin/settings` (admin)
-**Body** (all optional, only provided keys applied): `{ "siteName": "Testopy", "contactEmail": "support@testopy.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
+**Body** (all optional, only provided keys applied): `{ "siteName": "Testopy", "contactEmail": "support@govtprep.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
 **Success — 200**: `{ "success": true, "message": "Settings updated", "data": { ...settings... } }`
 
 ---

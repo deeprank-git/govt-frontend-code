@@ -20,6 +20,16 @@ export async function submitTest(attemptId: string) {
   return res.data;
 }
 
+export async function pauseTest(attemptId: string) {
+  const res = await axiosClient.post(`/test-attempts/${attemptId}/pause`);
+  return res.data;
+}
+
+export async function resumeTest(attemptId: string) {
+  const res = await axiosClient.post(`/test-attempts/${attemptId}/resume`);
+  return res.data;
+}
+
 export async function getResult(attemptId: string) {
   const res = await axiosClient.get(`/test-attempts/${attemptId}/result`);
   return res.data;
