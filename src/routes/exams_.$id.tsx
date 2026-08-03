@@ -3,8 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutGrid, ClipboardList, FileText,
-  Trophy, ExternalLink, Globe, Download, ArrowLeft,
-  CheckCircle2, FileSignature, IdCard, ScrollText,
+  ExternalLink, Globe, Download, ArrowLeft,
   Landmark, User, BookOpen, Clock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -21,6 +20,7 @@ import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { formatImportantDate, IMPORTANT_DATE_TINTS, ImportantDateIcon } from "@/lib/important-dates";
 
 type SeriesApiData = {
   name: string;
@@ -31,9 +31,6 @@ type SeriesApiData = {
   notificationPdf?: string;
   importantDates?: Record<string, { from: string; to: string }>;
 };
-
-const formatImportantDate = (d: string) =>
-  new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
 
@@ -59,15 +56,6 @@ const NAV_ITEMS = [
   { id: "mocks", label: "Mock Test", icon: ClipboardList },
   { id: "pyp", label: "Previous Year Question Paper", icon: FileText },
 ] as const;
-
-const IMPORTANT_DATES_CONFIG = [
-  { key: "notification_date", label: "Notification", icon: CheckCircle2, tint: "bg-emerald-50 text-emerald-600" },
-  { key: "application_start", label: "Application Start", icon: FileSignature, tint: "bg-blue-50 text-blue-600" },
-  { key: "last_date_to_apply", label: "Last Date to Apply", icon: ClipboardList, tint: "bg-amber-50 text-amber-600" },
-  { key: "admit_card", label: "Admit Card", icon: IdCard, tint: "bg-violet-50 text-violet-600" },
-  { key: "tier_1_exam", label: "Tier 1 Exam", icon: ScrollText, tint: "bg-rose-50 text-rose-600" },
-  { key: "tier_1_result", label: "Tier 1 Result", icon: Trophy, tint: "bg-slate-50 text-slate-600" },
-];
 
 const EXAM_DETAIL_SECTIONS = [
   {
@@ -132,15 +120,14 @@ function TestSeriesDetailPage() {
   const notificationPdfUrl = series?.notificationPdf
     ? mediaService.resolveMediaUrl(series.notificationPdf)
     : undefined;
-  const importantDates = IMPORTANT_DATES_CONFIG.map((c) => {
-    const v = series?.importantDates?.[c.key];
+  const importantDates = Object.entries(series?.importantDates ?? {}).map(([label, v], i) => {
     let date = "—";
     if (v?.from) {
       date = v.to && v.to !== v.from
         ? `${formatImportantDate(v.from)} - ${formatImportantDate(v.to)}`
         : formatImportantDate(v.from);
     }
-    return { ...c, date };
+    return { label, date, tint: IMPORTANT_DATE_TINTS[i % IMPORTANT_DATE_TINTS.length] };
   });
 
   // Checked from client-side auth state first — if logged out, this never
@@ -249,20 +236,24 @@ function TestSeriesDetailPage() {
               <div className="flex items-center justify-between mb-5">
                 <h2 className="font-display font-bold text-lg">Important Dates</h2>
               </div>
-              <div className="relative">
-                <div className="absolute top-6 left-0 right-0 h-px bg-border" />
-                <div className="relative grid grid-cols-3 sm:grid-cols-6 gap-y-4">
-                  {importantDates.map((d) => (
-                    <div key={d.label} className="text-center px-1">
-                      <div className={cn("h-12 w-12 rounded-full grid place-items-center mx-auto", d.tint)}>
-                        <d.icon className="h-5 w-5" />
+              {importantDates.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No important dates added yet.</p>
+              ) : (
+                <div className="relative">
+                  <div className="absolute top-6 left-0 right-0 h-px bg-border" />
+                  <div className="relative grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-y-4">
+                    {importantDates.map((d) => (
+                      <div key={d.label} className="text-center px-1">
+                        <div className={cn("h-12 w-12 rounded-full grid place-items-center mx-auto", d.tint)}>
+                          <ImportantDateIcon className="h-5 w-5" />
+                        </div>
+                        <div className="text-xs font-semibold mt-2.5 truncate" title={d.label}>{d.label}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">{d.date}</div>
                       </div>
-                      <div className="text-xs font-semibold mt-2.5 truncate">{d.label}</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">{d.date}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
 
             {activeSection === "overview" && (
