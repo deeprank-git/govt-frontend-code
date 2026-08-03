@@ -1,4 +1,4 @@
-# Testopy Backend — API Reference
+# GovtPrep Backend — API Reference
 
 Generated from the codebase (`index.js`, `routes/`, `controllers/`, `middleware/`, `models/`) for frontend integration. Every endpoint below reflects the **actual current implementation**, including inconsistencies — read the "Known Inconsistencies" section before integrating a generic API client/error handler.
 
@@ -418,30 +418,36 @@ CSV columns: `test` (ObjectId, required), `section` (section **name**, required 
 ## 8. Test Attempts — `/api/test-attempts` (auth required, any role)
 
 ### POST `/api/test-attempts/start`
-**Body**: `{ "testId": "<Test ObjectId>" }` (required). Resumes an existing non-expired `in-progress` attempt for this user+test if one exists. On a genuinely new attempt, also increments `Test.attemptsCount`.
+**Body**: `{ "testId": "<Test ObjectId>" }` (required). Resumes an existing non-expired `in-progress` **or `paused`** attempt for this user+test if one exists — a paused attempt is never silently superseded by a new one just because the student reopened the page. On a genuinely new attempt, also increments `Test.attemptsCount`.
 
-The database enforces **at most one `in-progress` attempt per (user, test)** via a unique partial index — this closes a race where two near-simultaneous `start` calls could otherwise both slip past the "no in-progress attempt yet" check and each create one. If that race is lost, the server catches the resulting duplicate-key error and transparently returns the *other* request's attempt as a normal 200 "resumed" response — from the client's perspective this just looks like the usual resume path, never a 409/500.
+The database enforces **at most one `in-progress` attempt, and separately at most one `paused` attempt, per (user, test)** via two unique partial indexes — this closes a race where two near-simultaneous `start` calls could otherwise both slip past the "no active attempt yet" check and each create one. If that race is lost, the server catches the resulting duplicate-key error and transparently returns the *other* request's attempt as a normal 200 "resumed" response — from the client's perspective this just looks like the usual resume path, never a 409/500.
 
-**Success — 200 (resumed)**: `{ "success": true, "resumed": true, "message": "Resuming your in-progress attempt", "data": { ...attempt... } }`
-**Success — 201 (new)**: `{ "success": true, "resumed": false, "data": { ...attempt, "expiresAt": "...", "totalMarks": 50, "currentQuestionIndex": 0, "status": "in-progress" } }`
+**Success — 200 (resumed, in-progress)**: `{ "success": true, "resumed": true, "message": "Resuming your in-progress attempt", "data": { ...attempt, "remainingSeconds": 2400 } }`
+**Success — 200 (resumed, paused)**: `{ "success": true, "resumed": true, "message": "You have a paused attempt for this test — resume it to continue", "data": { ...attempt, "status": "paused", "remainingSeconds": 2400 } }` — see "Pause / resume" below; `remainingSeconds` here is frozen at whatever it was when the attempt was paused.
+**Success — 201 (new)**: `{ "success": true, "resumed": false, "data": { ...attempt, "expiresAt": "...", "totalMarks": 50, "currentQuestionIndex": 0, "status": "in-progress", "remainingSeconds": 2400 } }`
 **Errors**
 - 400 `{ "success": false, "message": "testId is required" }`
 - 404 `{ "success": false, "message": "Test not found" }`
 - 400 `{ "success": false, "message": "This test has no questions yet" }`
 
 ### GET `/api/test-attempts/:id/question/:index` (`:index` is 0-based)
+This is the endpoint the test-taking page uses to hydrate itself (loading a question also refreshes the timer). **Works while `paused`, not just `in-progress`** — a paused attempt can still be viewed (read-only) so the frontend can render a "Paused" overlay with the frozen timer over the last-loaded question; it just won't persist `currentQuestionIndex` while paused (no writes happen to a paused attempt at all).
 **Success — 200**
 ```json
 {
   "success": true,
-  "data": { "question": { "_id":"...", "questionText":"...", "options":[...] }, "index": 0, "totalQuestions": 50, "selectedOption": null, "expiresAt": "..." }
+  "data": {
+    "question": { "_id":"...", "questionText":"...", "options":[...] },
+    "index": 0, "totalQuestions": 50, "selectedOption": null, "expiresAt": "...",
+    "status": "in-progress", "remainingSeconds": 2385
+  }
 }
 ```
-`question` never includes `correctAnswer`/`explanation`. `selectedOption` is `null` if unanswered, else the previously saved index.
+`question` never includes `correctAnswer`/`explanation`. `selectedOption` is `null` if unanswered, else the previously saved index. `status`/`remainingSeconds` were added alongside the pause/resume feature (see below) — `remainingSeconds` is **frozen** (returns the same value on every call) whenever `status` is `"paused"`.
 **Errors**
 - 404 `{ "success": false, "message": "Attempt not found" }`
 - 403 `{ "success": false, "message": "Forbidden" }` (not the attempt's owner)
-- 400 `{ "success": false, "message": "This attempt has already been submitted", "status": "completed" }`
+- 400 `{ "success": false, "message": "This attempt has already been submitted", "status": "completed" }` (only for a truly-ended attempt — `"paused"` is not treated as ended here)
 - 400 `{ "success": false, "message": "Invalid question index" }`
 - 404 `{ "success": false, "message": "No question at this index", "totalQuestions": 50 }`
 
@@ -452,6 +458,7 @@ The database enforces **at most one `in-progress` attempt per (user, test)** via
 - 400 `{ "success": false, "message": "attemptId, questionId and selectedOption are required" }`
 - 404 `{ "success": false, "message": "Attempt not found" }`
 - 403 `{ "success": false, "message": "Forbidden" }`
+- 400 `{ "success": false, "message": "This attempt is paused. Resume it before continuing.", "status": "paused" }` — ⚠️ **new**: unlike the list above, a paused attempt is explicitly rejected here (and on `/submit` below), distinct from the generic "already submitted" case, so a stale tab can't sneak in an answer while paused.
 - 400 `{ "success": false, "message": "This attempt has already been submitted", "status": "..." }`
 - 404 `{ "success": false, "message": "Question not found for this test" }` (also returned if the question was **soft-deleted** since the attempt started — it must be `isActive:true` to accept an answer for it)
 - 400 `{ "success": false, "message": "Invalid selectedOption" }`
@@ -462,9 +469,10 @@ The database enforces **at most one `in-progress` attempt per (user, test)** via
 **Errors**
 - 404 `{ "success": false, "message": "Attempt not found" }` (also thrown if `attemptId` is missing entirely)
 - 403 `{ "success": false, "message": "Forbidden" }`
+- 400 `{ "success": false, "message": "This attempt is paused. Resume it before submitting.", "status": "paused" }` — must resume first; checked before the idempotent "already submitted" branch above so a paused attempt isn't misreported as finished.
 
 ### GET `/api/test-attempts/:id/result`
-Auto-finalizes if the attempt expired but is still marked `in-progress`. Accessible by the owner or an admin.
+Auto-finalizes if the attempt expired but is still marked `in-progress`. Accessible by the owner or an admin. Treats a **`paused`** attempt the same as `in-progress` — "not submitted yet", not a result to show.
 **Success — 200**
 ```json
 {
@@ -484,7 +492,43 @@ Auto-finalizes if the attempt expired but is still marked `in-progress`. Accessi
 **Errors**
 - 404 `{ "success": false, "message": "Attempt not found" }`
 - 403 `{ "success": false, "message": "Forbidden" }`
-- 400 `{ "success": false, "message": "This attempt has not been submitted yet" }`
+- 400 `{ "success": false, "message": "This attempt has not been submitted yet", "status": "in-progress" }` (`status` here will be `"in-progress"` or `"paused"`)
+
+### Pause / Resume
+
+Adds a `"paused"` value to `TestAttempt.status` (alongside the existing `in-progress`/`completed`/`auto-submitted`) plus three new fields: `pausedAt` (Date, null unless currently paused), `totalPausedDurationMs` (cumulative ms spent paused across the whole attempt), and `pauseCount` (times paused so far). **No separate `durationSeconds` field was added** — the attempt's total duration is derived from the existing `expiresAt - startedAt`, which is fixed at start and never changes, so it's already a single source of truth for "how long is this test."
+
+`remainingSeconds` (returned by `/start`, `/question/:index`, `/pause`, `/resume`) is computed as:
+```
+effectiveExpiresAt = expiresAt + totalPausedDurationMs
+remainingSeconds   = max(0, floor((effectiveExpiresAt - now) / 1000))
+```
+i.e. every millisecond spent paused pushes the deadline out by the same amount, so pausing never burns down the timer. While `status === "paused"`, `now` in that formula is pinned to `pausedAt` instead of the real clock — that's what freezes the value across repeated calls.
+
+⚠️ The same `remainingSeconds <= 0` check (using the formula above, so it already excludes paused time) drives the lazy auto-submit that used to just compare `now > expiresAt` — this only ever fires while `status === "in-progress"`, so **a paused attempt can never auto-submit while paused**, no matter how long it sits paused.
+
+#### POST `/api/test-attempts/:attemptId/pause`
+Auth required, owner only.
+**Success — 200**: `{ "success": true, "message": "Attempt paused", "data": { "status": "paused", "remainingSeconds": 2385 } }`
+**Errors**
+- 404 `{ "success": false, "message": "Attempt not found" }`
+- 403 `{ "success": false, "message": "Forbidden" }` (not the owner)
+- 400 `{ "success": false, "message": "This attempt has already ended", "status": "..." }` (the lazy expiry check fired first — it had actually already timed out)
+- 400 `{ "success": false, "message": "Cannot pause an attempt with status \"<status>\"" }` (already `paused`, or already `completed`/`auto-submitted`)
+- 400 `{ "success": false, "message": "Maximum number of pauses (<N>) reached for this attempt" }` — only if the test has `maxPauses` configured (see below)
+- 400 `{ "success": false, "message": "Maximum total paused time reached for this attempt" }` — only if the test has `maxPauseDurationMs` configured
+
+#### POST `/api/test-attempts/:attemptId/resume`
+Auth required, owner only.
+**Success — 200 (normal)**: `{ "success": true, "message": "Attempt resumed", "data": { "status": "in-progress", "remainingSeconds": 2385 } }`
+**Success — 200 (edge case)**: `{ "success": true, "message": "Attempt auto-submitted (time was already up)", "data": { "status": "auto-submitted", "remainingSeconds": 0 } }` — if the accumulated paused time still leaves the timer exhausted the instant you resume (e.g. paused with 1 second left), the attempt is auto-submitted immediately instead of handing back a 0-second "in-progress" attempt.
+**Errors**
+- 404 `{ "success": false, "message": "Attempt not found" }`
+- 403 `{ "success": false, "message": "Forbidden" }`
+- 400 `{ "success": false, "message": "Cannot resume an attempt with status \"<status>\"" }` (not currently `paused`)
+
+#### Pause-abuse limits (opt-in, per test)
+`Test` gained two optional admin-configurable fields, both `null` by default (= unlimited, so existing tests are unaffected unless an admin explicitly sets one): `maxPauses` (number — caps `pauseCount`) and `maxPauseDurationMs` (number — caps `totalPausedDurationMs`). Neither is currently exposed on any admin create/update endpoint's documented field list above — they exist on the schema and are enforced by `/pause` if set directly in the DB, but there's no admin UI/API wiring for them yet. **Recommendation:** yes, some limit is worth having before this ships broadly — an unpaused/forgotten "paused" attempt otherwise gives a student effectively unlimited time on a timed exam. Wiring `maxPauses`/`maxPauseDurationMs` into `POST`/`PATCH /api/admin/tests` is a small, low-risk follow-up (same pattern as any other optional numeric field on that resource) rather than something that needed to block this change.
 
 ### GET `/api/test-attempts/my-attempts`
 **Success — 200**: `{ "success": true, "count": N, "data": [{ "test": {"title":"...","duration":60,"totalMarks":50}, "status":"completed", "score":40, "correctCount":20, "wrongCount":5, "startedAt":"...", "submittedAt":"..." }] }` (sorted newest first)
@@ -515,6 +559,42 @@ Auto-finalizes if the attempt expired but is still marked `in-progress`. Accessi
 **Success — 200**: `{ "success": true, "count": N, "data": [{ "_id":"...", "title":"...", "content":"...", "summary":"...", "date":"...", "category":"...", "category_link":"...", "tags":["..."], "image":"...", "url":"...", "source":"...", "source_link":"...", "views":123, "createdBy":"<userId or absent>" }] }`
 
 ⚠️ `url`, `source`, `source_link`, `category_link` are **not documented anywhere else** and default to `""` — they exist mainly to carry attribution for auto-ingested articles (see "Current Affairs data ingestion" below) but are plain optional string fields on `POST`/`PATCH /api/admin/current-affairs` too, so admin-authored articles can set them as well. Don't assume they're always populated — hand-written admin articles will typically leave them blank.
+
+### GET `/api/current-affairs/streak` — auth required (`authMiddleware`, unlike the rest of this section)
+⚠️ Registered before the `GET /:id` route below in `routes/currentAffairsRoutes.js` — otherwise Express would match the literal path segment `streak` as an `:id`. Returns the current user's reading streak plus a Monday–Sunday activity row for the current week (server-week, Monday start).
+**Success — 200**
+```json
+{
+  "success": true,
+  "data": {
+    "currentStreak": 4,
+    "longestStreak": 12,
+    "weekActivity": [
+      { "date": "2026-07-27", "label": "M", "completed": true },
+      { "date": "2026-07-28", "label": "T", "completed": true },
+      { "date": "2026-07-29", "label": "W", "completed": false },
+      { "date": "2026-07-30", "label": "T", "completed": false },
+      { "date": "2026-07-31", "label": "F", "completed": false },
+      { "date": "2026-08-01", "label": "S", "completed": false },
+      { "date": "2026-08-02", "label": "S", "completed": false }
+    ]
+  }
+}
+```
+`weekActivity` always has exactly 7 entries covering Monday through Sunday of the **current** week, regardless of when in the week you call it — it's not a rolling 7-day window. `date` is `YYYY-MM-DD` (UTC).
+**Errors**: 401 (no/invalid token — see Authentication section)
+
+### POST `/api/current-affairs/:id/record-view` — auth required (`authMiddleware`, unlike the rest of this section)
+Call this when a student opens/reads an article, to advance their reading streak. Purely additive — does **not** touch `CurrentAffairs.views` (see `GET /:id` above) or any bookmark logic; it only writes to `User.currentStreak`/`longestStreak`/`lastActiveDate` and a `StreakActivity` log row.
+
+"Today" is always the **server's UTC date** — the endpoint does not accept or trust a client-supplied date (a client could otherwise fake/extend a streak by sending an arbitrary date). Trade-off: a user far from UTC may see their streak roll over at a local time other than midnight.
+
+Logic: if `lastActiveDate` is already today → no-op (idempotent, safe to call on every article open, not just the first). If `lastActiveDate` was yesterday → `currentStreak += 1`. If `lastActiveDate` is older than yesterday, or the user has never recorded a view → `currentStreak` resets to `1`. `longestStreak` is updated to `max(longestStreak, currentStreak)` in every case. Today is then logged in `StreakActivity` (idempotent — a duplicate insert for the same user+day is swallowed, not an error).
+
+**Success — 200**: `{ "success": true, "data": { "currentStreak": 4, "longestStreak": 12 } }`
+**Errors**
+- 401 (no/invalid token)
+- 404 `{ "success": false, "message": "Article not found" }` (missing, inactive, or unpublished-and-caller-isn't-admin — same indistinguishable-404 pattern as `GET /:id`)
 
 ### GET `/api/current-affairs/:id`
 Increments `views` by 1 on every fetch (including anonymous requests — there's no dedup/rate-limit on this). Returns the full doc incl. `content`.
@@ -634,10 +714,10 @@ Any subset of `slug/title/content/status`.
 
 ### GET `/api/settings` (public, no auth)
 Singleton document, auto-created with defaults on first call.
-**Success — 200**: `{ "success": true, "data": { "siteName":"Testopy", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
+**Success — 200**: `{ "success": true, "data": { "siteName":"GovtPrep", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
 
 ### PUT `/api/admin/settings` (admin)
-**Body** (all optional, only provided keys applied): `{ "siteName": "Testopy", "contactEmail": "support@govtprep.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
+**Body** (all optional, only provided keys applied): `{ "siteName": "GovtPrep", "contactEmail": "support@govtprep.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
 **Success — 200**: `{ "success": true, "message": "Settings updated", "data": { ...settings... } }`
 
 ---
@@ -720,7 +800,7 @@ Case-insensitive regex search across Categories, Tests, TestSeries, CurrentAffai
 ## 17. Misc
 
 ### GET `/api/health`
-Simple liveness check (inline handler in `index.js`, not JSON-audited above but returns 200 when the server is up).
+Simple liveness check (inline handler in `app.js`, not JSON-audited above but returns 200 when the server is up).
 
 ### Unmatched routes
 Any request not matching a route above returns **404**: `{ "success": false, "message": "Route not found" }`.
@@ -740,7 +820,7 @@ Every route in the app is mounted under `/api/...` (including `/api/health`), wi
 
 ## Background job affecting attempt state
 
-A `setInterval`-based sweep (`cron/autoSubmitJob.js`) runs every 60 seconds and auto-submits any `in-progress` `TestAttempt` whose `expiresAt` has passed, setting `status: "auto-submitted"`. This happens **without any client request** — if a user is mid-test and their timer runs out, poll `GET /api/test-attempts/:id/result` (or refetch attempt status) shortly after `expiresAt` rather than assuming the attempt is still `in-progress` until an explicit submit call succeeds. Treat `completed` and `auto-submitted` identically in all UI (results screen, leaderboard, attempt history) — both mean "graded, final".
+A `setInterval`-based sweep (`cron/autoSubmitJob.js`) runs every 60 seconds and auto-submits any `in-progress` `TestAttempt` whose `expiresAt` has passed, setting `status: "auto-submitted"`. This happens **without any client request** — if a user is mid-test and their timer runs out, poll `GET /api/test-attempts/:id/result` (or refetch attempt status) shortly after `expiresAt` rather than assuming the attempt is still `in-progress` until an explicit submit call succeeds. Treat `completed` and `auto-submitted` identically in all UI (results screen, leaderboard, attempt history) — both mean "graded, final". ⚠️ The sweep only ever queries `status: "in-progress"`, so a `paused` attempt is automatically skipped by this job too — consistent with the pause/resume feature's guarantee that a paused attempt never auto-submits while paused (see "Pause / Resume" under Test Attempts).
 
 ---
 
@@ -749,7 +829,7 @@ A `setInterval`-based sweep (`cron/autoSubmitJob.js`) runs every 60 seconds and 
 | Field | Values |
 |---|---|
 | `User.role` | `student`, `instructor`, `admin` |
-| `TestAttempt.status` | `in-progress`, `completed`, `auto-submitted` |
+| `TestAttempt.status` | `in-progress`, `paused`, `completed`, `auto-submitted` |
 | `Report.status` | `pending`, `reviewed`, `resolved` |
 | `Notification.type` | `info`, `reminder`, `result`, `offer`, `system` |
 | `Page.status` | `draft`, `published` |
