@@ -377,7 +377,7 @@ function ProfilePage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>Enter a new password for your account.</DialogDescription>
+            <DialogDescription>Enter your current password and choose a new one.</DialogDescription>
           </DialogHeader>
           <ChangePasswordForm onClose={() => setPwdOpen(false)} />
         </DialogContent>
@@ -481,11 +481,17 @@ function CircularProgress({ value }: { value: number }) {
 }
 
 function ChangePasswordForm({ onClose }: { onClose: () => void }) {
+  const [currentPwd, setCurrentPwd] = useState("");
   const [pwd, setPwd] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const canSubmit = !busy && currentPwd && pwd.length >= 6 && pwd === confirm;
   return (
     <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Current Password</Label>
+        <Input type="password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} />
+      </div>
       <div>
         <Label className="text-xs">New Password</Label>
         <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
@@ -497,11 +503,11 @@ function ChangePasswordForm({ onClose }: { onClose: () => void }) {
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button
-          disabled={busy || !pwd || pwd !== confirm}
+          disabled={!canSubmit}
           onClick={async () => {
             setBusy(true);
             try {
-              await userService.updateMe({ password: pwd });
+              await userService.updateMe({ password: pwd, currentPassword: currentPwd });
               toast.success("Password updated");
               onClose();
             } catch (err: any) {

@@ -22,7 +22,6 @@ import { Route as AdminDashboardIndexRouteImport } from './routes/admin-dashboar
 import { Route as PagesSlugRouteImport } from './routes/pages.$slug'
 import { Route as ExamsIdRouteImport } from './routes/exams_.$id'
 import { Route as CurrentAffairsIdRouteImport } from './routes/current-affairs_.$id'
-import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AdminDashboardUsersRouteImport } from './routes/admin-dashboard.users'
 import { Route as AdminDashboardTestsRouteImport } from './routes/admin-dashboard.tests'
 import { Route as AdminDashboardTestSeriesRouteImport } from './routes/admin-dashboard.test-series'
@@ -117,11 +116,6 @@ const CurrentAffairsIdRoute = CurrentAffairsIdRouteImport.update({
   id: '/current-affairs_/$id',
   path: '/current-affairs/$id',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => AuthRoute,
 } as any)
 const AdminDashboardUsersRoute = AdminDashboardUsersRouteImport.update({
   id: '/users',
@@ -298,7 +292,7 @@ export interface FileRoutesByFullPath {
   '/about-us': typeof AboutUsRoute
   '/admin-dashboard': typeof AdminDashboardRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/current-affairs': typeof CurrentAffairsRoute
   '/exam-info': typeof ExamInfoRoute
   '/exams': typeof ExamsRoute
@@ -316,7 +310,6 @@ export interface FileRoutesByFullPath {
   '/admin-dashboard/test-series': typeof AdminDashboardTestSeriesRoute
   '/admin-dashboard/tests': typeof AdminDashboardTestsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
-  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/current-affairs/$id': typeof CurrentAffairsIdRoute
   '/exams/$id': typeof ExamsIdRoute
   '/pages/$slug': typeof PagesSlugRoute
@@ -342,7 +335,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
   '/admin-login': typeof AdminLoginRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/current-affairs': typeof CurrentAffairsRoute
   '/exam-info': typeof ExamInfoRoute
   '/exams': typeof ExamsRoute
@@ -359,7 +352,6 @@ export interface FileRoutesByTo {
   '/admin-dashboard/test-series': typeof AdminDashboardTestSeriesRoute
   '/admin-dashboard/tests': typeof AdminDashboardTestsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
-  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/current-affairs/$id': typeof CurrentAffairsIdRoute
   '/exams/$id': typeof ExamsIdRoute
   '/pages/$slug': typeof PagesSlugRoute
@@ -388,7 +380,7 @@ export interface FileRoutesById {
   '/about-us': typeof AboutUsRoute
   '/admin-dashboard': typeof AdminDashboardRouteWithChildren
   '/admin-login': typeof AdminLoginRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/current-affairs': typeof CurrentAffairsRoute
   '/exam-info': typeof ExamInfoRoute
   '/exams': typeof ExamsRoute
@@ -406,7 +398,6 @@ export interface FileRoutesById {
   '/admin-dashboard/test-series': typeof AdminDashboardTestSeriesRoute
   '/admin-dashboard/tests': typeof AdminDashboardTestsRoute
   '/admin-dashboard/users': typeof AdminDashboardUsersRoute
-  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/current-affairs_/$id': typeof CurrentAffairsIdRoute
   '/exams_/$id': typeof ExamsIdRoute
   '/pages/$slug': typeof PagesSlugRoute
@@ -453,7 +444,6 @@ export interface FileRouteTypes {
     | '/admin-dashboard/test-series'
     | '/admin-dashboard/tests'
     | '/admin-dashboard/users'
-    | '/auth/reset-password'
     | '/current-affairs/$id'
     | '/exams/$id'
     | '/pages/$slug'
@@ -496,7 +486,6 @@ export interface FileRouteTypes {
     | '/admin-dashboard/test-series'
     | '/admin-dashboard/tests'
     | '/admin-dashboard/users'
-    | '/auth/reset-password'
     | '/current-affairs/$id'
     | '/exams/$id'
     | '/pages/$slug'
@@ -542,7 +531,6 @@ export interface FileRouteTypes {
     | '/admin-dashboard/test-series'
     | '/admin-dashboard/tests'
     | '/admin-dashboard/users'
-    | '/auth/reset-password'
     | '/current-affairs_/$id'
     | '/exams_/$id'
     | '/pages/$slug'
@@ -571,7 +559,7 @@ export interface RootRouteChildren {
   AboutUsRoute: typeof AboutUsRoute
   AdminDashboardRoute: typeof AdminDashboardRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
-  AuthRoute: typeof AuthRouteWithChildren
+  AuthRoute: typeof AuthRoute
   CurrentAffairsRoute: typeof CurrentAffairsRoute
   ExamInfoRoute: typeof ExamInfoRoute
   ExamsRoute: typeof ExamsRoute
@@ -672,13 +660,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/current-affairs/$id'
       preLoaderRoute: typeof CurrentAffairsIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/auth/reset-password': {
-      id: '/auth/reset-password'
-      path: '/reset-password'
-      fullPath: '/auth/reset-password'
-      preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof AuthRoute
     }
     '/admin-dashboard/users': {
       id: '/admin-dashboard/users'
@@ -994,23 +975,13 @@ const AdminDashboardRouteWithChildren = AdminDashboardRoute._addFileChildren(
   AdminDashboardRouteChildren,
 )
 
-interface AuthRouteChildren {
-  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthResetPasswordRoute: AuthResetPasswordRoute,
-}
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutUsRoute: AboutUsRoute,
   AdminDashboardRoute: AdminDashboardRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
-  AuthRoute: AuthRouteWithChildren,
+  AuthRoute: AuthRoute,
   CurrentAffairsRoute: CurrentAffairsRoute,
   ExamInfoRoute: ExamInfoRoute,
   ExamsRoute: ExamsRoute,

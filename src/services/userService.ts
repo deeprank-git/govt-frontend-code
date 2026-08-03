@@ -17,6 +17,7 @@ export async function updateMe(data: {
   country?: string;
   city?: string;
   password?: string;
+  currentPassword?: string;
   profilePicture?: File;
 }) {
   const form = new FormData();

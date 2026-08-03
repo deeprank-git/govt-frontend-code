@@ -66,7 +66,6 @@ Not directly consumed by the frontend, but useful when something behaves unexpec
 | `JWT_EXPIRES_IN` | `utils/generateToken.js` | Access-token TTL. Code default is `7d`, but the deployed value is `15d` (see Authentication section) | Yes |
 | `PORT` / `HOST` | `index.js` | Listen address, default `0.0.0.0:5000` | Yes |
 | `ALLOWED_ORIGINS` | — | ⚠️ **Dead** — not read anywhere in code. CORS origins are hardcoded in `index.js` instead (see CORS note above) | Yes, but unused |
-| `FRONTEND_URL` | `controllers/authController.js` | Base origin used to build the password-reset link (see forgot-password above). Defaults to `http://89.116.20.193:8080` if unset | **No** |
 | `GMAIL_USER` | `utils/emailService.js` | Gmail SMTP auth user, also the `from` fallback for outgoing emails | **No** |
 | `GMAIL_PASSWORD` | `utils/emailService.js` | Gmail SMTP auth password — must be a Google **App Password** (2FA account), not the regular login password | **No** |
 | `EMAIL_FROM` | `utils/emailService.js` | Overrides the `from` address on outgoing emails; falls back to `GMAIL_USER`, then `"noreply@govtprep.com"` | **No** |
@@ -154,21 +153,22 @@ Uploaded files are served back at whatever `GET /uploads/...` path the response'
 ### POST `/api/auth/forgot-password`
 **Body**: `{ "email": "..." }` (required). Always returns the same generic success message regardless of whether the email exists (anti-enumeration) — **do not** branch UI logic on this response to reveal account existence.
 
-If the account exists, the server emails a link of the exact shape `${FRONTEND_URL}/auth/reset-password?token=<rawToken>` (built in `authController.js`, sent via Gmail SMTP through `utils/emailService.js`). ⚠️ **The frontend must have a route at exactly `/auth/reset-password` that reads a `token` query param** and submits it as `token` to `POST /api/auth/reset-password` below — if the frontend uses a different path, the emailed link 404s client-side with no server-side fallback. `FRONTEND_URL` is a backend env var (not in `.env.example`; defaults to `http://89.116.20.193:8080` if unset) — confirm with whoever deploys the backend which origin it's actually set to. The token itself expires **1 hour** after the request (`RESET_TOKEN_TTL_MS`).
+If the account exists, the server emails a 6-digit OTP (built in `authController.js`, sent via Gmail SMTP through `utils/emailService.js`'s `sendPasswordResetOtpEmail`). The OTP is never returned in the API response — only the hashed form is stored (`resetPasswordOtp` on the User doc). The OTP expires **10 minutes** after the request (`RESET_OTP_TTL_MS`) and allows at most **5** incorrect guesses (`RESET_OTP_MAX_ATTEMPTS`) before it must be re-requested.
 
-**Success — 200**: `{ "success": true, "message": "If an account with that email exists, a password reset link has been sent." }`
+**Success — 200**: `{ "success": true, "message": "If an account with that email exists, a password reset code has been sent." }`
 **Errors**
 - 400 `{ "success": false, "message": "Email is required" }`
 - 500 `{ "success": false, "message": "Server error", "error": "..." }`
 
 ### POST `/api/auth/reset-password`
-**Body**: `{ "token": "...", "newPassword": "..." }` (`token` is the raw token from the emailed reset link; `newPassword` min 6 chars).
+**Body**: `{ "email": "...", "otp": "...", "newPassword": "..." }` (`otp` is the 6-digit code emailed by forgot-password; `newPassword` min 6 chars). Verifies the OTP and sets the new password in one step — there is no separate "verify OTP" call.
 
 **Success — 200**: `{ "success": true, "message": "Password has been reset successfully" }`
 **Errors**
-- 400 `{ "success": false, "message": "token and newPassword are required" }`
+- 400 `{ "success": false, "message": "email, otp and newPassword are required" }`
 - 400 `{ "success": false, "message": "Password must be at least 6 characters" }`
-- 400 `{ "success": false, "message": "Invalid or expired reset token" }`
+- 400 `{ "success": false, "message": "Invalid or expired OTP" }` (wrong/expired/missing OTP)
+- 400 `{ "success": false, "message": "Too many incorrect attempts. Please request a new OTP." }`
 - 500 `{ "success": false, "message": "Server error", "error": "..." }`
 
 ---
@@ -179,7 +179,9 @@ If the account exists, the server emails a link of the exact shape `${FRONTEND_U
 **Success — 200**: `{ "success": true, "data": { ...full User doc minus password... } }`
 
 ### PUT `/api/users/me` — `multipart/form-data`
-**Form fields** (all optional): `name`, `email`, `mobile`, `username`, `address`, `country`, `city`, `password` (string), `profilePicture` (file — see upload table above).
+**Form fields** (all optional): `name`, `email`, `mobile`, `username`, `address`, `country`, `city`, `password` (string), `currentPassword` (string), `profilePicture` (file — see upload table above).
+
+⚠️ If `password` is present, `currentPassword` is **required** and must match the account's existing password — this is the logged-in "change password" flow (distinct from the OTP-based `/api/auth/forgot-password` + `/api/auth/reset-password` flow above, which is for users who can't log in).
 
 **Success — 200**
 ```json
@@ -192,6 +194,9 @@ If the account exists, the server emails a link of the exact shape `${FRONTEND_U
 **Errors**
 - 404 `{ "success": false, "message": "User not found" }`
 - 400 `{ "success": false, "message": "<field> already taken" }`
+- 400 `{ "success": false, "message": "Current password is required to set a new password" }`
+- 400 `{ "success": false, "message": "Password must be at least 6 characters" }`
+- 400 `{ "success": false, "message": "Current password is incorrect" }`
 - 500 `{ "success": false, "message": "Error updating profile", "error": "..." }`
 
 ### POST `/api/users/me/report-question`
@@ -374,14 +379,14 @@ Every question belongs to a **specific section** within its Test (`Test.sections
   "order": 0
 }
 ```
-`test` and `section` are both explicitly required (checked before touching the DB). The server then verifies `test` actually exists, and that `section` is one of that test's own `sections[]._id` values — a section id borrowed from a *different* test is rejected. `options` **must be exactly 4 items** (schema-enforced). `correctAnswer` is a **0-based index** into `options`. `order` auto-assigned (count of existing questions in that test **+ section** combination) if omitted — i.e. ordering restarts per section, not per test. Creating/updating/deleting a question recalculates the parent Test's `totalQuestions`/`totalMarks`.
+`test` and `section` are both explicitly required (checked before touching the DB). The server then verifies `test` actually exists, and that `section` is one of that test's own `sections[]._id` values — a section id borrowed from a *different* test is rejected. `options` **must be 4 or 5 items** (schema-enforced) — 5 is for banking-style exams (e.g. IBPS) that use options a-e. `correctAnswer` is a **0-based index** into `options`. `order` auto-assigned (count of existing questions in that test **+ section** combination) if omitted — i.e. ordering restarts per section, not per test. Creating/updating/deleting a question recalculates the parent Test's `totalQuestions`/`totalMarks`.
 **Success — 201**: `{ "success": true, "message": "Question created", "data": { ...question... } }`
 **Errors**
 - 400 `{ "success": false, "message": "test (Test ID) is required" }`
 - 400 `{ "success": false, "message": "section (section ID) is required" }`
 - 400 `{ "success": false, "message": "test not found" }`
 - 400 `{ "success": false, "message": "section does not belong to this test" }`
-- 500 for schema violations (e.g. not exactly 4 options)
+- 500 for schema violations (e.g. not 4 or 5 options)
 
 ### GET `/api/admin/questions?test=<TestId>&section=<SectionId>` (both filters optional — omit `test` for all questions across all tests)
 **Success — 200** (note: plain `res.json`, still HTTP 200): `{ "success": true, "count": N, "data": [{ ...full question incl. correctAnswer/explanation/section... }] }`
@@ -398,19 +403,19 @@ Any subset of question fields, schema-validated. (`test`/`section` can technical
 ⚠️ Soft-deleting a question that a student already answered doesn't just vanish from lists — it also affects that student's **already-submitted** results: `getResult`'s `unattempted` count and `finalizeAttempt`'s scoring both now exclude answers pointing at an inactive question (see Test Attempts section).
 
 ### GET `/api/admin/questions/bulk/template`
-Returns a **CSV file** (not JSON): `Content-Type: text/csv`, `Content-Disposition: attachment; filename="questions-template.csv"`. Header row: `test,section,questionText,option1,option2,option3,option4,correctAnswer,marks,explanation,order`. `section` in the CSV is matched by that section's **name** (e.g. `"General Awareness"`), not its ObjectId — the server looks it up against the given `test`'s `sections[]` by name. ⚠️ `correctAnswer` in the CSV is **1-based** (e.g. `2` = option2), unlike the JSON API's 0-based `correctAnswer`.
+Returns a **CSV file** (not JSON): `Content-Type: text/csv`, `Content-Disposition: attachment; filename="questions-template.csv"`. Header row: `test,section,questionText,option1,option2,option3,option4,correctAnswer,marks,explanation,order`. `section` in the CSV is matched by that section's **name** (e.g. `"General Awareness"`), not its ObjectId — the server looks it up against the given `test`'s `sections[]` by name. ⚠️ `correctAnswer` in the CSV is **1-based** (e.g. `2` = option2), unlike the JSON API's 0-based `correctAnswer`. The downloadable template only shows the 4-option baseline — see below for the optional 5th option.
 
 ### POST `/api/admin/questions/bulk` — `multipart/form-data`, field `file` (CSV, ≤5MB)
-CSV columns: `test` (ObjectId, required), `section` (section **name**, required — must match a `sections[].name` on the given `test`), `questionText` (required), `option1`..`option4` (required), `correctAnswer` (1-4, required), `marks` (optional, default 1), `explanation` (optional), `order` (optional, auto-incremented per test+section if blank).
+CSV columns: `test` (ObjectId, required), `section` (section **name**, required — must match a `sections[].name` on the given `test`), `questionText` (required), `option1`..`option4` (required), `option5` (optional — banking-style exams with 5 options), `correctAnswer` (1-based, up to however many options the row has: 1-4 or 1-5, required), `marks` (optional, default 1), `explanation` (optional), `order` (optional, auto-incremented per test+section if blank).
 **Success — 201**: `{ "success": true, "message": "<N> questions uploaded successfully", "data": [ ...inserted questions... ] }`
 **Errors**
 - 400 `{ "success": false, "message": "CSV file is required (field name: file)" }`
 - 400 `{ "success": false, "message": "Could not parse CSV file", "error": "..." }`
 - 400 `{ "success": false, "message": "CSV file has no data rows" }`
-- 400 `{ "success": false, "message": "Row <n>: test, section, questionText and all 4 options are required" }`
+- 400 `{ "success": false, "message": "Row <n>: test, section, questionText and options 1-4 are required (option5 is optional)" }`
 - 400 `{ "success": false, "message": "Row <n>: test \"<id>\" not found" }`
 - 400 `{ "success": false, "message": "Row <n>: section \"<name>\" does not belong to test \"<id>\"" }`
-- 400 `{ "success": false, "message": "Row <n>: correctAnswer must be a number from 1 to 4" }`
+- 400 `{ "success": false, "message": "Row <n>: correctAnswer must be a number from 1 to 4" }` (or `1 to 5` if the row has an `option5`)
 - 500 `{ "success": false, "message": "Bulk upload failed", "error": "..." }`
 
 ---

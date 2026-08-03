@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/test/$testId")({
   component: TestEngine,
 });
 
-const OPTION_LETTERS = ["A", "B", "C", "D"];
+const OPTION_LETTERS = ["A", "B", "C", "D", "E"];
 
 type Question = {
   _id: string;
