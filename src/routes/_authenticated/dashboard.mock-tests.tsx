@@ -13,6 +13,7 @@ import * as testSeriesService from "@/services/testSeriesService";
 import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
+import { isPublishedVisible } from "@/lib/publish";
 
 export const Route = createFileRoute("/_authenticated/dashboard/mock-tests")({
   component: MockTests,
@@ -29,6 +30,10 @@ function MockTests() {
     queryFn: () => categoryService.getCategories(),
   });
   const categories = unwrapList<any>(categoriesRes);
+  // The backend already excludes inactive categories from this endpoint, so
+  // membership in this set is also how unpublished categories cascade to
+  // hide their test series/tests below, with no extra category-level flag needed.
+  const activeCategoryIds = useMemo(() => new Set(categories.map((c) => c._id)), [categories]);
   // Default to the first category once loaded, same as the Overview page —
   // there's no "All" option here either.
   const resolvedCategory = activeCategory ?? categories[0]?._id ?? null;
@@ -42,9 +47,13 @@ function MockTests() {
 
   const { data: seriesRes, isLoading: loadingSeries } = useQuery({
     queryKey: ["mt-series"],
-    queryFn: () => testSeriesService.getTestSeries(),
+    queryFn: () => testSeriesService.getTestSeries({ isPublished: true, isActive: true }),
   });
-  const series = unwrapList<any>(seriesRes);
+  const allSeries = unwrapList<any>(seriesRes);
+  const series = useMemo(
+    () => allSeries.filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category)),
+    [allSeries, activeCategoryIds],
+  );
   const seriesInCategory = useMemo(
     () => series.filter((s) => (s.category?._id ?? s.category) === resolvedCategory),
     [series, resolvedCategory],
@@ -52,18 +61,31 @@ function MockTests() {
   const activeSeries = series.find((s) => s._id === activeSeriesId) ?? null;
   const seriesLogoUrl = activeSeries?.image ? mediaService.resolveMediaUrl(activeSeries.image) : undefined;
 
+  const visibleSeriesIds = useMemo(() => new Set(series.map((s) => s._id)), [series]);
+
   const { data: testsRes, isLoading: loadingTests } = useQuery({
     queryKey: ["all-mock-tests"],
-    queryFn: () => testService.getTests({ paperType: "mock" }),
+    queryFn: () => testService.getTests({ paperType: "mock", isPublished: true, isActive: true }),
   });
-  const tests = unwrapList<any>(testsRes);
+  const allTests = unwrapList<any>(testsRes);
+  const tests = useMemo(
+    () => allTests.filter((t) => isPublishedVisible(t) && visibleSeriesIds.has(typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries)),
+    [allTests, visibleSeriesIds],
+  );
 
   const { data: seriesTestsRes, isLoading: loadingSeriesTests } = useQuery({
     queryKey: ["mt-series-tests", activeSeriesId],
-    queryFn: () => testService.getTests({ testSeries: activeSeriesId!, paperType: "mock" }),
+    queryFn: () => testService.getTests({ testSeries: activeSeriesId!, paperType: "mock", isPublished: true, isActive: true }),
     enabled: !!activeSeriesId,
   });
-  const seriesTests = unwrapList<any>(seriesTestsRes);
+  const allSeriesTests = unwrapList<any>(seriesTestsRes);
+  // activeSeries is only ever set from an already-visible series card, but
+  // re-check here too in case activeSeriesId was set before this series lost
+  // its published/active status (e.g. an admin unpublished it moments ago).
+  const seriesTests = useMemo(
+    () => (activeSeries ? allSeriesTests.filter((t) => isPublishedVisible(t)) : []),
+    [allSeriesTests, activeSeries],
+  );
 
   const goToInstructions = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
@@ -161,7 +183,9 @@ function MockTests() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{s.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{s.totalTests ?? 0} Tests</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {tests.filter((t) => (typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries) === s._id).length} Tests
+                        </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
                     </button>

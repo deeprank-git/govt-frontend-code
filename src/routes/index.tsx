@@ -7,6 +7,7 @@ import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
 import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
+import { isPublishedVisible } from "@/lib/publish";
 import { useAuth } from "@/hooks/use-auth";
 import { getToken, getUser } from "@/lib/auth-store";
 import {
@@ -93,12 +94,18 @@ function HomePage() {
     queryFn: () => categoryService.getCategories(),
   });
   const categories = unwrapList<any>(categoriesRes);
+  // The backend already excludes inactive categories from this endpoint, so
+  // membership in this set is also how unpublished categories cascade to
+  // hide their test series below, with no extra category-level flag needed.
+  const activeCategoryIds = new Set(categories.map((c) => c._id));
 
   const { data: seriesRes } = useQuery({
     queryKey: ["home-series"],
-    queryFn: () => testSeriesService.getTestSeries(),
+    queryFn: () => testSeriesService.getTestSeries({ isPublished: true, isActive: true }),
   });
-  const series = unwrapList<any>(seriesRes);
+  const series = unwrapList<any>(seriesRes).filter(
+    (s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category),
+  );
 
   const resolvedCat = activeCat ?? categories[0]?._id ?? null;
 
@@ -113,10 +120,11 @@ function HomePage() {
   // popular ones as "Top Free Mock Tests".
   const { data: freeTestsRes } = useQuery({
     queryKey: ["home-free-tests"],
-    queryFn: () => testService.getTests({ paperType: "mock", isPublished: true }),
+    queryFn: () => testService.getTests({ paperType: "mock", isPublished: true, isActive: true }),
   });
+  const visibleSeriesIds = new Set(series.map((s) => s._id));
   const freeTests = unwrapList<any>(freeTestsRes)
-    .filter((t) => !t.isPaid)
+    .filter((t) => isPublishedVisible(t) && !t.isPaid && visibleSeriesIds.has(typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries))
     .sort((a, b) => (b.attemptsCount ?? 0) - (a.attemptsCount ?? 0))
     .slice(0, 3);
 

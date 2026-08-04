@@ -9,6 +9,7 @@ import { Logo } from "@/components/site/Logo";
 import * as testService from "@/services/testService";
 import * as testAttemptService from "@/services/testAttemptService";
 import { unwrapItem } from "@/lib/api-unwrap";
+import { isTestVisible } from "@/lib/publish";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/test/$testId_/instructions")({
@@ -37,6 +38,11 @@ function TestInstructionsPage() {
   });
   const test = unwrapItem<any>(testRes);
   const sections: any[] = test?.sections ?? [];
+  // Backend documents that GET /tests/:id already 404s for a test that
+  // isn't visible to the caller, but that hasn't held up in practice for a
+  // real student session, so re-check the test's (and its series'/category's)
+  // published/active flags here too before letting anyone reach "Start Test".
+  const testVisible = !!test && isTestVisible(test);
 
   const startTest = async () => {
     setStarting(true);
@@ -63,6 +69,11 @@ function TestInstructionsPage() {
           <div className="text-sm text-muted-foreground py-10 text-center">Loading test details…</div>
         ) : !test ? (
           <div className="text-sm text-muted-foreground py-10 text-center">Could not load this test.</div>
+        ) : !testVisible ? (
+          <Card className="p-10 text-center">
+            <h1 className="text-xl font-display font-bold mb-2">Test Not Available</h1>
+            <p className="text-sm text-muted-foreground">This test isn't published yet or is no longer active.</p>
+          </Card>
         ) : (
           <>
             <div>

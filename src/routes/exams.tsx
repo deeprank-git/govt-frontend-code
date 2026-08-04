@@ -10,9 +10,11 @@ import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { ExamIcon } from "@/components/site/ExamIcon";
 import * as categoryService from "@/services/categoryService";
 import * as testSeriesService from "@/services/testSeriesService";
+import * as testService from "@/services/testService";
 import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
+import { isPublishedVisible } from "@/lib/publish";
 
 export const Route = createFileRoute("/exams")({
   head: () => ({
@@ -35,14 +37,33 @@ function ExamsPage() {
     queryFn: () => categoryService.getCategories(),
   });
   const categories = unwrapList<any>(categoriesRes);
+  // The backend already excludes inactive categories from this endpoint, so
+  // membership in this set is also how unpublished categories cascade to
+  // hide their test series/tests below, with no extra category-level flag needed.
+  const activeCategoryIds = useMemo(() => new Set(categories.map((c) => c._id)), [categories]);
 
   const { data: seriesRes, isLoading: loadingSeries } = useQuery({
     queryKey: ["exams-series"],
-    queryFn: () => testSeriesService.getTestSeries(),
+    queryFn: () => testSeriesService.getTestSeries({ isPublished: true, isActive: true }),
   });
-  const series = unwrapList<any>(seriesRes);
+  const allSeries = unwrapList<any>(seriesRes);
+  const series = useMemo(
+    () => allSeries.filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category)),
+    [allSeries, activeCategoryIds],
+  );
 
-  const isLoading = loadingCats || loadingSeries;
+  const { data: testsRes, isLoading: loadingTests } = useQuery({
+    queryKey: ["exams-tests"],
+    queryFn: () => testService.getTests({ isPublished: true, isActive: true }),
+  });
+  const allTests = unwrapList<any>(testsRes);
+  const visibleSeriesIds = useMemo(() => new Set(series.map((s) => s._id)), [series]);
+  const visibleTests = useMemo(
+    () => allTests.filter((t) => isPublishedVisible(t) && visibleSeriesIds.has(typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries)),
+    [allTests, visibleSeriesIds],
+  );
+
+  const isLoading = loadingCats || loadingSeries || loadingTests;
 
   // Default to the first category once loaded — there's no "All" option here,
   // same as the equivalent logged-in Overview page.
@@ -58,13 +79,12 @@ function ExamsPage() {
     });
   }, [series, resolvedCat, q]);
 
-  const totalTests = series.reduce((sum, s) => sum + (s.totalTests ?? 0), 0);
   const freePct = series.length ? Math.round((series.filter((s) => !s.isPaid).length / series.length) * 100) : 0;
 
   const STATS = [
     { icon: BookOpen, value: `${categories.length}`, label: "Categories" },
     { icon: FileText, value: `${series.length}`, label: "Test Series" },
-    { icon: ClipboardList, value: `${totalTests}`, label: "Mock Tests" },
+    { icon: ClipboardList, value: `${visibleTests.length}`, label: "Mock Tests" },
     { icon: Sparkles, value: `${freePct}%`, label: "Free Access" },
   ];
 
@@ -171,7 +191,9 @@ function ExamsPage() {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{s.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{s.totalTests ?? 0} Tests</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {visibleTests.filter((t) => (typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries) === s._id).length} Tests
+                          </div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                       </div>

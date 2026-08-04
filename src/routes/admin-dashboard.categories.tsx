@@ -111,14 +111,13 @@ function CategoriesPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Name</TableHead><TableHead>Slug</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={4} />}
+          {isLoading && <LoadingRows colSpan={3} />}
           {!isLoading && paginated.map((c) => (
             <TableRow key={c._id}>
               <TableCell>{c.name}</TableCell>
-              <TableCell>{c.slug}</TableCell>
               <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
@@ -128,7 +127,7 @@ function CategoriesPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && categories.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
+          {!isLoading && categories.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />

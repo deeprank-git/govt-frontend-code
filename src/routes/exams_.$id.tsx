@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { ExamIcon } from "@/components/site/ExamIcon";
+import * as categoryService from "@/services/categoryService";
 import * as mediaService from "@/services/mediaService";
 import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { formatImportantDate, IMPORTANT_DATE_TINTS, ImportantDateIcon } from "@/lib/important-dates";
+import { isPublishedVisible } from "@/lib/publish";
 
 type SeriesApiData = {
   name: string;
@@ -30,6 +32,9 @@ type SeriesApiData = {
   applyLink?: string;
   notificationPdf?: string;
   importantDates?: Record<string, { from: string; to: string }>;
+  isPublished?: boolean;
+  isActive?: boolean;
+  category?: { _id?: string } | string;
 };
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
@@ -96,20 +101,34 @@ function TestSeriesDetailPage() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<(typeof NAV_ITEMS)[number]["id"]>("overview");
 
-  const { data: seriesRes } = useQuery({
+  const { data: seriesRes, isLoading: seriesLoading } = useQuery({
     queryKey: ["exam-series-detail", id],
     queryFn: () => testSeriesService.getTestSeriesById(id),
   });
   const series = unwrapItem<SeriesApiData>(seriesRes);
+
+  // Backend documents that non-admin callers should already be forced to
+  // isActive:true/isPublished:true here, but that hasn't held up in
+  // practice, so this page re-checks the series' own flags, plus its
+  // category's active status, before rendering anything — a direct link to
+  // an unpublished series or one under an unpublished category must not work.
+  const { data: categoriesRes } = useQuery({
+    queryKey: ["exam-categories-visibility"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const activeCategoryIds = new Set(unwrapList<any>(categoriesRes).map((c: any) => c._id));
+  const seriesVisible = isPublishedVisible(series)
+    && activeCategoryIds.has(typeof series?.category === "object" ? series.category?._id : series?.category);
 
   // GET /api/tests?testSeries= is public as of the latest backend change —
   // confirmed to return 200 without a token, so this list renders for
   // anonymous visitors too. Only actually starting a test (below) is gated.
   const { data: testsRes, isLoading: testsLoading } = useQuery({
     queryKey: ["exam-series-tests", id],
-    queryFn: () => testService.getTests({ testSeries: id }),
+    queryFn: () => testService.getTests({ testSeries: id, isPublished: true, isActive: true }),
+    enabled: seriesVisible,
   });
-  const tests = unwrapList<any>(testsRes);
+  const tests = unwrapList<any>(testsRes).filter(isPublishedVisible);
   const mockTests = tests.filter((t) => t.paperType !== "previous_year");
   const pypTests = tests.filter((t) => t.paperType === "previous_year");
 
@@ -142,6 +161,23 @@ function TestSeriesDetailPage() {
     }
     navigate({ to: "/test/$testId/instructions", params: { testId } });
   };
+
+  if (!seriesLoading && !seriesVisible) {
+    return (
+      <SiteShell>
+        <div className="container mx-auto px-4 lg:px-6 pt-6 pb-16">
+          <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Exams", to: "/exams" }]} />
+          <Card className="p-10 text-center mt-6">
+            <h1 className="text-xl font-display font-bold mb-2">Test Series Not Available</h1>
+            <p className="text-sm text-muted-foreground mb-4">
+              This test series isn't published yet or is no longer active.
+            </p>
+            <Button onClick={() => navigate({ to: "/exams" })}>Back to Exams</Button>
+          </Card>
+        </div>
+      </SiteShell>
+    );
+  }
 
   return (
     <SiteShell>

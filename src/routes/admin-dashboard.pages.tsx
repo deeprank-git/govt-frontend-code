@@ -98,13 +98,12 @@ function PagesPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Slug</TableHead><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Updated By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Updated By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={5} />}
+          {isLoading && <LoadingRows colSpan={4} />}
           {!isLoading && paginated.map((p) => (
             <TableRow key={p._id}>
-              <TableCell className="font-mono text-xs">{p.slug}</TableCell>
               <TableCell>{p.title}</TableCell>
               <TableCell>{p.status === "published" ? <Badge className="bg-success/15 text-success-foreground border-transparent">Published</Badge> : <Badge variant="outline">Draft</Badge>}</TableCell>
               <TableCell>{p.updatedBy?.name ?? "—"}</TableCell>
@@ -114,7 +113,7 @@ function PagesPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && pages.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No pages yet.</TableCell></TableRow>}
+          {!isLoading && pages.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No pages yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />

@@ -13,6 +13,7 @@ import * as questionService from "@/services/questionService";
 import * as reportService from "@/services/reportService";
 import * as mediaService from "@/services/mediaService";
 import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
+import { isTestVisible } from "@/lib/publish";
 import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/utils";
 import {
@@ -67,13 +68,26 @@ function TestEngine() {
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
 
-  const { data: testRes } = useQuery({
+  const { data: testRes, isLoading: testLoading } = useQuery({
     queryKey: ["test-detail", testId],
     queryFn: () => testService.getTestById(testId),
   });
   const test = unwrapItem<any>(testRes);
   const sections: any[] = test?.sections ?? [];
   const seriesLogoUrl = test?.testSeries?.image ? mediaService.resolveMediaUrl(test.testSeries.image) : undefined;
+  // Backend documents that GET /tests/:id already 404s for a test that isn't
+  // visible to the caller, but that hasn't held up in practice for a real
+  // student session, so re-check here too — this test's own attempt-start
+  // effect below already fired by the time this data lands, but rendering
+  // the actual question/answer UI is still blocked below if this is false.
+  const testNotVisible = !testLoading && !!test && !isTestVisible(test);
+
+  useEffect(() => {
+    if (!testNotVisible) return;
+    toast.error("This test is not available.");
+    navigate({ to: "/dashboard/mock-tests" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testNotVisible]);
 
   // Each question now carries its own `section` (an ObjectId into
   // test.sections[]) — fetch the full question list (index/order + section
@@ -332,6 +346,16 @@ function TestEngine() {
   };
 
   if (starting) return <div className="p-8">Starting attempt…</div>;
+  if (testNotVisible) {
+    return (
+      <div className="min-h-screen grid place-items-center p-8">
+        <Card className="p-10 text-center max-w-md">
+          <h1 className="text-xl font-display font-bold mb-2">Test Not Available</h1>
+          <p className="text-sm text-muted-foreground">This test isn't published yet or is no longer active.</p>
+        </Card>
+      </div>
+    );
+  }
   if (!attemptId) return <div className="p-8">Could not start this test.</div>;
   if (loadingQuestion && !question) return <div className="p-8">Loading question…</div>;
   if (!question) return <div className="p-8">No questions in this test.</div>;

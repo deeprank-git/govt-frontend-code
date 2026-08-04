@@ -139,6 +139,15 @@ function TestsPage() {
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete test"),
   });
 
+  const togglePublishMut = useMutation({
+    mutationFn: (t: any) => testService.updateTest(t._id, { isPublished: !t.isPublished }),
+    onSuccess: (_data, t) => {
+      toast.success(t.isPublished ? "Test unpublished" : "Test published");
+      qc.invalidateQueries({ queryKey: ["ad-tests"] });
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not update publish status"),
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -167,6 +176,14 @@ function TestsPage() {
               <TableCell>{t.duration} Min</TableCell>
               <TableCell>{t.isPublished ? "Published" : "Draft"}</TableCell>
               <TableCell className="text-right space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => togglePublishMut.mutate(t)}
+                  disabled={togglePublishMut.isPending}
+                >
+                  {t.isPublished ? "Unpublish" : "Publish"}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => openEdit(t)}>Edit</Button>
                 <Button size="sm" variant="outline" onClick={() => setDeleteTarget(t._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>

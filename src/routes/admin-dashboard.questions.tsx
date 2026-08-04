@@ -223,10 +223,10 @@ function QuestionsPage() {
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvFile} />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mb-2">
+      {/* <p className="text-xs text-muted-foreground mb-2">
         Tip: the CSV can include an optional <code className="text-[11px] bg-muted px-1 py-0.5 rounded">section</code> column —
         use the exact section name from the target test (e.g. "Quantitative Aptitude").
-      </p>
+      </p> */}
 
       {activeTestId && (
         <div className="mb-2">

@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExamIcon } from "@/components/site/ExamIcon";
 import { useSidebar } from "@/components/ui/sidebar";
+import * as categoryService from "@/services/categoryService";
 import * as mediaService from "@/services/mediaService";
 import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
 import { unwrapItem, unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 import { formatImportantDate, IMPORTANT_DATE_TINTS, ImportantDateIcon } from "@/lib/important-dates";
+import { isPublishedVisible } from "@/lib/publish";
 
 type SeriesApiData = {
   name: string;
@@ -27,6 +29,9 @@ type SeriesApiData = {
   applyLink?: string;
   notificationPdf?: string;
   importantDates?: Record<string, { from: string; to: string }>;
+  isPublished?: boolean;
+  isActive?: boolean;
+  category?: { _id?: string } | string;
 };
 
 type SeriesSearch = { name?: string; category?: string; image?: string; description?: string };
@@ -101,17 +106,31 @@ function TestSeriesDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { data: seriesRes } = useQuery({
+  const { data: seriesRes, isLoading: seriesLoading } = useQuery({
     queryKey: ["series-detail", id],
     queryFn: () => testSeriesService.getTestSeriesById(id),
   });
   const series = unwrapItem<SeriesApiData>(seriesRes);
 
+  // Backend documents that non-admin callers should already be forced to
+  // isActive:true/isPublished:true here, but that hasn't held up in
+  // practice, so this page re-checks the series' own flags, plus its
+  // category's active status, before rendering anything — a direct link to
+  // an unpublished series or one under an unpublished category must not work.
+  const { data: categoriesRes } = useQuery({
+    queryKey: ["dash-categories-visibility"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const activeCategoryIds = new Set(unwrapList<any>(categoriesRes).map((c: any) => c._id));
+  const seriesVisible = isPublishedVisible(series)
+    && activeCategoryIds.has(typeof series?.category === "object" ? series.category?._id : series?.category);
+
   const { data: testsRes, isLoading: testsLoading } = useQuery({
     queryKey: ["series-tests", id],
-    queryFn: () => testService.getTests({ testSeries: id }),
+    queryFn: () => testService.getTests({ testSeries: id, isPublished: true, isActive: true }),
+    enabled: seriesVisible,
   });
-  const tests = unwrapList<any>(testsRes);
+  const tests = unwrapList<any>(testsRes).filter(isPublishedVisible);
   const mockTests = tests.filter((t) => t.paperType !== "previous_year");
   const pypTests = tests.filter((t) => t.paperType === "previous_year");
 
@@ -133,6 +152,23 @@ function TestSeriesDetailPage() {
   });
 
   const startTest = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
+
+  if (!seriesLoading && !seriesVisible) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => navigate({ to: "/dashboard/overview" })}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Categories
+        </Button>
+        <Card className="p-10 text-center">
+          <h1 className="text-xl font-display font-bold mb-2">Test Series Not Available</h1>
+          <p className="text-sm text-muted-foreground mb-4">
+            This test series isn't published yet or is no longer active.
+          </p>
+          <Button onClick={() => navigate({ to: "/dashboard/overview" })}>Back to Overview</Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
