@@ -24,9 +24,10 @@ const NAV_ITEMS = [
   { to: "/admin-dashboard/questions" as const, label: "Questions" },
   { to: "/admin-dashboard/users" as const, label: "Users" },
   { to: "/admin-dashboard/current-affairs" as const, label: "Current Affairs" },
-  { to: "/admin-dashboard/pages" as const, label: "Pages" },
-  { to: "/admin-dashboard/settings" as const, label: "Settings" },
-  { to: "/admin-dashboard/media" as const, label: "Media" },
+  // Temporarily disabled - Pages section temporarily hidden (2026-08-04).
+  // { to: "/admin-dashboard/pages" as const, label: "Pages" },
+  // Temporarily disabled - Media section temporarily hidden (2026-08-04).
+  // { to: "/admin-dashboard/media" as const, label: "Media" },
   { to: "/admin-dashboard/reports" as const, label: "Reports" },
   { to: "/admin-dashboard/notifications" as const, label: "Notifications" },
   { to: "/admin-dashboard/profile" as const, label: "My Profile" },

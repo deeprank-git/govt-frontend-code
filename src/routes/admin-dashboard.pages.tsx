@@ -17,9 +17,15 @@ import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { AdminPager } from "@/components/admin/AdminPager";
 import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
-export const Route = createFileRoute("/admin-dashboard/pages")({
-  component: PagesPage,
-});
+// Temporarily disabled - Pages section temporarily hidden (2026-08-04).
+// Route intentionally left unregistered so /admin-dashboard/pages is no
+// longer reachable; TanStack Router's codegen drops it from routeTree.gen.ts
+// automatically when this file has no `Route` export. Nothing else in this
+// file (component, pageService calls, etc.) was touched — uncomment below
+// to re-enable.
+// export const Route = createFileRoute("/admin-dashboard/pages")({
+//   component: PagesPage,
+// });
 
 const emptyForm = { slug: "", title: "", content: "", status: "draft" as "draft" | "published" };
 

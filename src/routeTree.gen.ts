@@ -29,9 +29,7 @@ import { Route as AdminDashboardSettingsRouteImport } from './routes/admin-dashb
 import { Route as AdminDashboardReportsRouteImport } from './routes/admin-dashboard.reports'
 import { Route as AdminDashboardQuestionsRouteImport } from './routes/admin-dashboard.questions'
 import { Route as AdminDashboardProfileRouteImport } from './routes/admin-dashboard.profile'
-import { Route as AdminDashboardPagesRouteImport } from './routes/admin-dashboard.pages'
 import { Route as AdminDashboardNotificationsRouteImport } from './routes/admin-dashboard.notifications'
-import { Route as AdminDashboardMediaRouteImport } from './routes/admin-dashboard.media'
 import { Route as AdminDashboardCurrentAffairsRouteImport } from './routes/admin-dashboard.current-affairs'
 import { Route as AdminDashboardCategoriesRouteImport } from './routes/admin-dashboard.categories'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -153,22 +151,12 @@ const AdminDashboardProfileRoute = AdminDashboardProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AdminDashboardRoute,
 } as any)
-const AdminDashboardPagesRoute = AdminDashboardPagesRouteImport.update({
-  id: '/pages',
-  path: '/pages',
-  getParentRoute: () => AdminDashboardRoute,
-} as any)
 const AdminDashboardNotificationsRoute =
   AdminDashboardNotificationsRouteImport.update({
     id: '/notifications',
     path: '/notifications',
     getParentRoute: () => AdminDashboardRoute,
   } as any)
-const AdminDashboardMediaRoute = AdminDashboardMediaRouteImport.update({
-  id: '/media',
-  path: '/media',
-  getParentRoute: () => AdminDashboardRoute,
-} as any)
 const AdminDashboardCurrentAffairsRoute =
   AdminDashboardCurrentAffairsRouteImport.update({
     id: '/current-affairs',
@@ -300,9 +288,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/admin-dashboard/categories': typeof AdminDashboardCategoriesRoute
   '/admin-dashboard/current-affairs': typeof AdminDashboardCurrentAffairsRoute
-  '/admin-dashboard/media': typeof AdminDashboardMediaRoute
   '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
-  '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
   '/admin-dashboard/profile': typeof AdminDashboardProfileRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
   '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
@@ -342,9 +328,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/admin-dashboard/categories': typeof AdminDashboardCategoriesRoute
   '/admin-dashboard/current-affairs': typeof AdminDashboardCurrentAffairsRoute
-  '/admin-dashboard/media': typeof AdminDashboardMediaRoute
   '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
-  '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
   '/admin-dashboard/profile': typeof AdminDashboardProfileRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
   '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
@@ -388,9 +372,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/admin-dashboard/categories': typeof AdminDashboardCategoriesRoute
   '/admin-dashboard/current-affairs': typeof AdminDashboardCurrentAffairsRoute
-  '/admin-dashboard/media': typeof AdminDashboardMediaRoute
   '/admin-dashboard/notifications': typeof AdminDashboardNotificationsRoute
-  '/admin-dashboard/pages': typeof AdminDashboardPagesRoute
   '/admin-dashboard/profile': typeof AdminDashboardProfileRoute
   '/admin-dashboard/questions': typeof AdminDashboardQuestionsRoute
   '/admin-dashboard/reports': typeof AdminDashboardReportsRoute
@@ -434,9 +416,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/admin-dashboard/categories'
     | '/admin-dashboard/current-affairs'
-    | '/admin-dashboard/media'
     | '/admin-dashboard/notifications'
-    | '/admin-dashboard/pages'
     | '/admin-dashboard/profile'
     | '/admin-dashboard/questions'
     | '/admin-dashboard/reports'
@@ -476,9 +456,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin-dashboard/categories'
     | '/admin-dashboard/current-affairs'
-    | '/admin-dashboard/media'
     | '/admin-dashboard/notifications'
-    | '/admin-dashboard/pages'
     | '/admin-dashboard/profile'
     | '/admin-dashboard/questions'
     | '/admin-dashboard/reports'
@@ -521,9 +499,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/admin-dashboard/categories'
     | '/admin-dashboard/current-affairs'
-    | '/admin-dashboard/media'
     | '/admin-dashboard/notifications'
-    | '/admin-dashboard/pages'
     | '/admin-dashboard/profile'
     | '/admin-dashboard/questions'
     | '/admin-dashboard/reports'
@@ -710,25 +686,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardProfileRouteImport
       parentRoute: typeof AdminDashboardRoute
     }
-    '/admin-dashboard/pages': {
-      id: '/admin-dashboard/pages'
-      path: '/pages'
-      fullPath: '/admin-dashboard/pages'
-      preLoaderRoute: typeof AdminDashboardPagesRouteImport
-      parentRoute: typeof AdminDashboardRoute
-    }
     '/admin-dashboard/notifications': {
       id: '/admin-dashboard/notifications'
       path: '/notifications'
       fullPath: '/admin-dashboard/notifications'
       preLoaderRoute: typeof AdminDashboardNotificationsRouteImport
-      parentRoute: typeof AdminDashboardRoute
-    }
-    '/admin-dashboard/media': {
-      id: '/admin-dashboard/media'
-      path: '/media'
-      fullPath: '/admin-dashboard/media'
-      preLoaderRoute: typeof AdminDashboardMediaRouteImport
       parentRoute: typeof AdminDashboardRoute
     }
     '/admin-dashboard/current-affairs': {
@@ -942,9 +904,7 @@ const AuthenticatedRouteRouteWithChildren =
 interface AdminDashboardRouteChildren {
   AdminDashboardCategoriesRoute: typeof AdminDashboardCategoriesRoute
   AdminDashboardCurrentAffairsRoute: typeof AdminDashboardCurrentAffairsRoute
-  AdminDashboardMediaRoute: typeof AdminDashboardMediaRoute
   AdminDashboardNotificationsRoute: typeof AdminDashboardNotificationsRoute
-  AdminDashboardPagesRoute: typeof AdminDashboardPagesRoute
   AdminDashboardProfileRoute: typeof AdminDashboardProfileRoute
   AdminDashboardQuestionsRoute: typeof AdminDashboardQuestionsRoute
   AdminDashboardReportsRoute: typeof AdminDashboardReportsRoute
@@ -958,9 +918,7 @@ interface AdminDashboardRouteChildren {
 const AdminDashboardRouteChildren: AdminDashboardRouteChildren = {
   AdminDashboardCategoriesRoute: AdminDashboardCategoriesRoute,
   AdminDashboardCurrentAffairsRoute: AdminDashboardCurrentAffairsRoute,
-  AdminDashboardMediaRoute: AdminDashboardMediaRoute,
   AdminDashboardNotificationsRoute: AdminDashboardNotificationsRoute,
-  AdminDashboardPagesRoute: AdminDashboardPagesRoute,
   AdminDashboardProfileRoute: AdminDashboardProfileRoute,
   AdminDashboardQuestionsRoute: AdminDashboardQuestionsRoute,
   AdminDashboardReportsRoute: AdminDashboardReportsRoute,
