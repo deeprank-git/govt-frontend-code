@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { to: "/" as const, label: "Home" },
   { to: "/exams" as const, label: "Exams" },
   { to: "/current-affairs" as const, label: "Current Affairs" },
   // { to: "/exam-info" as const, label: "Exam Info" },

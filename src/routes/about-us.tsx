@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Eye, Target, BookOpen, BarChart3, Bell, Shield, Award, Users } from "lucide-react";
+import { ArrowRight, Eye, Target, BookOpen, BarChart3, Bell, Shield, Award, Users, Quote, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SiteShell } from "@/components/site/SiteShell";
@@ -43,11 +43,17 @@ const TEAM = [
   { name: "Saurabh Jain", role: "Lead — Design" },
 ];
 
+const WHY_TESTOPY = [
+  { title: "Built for Bharat", desc: "Designed specifically for Indian government exams — SSC, UPSC, Banking, Railways, State PSCs and more. Every feature and every question is tailored to aspirants like you." },
+  { title: "Expert-Curated Content", desc: "Our content is crafted by experienced educators who have cracked these exams themselves. No noise, no filler — only what matters for your success." },
+  { title: "One Platform, All Exams", desc: "From daily current affairs to full-length mock tests and previous year papers — everything you need is in one place, accessible anytime, anywhere." },
+];
+
 function AboutPage() {
   return (
     <SiteShell>
       <section className="bg-hero-radial">
-        <div className="container mx-auto px-4 lg:px-6 pt-6 pb-14">
+        <div className="container mx-auto px-4 lg:px-6 pt-6 pb-5">
           <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "About Us" }]} />
           <div className="mt-6 grid lg:grid-cols-2 gap-10 items-center">
             <div>
@@ -103,6 +109,32 @@ function AboutPage() {
       </section>
 
       <section className="container mx-auto px-4 lg:px-6 py-10">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <span className="inline-flex items-center text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-wider">Founder's Message</span>
+            <h2 className="mt-4 text-2xl md:text-3xl font-display font-bold">A Word from Our Founder</h2>
+            <Quote className="h-8 w-8 text-primary mt-6 mb-3" />
+            <p className="text-muted-foreground text-base leading-relaxed italic">
+              "When I was preparing for government exams, I struggled to find a single platform that offered quality content, realistic mock tests, and actionable performance insights — all in one place. That struggle became the seed of Testopy. Today, I am proud that millions of aspirants across India trust us to help them achieve their dreams. Our mission is simple: give every aspirant the best possible chance to succeed, regardless of their background or location."
+            </p>
+            <div className="mt-8">
+              <div className="font-display font-bold text-lg">Debabrata Roy</div>
+              <div className="text-sm text-muted-foreground">Founder & CEO, Testopy</div>
+            </div>
+          </div>
+          <div className="flex justify-center">
+            <img
+              src="/docs/founderImage.png"
+              alt="Debabrata Roy — Founder & CEO, Testopy"
+              className="w-[60%] object-cover object-top rounded-2xl"
+              style={{ minHeight: "290px", maxHeight: "360px" }}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 lg:px-6 py-10">
         <h2 className="text-2xl md:text-3xl font-display font-bold text-center">Why Choose Testopy?</h2>
         <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {REASONS.map((r) => (
@@ -115,20 +147,23 @@ function AboutPage() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 lg:px-6 py-12">
-        <h2 className="text-2xl md:text-3xl font-display font-bold text-center mb-8">Meet Our Team</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {TEAM.map((t) => (
-            <Card key={t.name} className="p-4 text-center">
-              <div className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 grid place-items-center text-2xl font-display font-bold text-primary">
-                {t.name.split(" ").map(n => n[0]).join("")}
+      {/* <section className="container mx-auto px-4 lg:px-6 py-10">
+        <h2 className="text-2xl md:text-3xl font-display font-bold text-center">Why Testopy?</h2>
+        <p className="mt-3 text-center text-muted-foreground max-w-xl mx-auto">
+          We didn't just build another test-prep app. We built the platform we wished we had.
+        </p>
+        <div className="mt-8 grid md:grid-cols-3 gap-6">
+          {WHY_TESTOPY.map((item) => (
+            <div key={item.title} className="flex gap-4">
+              <span className="mt-1 shrink-0"><CheckCircle2 className="h-5 w-5 text-primary" /></span>
+              <div>
+                <h4 className="font-semibold">{item.title}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{item.desc}</p>
               </div>
-              <div className="mt-3 font-semibold">{t.name}</div>
-              <div className="text-xs text-muted-foreground">{t.role}</div>
-            </Card>
+            </div>
           ))}
         </div>
-      </section>
+      </section> */}
 
       <section className="container mx-auto px-4 lg:px-6 pb-16">
         <Card className="p-6 sm:p-8 bg-footer-bg text-primary-foreground flex flex-col md:flex-row items-center justify-between gap-4">
