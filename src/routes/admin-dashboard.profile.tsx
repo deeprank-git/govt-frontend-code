@@ -164,7 +164,7 @@ function AdminProfilePage() {
           <div><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div>
         </div>
         <div className="flex gap-2 pt-2">
-          <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending ? "Savingâ€¦" : "Save Changes"}</Button>
+          <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending ? "Saving…" : "Save Changes"}</Button>
           <Button variant="outline" onClick={load}>Reset</Button>
         </div>
       </div>

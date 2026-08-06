@@ -51,7 +51,7 @@ const NAV_SECTIONS = [
       // Temporarily disabled - Media section temporarily hidden (2026-08-04).
       // { to: "/admin-dashboard/media" as const, label: "Media", icon: ... },
       { to: "/admin-dashboard/reports" as const, label: "Reports", icon: Flag },
-      { to: "/admin-dashboard/notifications" as const, label: "Notifications", icon: Bell },
+      // { to: "/admin-dashboard/notifications" as const, label: "Notifications", icon: Bell },
     ],
   },
   {
@@ -162,13 +162,13 @@ function AdminDashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top header */}
         <header className="h-12 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10 flex items-center justify-end px-6 gap-2 shrink-0">
-          <Link
+          {/* <Link
             to="/admin-dashboard/notifications"
             className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <Bell className="w-4 h-4" />
           </Link>
-          <div className="w-px h-5 bg-border mx-1" />
+          <div className="w-px h-5 bg-border mx-1" /> */}
           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <span className="text-xs font-semibold text-primary">{initials}</span>
           </div>

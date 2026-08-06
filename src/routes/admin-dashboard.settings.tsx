@@ -14,7 +14,7 @@ export const Route = createFileRoute("/admin-dashboard/settings")({
   component: SettingsPage,
 });
 
-// socialLinks is a schema-less object on the backend â€” this fixed set of
+// socialLinks is a schema-less object on the backend his fixed set of
 // platform keys is an assumption about which ones matter, easy to extend.
 const SOCIAL_PLATFORMS = ["facebook", "twitter", "instagram", "youtube", "linkedin"] as const;
 
@@ -95,7 +95,7 @@ function SettingsPage() {
         <div className="flex items-center justify-between border border-border rounded-md px-4 py-3">
           <div>
             <Label>Maintenance Mode</Label>
-            <p className="text-xs text-muted-foreground mt-0.5">Editable flag only â€” nothing in the app currently enforces this.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Editable flag only othing in the app currently enforces this.</p>
           </div>
           <Switch checked={form.maintenanceMode} onCheckedChange={(v) => setForm({ ...form, maintenanceMode: v })} disabled={loading} />
         </div>
@@ -118,7 +118,7 @@ function SettingsPage() {
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Button onClick={() => saveMut.mutate()} disabled={loading || saveMut.isPending}>{saveMut.isPending ? "Savingâ€¦" : "Save Settings"}</Button>
+          <Button onClick={() => saveMut.mutate()} disabled={loading || saveMut.isPending}>{saveMut.isPending ? "Saving…" : "Save Settings"}</Button>
           <Button variant="outline" onClick={load} disabled={loading}>Reset</Button>
         </div>
       </div>

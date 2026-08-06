@@ -79,7 +79,7 @@ function ReportsPage() {
       </div>
       <div className="mb-2">
         <Input
-          placeholder="Search reportsâ€¦"
+          placeholder="Search reports…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -103,7 +103,7 @@ function ReportsPage() {
             <TableRow key={r._id}>
               <TableCell>{r.user?.name}<div className="text-xs text-muted-foreground">{r.user?.email}</div></TableCell>
               <TableCell className="max-w-xs truncate">{r.question?.questionText}</TableCell>
-              <TableCell>{r.test?.title ?? "â€”"}</TableCell>
+              <TableCell>{r.test?.title ?? "—"}</TableCell>
               <TableCell className="max-w-xs truncate">{r.reason}</TableCell>
               <TableCell><Badge variant="outline" className={STATUS_TINT[r.status]}>{r.status}</Badge></TableCell>
               <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
@@ -149,7 +149,7 @@ function ReportsPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setReviewing(null)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending ? "Savingâ€¦" : "Save"}</Button>
+            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

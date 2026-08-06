@@ -123,7 +123,7 @@ function CurrentAffairsPage() {
       </div>
       <div className="mb-2">
         <Input
-          placeholder="Search articlesâ€¦"
+          placeholder="Search articles…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -205,7 +205,7 @@ function CurrentAffairsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.title || !form.content}>{saveMut.isPending ? "Savingâ€¦" : "Save"}</Button>
+            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.title || !form.content}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

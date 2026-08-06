@@ -18,7 +18,7 @@ import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 // Route intentionally left unregistered so /admin-dashboard/media is no
 // longer reachable; TanStack Router's codegen drops it from routeTree.gen.ts
 // automatically when this file has no `Route` export. Nothing else in this
-// file (component, mediaService calls, etc.) was touched â€” uncomment below
+// file (component, mediaService calls, etc.) was touched ncomment below
 // to re-enable.
 // export const Route = createFileRoute("/admin-dashboard/media")({
 //   component: MediaPage,
@@ -79,14 +79,14 @@ function MediaPage() {
           </Select>
           <input ref={fileInputRef} type="file" className="hidden" onChange={onFileSelected} />
           <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploadMut.isPending}>
-            <Upload className="h-4 w-4 mr-1" /> {uploadMut.isPending ? "Uploadingâ€¦" : "Upload"}
+            <Upload className="h-4 w-4 mr-1" /> {uploadMut.isPending ? "Uploading…" : "Upload"}
           </Button>
         </div>
       </div>
 
       <div className="mb-3">
         <Input
-          placeholder="Search by filenameâ€¦"
+          placeholder="Search by filename…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"

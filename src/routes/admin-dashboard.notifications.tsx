@@ -82,7 +82,7 @@ function NotificationsPage() {
             </div>
           </div>
           <Button onClick={() => sendMut.mutate()} disabled={sendMut.isPending || !form.title || !form.message}>
-            {sendMut.isPending ? "Sendingâ€¦" : "Send Notification"}
+            {sendMut.isPending ? "Sending…" : "Send Notification"}
           </Button>
         </div>
       </div>
@@ -91,7 +91,7 @@ function NotificationsPage() {
         <h2 className="text-lg font-semibold mb-3">Sent Notifications</h2>
         <div className="mb-2">
           <Input
-            placeholder="Search notificationsâ€¦"
+            placeholder="Search notifications…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
