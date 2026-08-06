@@ -36,3 +36,6 @@ dist-ssr
 
 CLAUDE.md
 docs
+
+!public/docs/
+!public/docs/**
