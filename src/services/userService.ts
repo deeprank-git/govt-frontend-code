@@ -5,7 +5,7 @@ export async function getMe() {
   return res.data;
 }
 
-// PUT /users/me is multipart/form-data (see GovtPrep-Backend-Workflow-and-Status.md
+// PUT /users/me is multipart/form-data (see Testopy-Backend-Workflow-and-Status.md
 // §2) so a profile-picture file can ride along with the rest of the fields in
 // one request.
 export async function updateMe(data: {

@@ -26,7 +26,7 @@ export type TestSeriesInput = {
   notificationPdf?: File;
 };
 
-// Create/update are multipart/form-data (see GovtPrep-Backend-Workflow-and-Status.md
+// Create/update are multipart/form-data (see Testopy-Backend-Workflow-and-Status.md
 // §5) so the series image can be uploaded as a real file, and importantDates rides
 // along as a JSON-stringified text field rather than raw JSON.
 function buildTestSeriesForm(data: TestSeriesInput) {

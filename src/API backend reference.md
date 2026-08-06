@@ -1,4 +1,4 @@
-# GovtPrep Backend — API Reference
+# Testopy Backend — API Reference
 
 Generated from the codebase (`index.js`, `routes/`, `controllers/`, `middleware/`, `models/`) for frontend integration. Every endpoint below reflects the **actual current implementation**, including inconsistencies — read the "Known Inconsistencies" section before integrating a generic API client/error handler.
 
@@ -68,7 +68,7 @@ Not directly consumed by the frontend, but useful when something behaves unexpec
 | `ALLOWED_ORIGINS` | — | ⚠️ **Dead** — not read anywhere in code. CORS origins are hardcoded in `index.js` instead (see CORS note above) | Yes, but unused |
 | `GMAIL_USER` | `utils/emailService.js` | Gmail SMTP auth user, also the `from` fallback for outgoing emails | **No** |
 | `GMAIL_PASSWORD` | `utils/emailService.js` | Gmail SMTP auth password — must be a Google **App Password** (2FA account), not the regular login password | **No** |
-| `EMAIL_FROM` | `utils/emailService.js` | Overrides the `from` address on outgoing emails; falls back to `GMAIL_USER`, then `"noreply@govtprep.com"` | **No** |
+| `EMAIL_FROM` | `utils/emailService.js` | Overrides the `from` address on outgoing emails; falls back to `GMAIL_USER`, then `"noreply@Testopy.com"` | **No** |
 
 ⚠️ Email sending (password reset) currently goes through Gmail SMTP, which has its own sending-rate limits and is sometimes flagged by spam filters — if reset emails aren't arriving in testing, that's a likely first place to check, not necessarily an API bug.
 
@@ -719,10 +719,10 @@ Any subset of `slug/title/content/status`.
 
 ### GET `/api/settings` (public, no auth)
 Singleton document, auto-created with defaults on first call.
-**Success — 200**: `{ "success": true, "data": { "siteName":"GovtPrep", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
+**Success — 200**: `{ "success": true, "data": { "siteName":"Testopy", "logo":"", "contactEmail":"", "socialLinks":{}, "maintenanceMode":false } }`
 
 ### PUT `/api/admin/settings` (admin)
-**Body** (all optional, only provided keys applied): `{ "siteName": "GovtPrep", "contactEmail": "support@govtprep.com", "socialLinks": { "facebook":"https://facebook.com/govtprep" }, "maintenanceMode": false }`
+**Body** (all optional, only provided keys applied): `{ "siteName": "Testopy", "contactEmail": "support@Testopy.com", "socialLinks": { "facebook":"https://facebook.com/Testopy" }, "maintenanceMode": false }`
 **Success — 200**: `{ "success": true, "message": "Settings updated", "data": { ...settings... } }`
 
 ---

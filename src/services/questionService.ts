@@ -16,7 +16,7 @@ export async function createQuestion(data: Record<string, unknown>) {
 }
 
 // POST /admin/questions/bulk is multipart/form-data — the server parses the
-// CSV itself (see GovtPrep-Backend-Workflow-and-Status.md §7), so the raw
+// CSV itself (see Testopy-Backend-Workflow-and-Status.md §7), so the raw
 // file goes up as-is rather than a JSON array of parsed rows.
 export async function bulkCreateQuestions(file: File | Blob, filename = "questions.csv") {
   const form = new FormData();

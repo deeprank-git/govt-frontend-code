@@ -26,7 +26,7 @@ export const Route = createFileRoute("/admin-dashboard/questions")({
 const OPTION_LETTERS = "ABCDE";
 
 // Real server-generated template — 1-based correctAnswer, requires a `test`
-// column per row (see GovtPrep-Backend-Workflow-and-Status.md Â§7). Blank
+// column per row (see Testopy-Backend-Workflow-and-Status.md Â§7). Blank
 // `test` cells are auto-filled with the currently selected test on import.
 async function downloadCsvTemplate() {
   try {
@@ -57,7 +57,7 @@ interface CsvRow {
   explanation: string;
   order: string;
   // Optional — not yet a documented backend column (see
-  // GovtPrep-Backend-Workflow-and-Status.md Â§7), but passed through as-is
+  // Testopy-Backend-Workflow-and-Status.md Â§7), but passed through as-is
   // if present so it starts working the moment the backend accepts it.
   section?: string;
 }
