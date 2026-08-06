@@ -48,7 +48,7 @@ export function CurrentAffairsSidebar() {
 
   return (
     <>
-      <Card className="p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
+      {/* <Card className="p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="font-display font-bold text-sm">Daily Current Affairs Digest</h3>
@@ -69,7 +69,7 @@ export function CurrentAffairsSidebar() {
             {subscribed ? <><Check className="mr-1 h-3.5 w-3.5" />Subscribed</> : "Subscribe"}
           </Button>
         </form>
-      </Card>
+      </Card> */}
 
       <Card className="p-4">
         <h3 className="font-display font-bold text-sm flex items-center gap-2">

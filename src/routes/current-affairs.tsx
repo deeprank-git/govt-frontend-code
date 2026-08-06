@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Newspaper,
@@ -15,8 +14,6 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
-  Mail,
-  Check,
 } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
@@ -24,7 +21,6 @@ import { TopStoryCard } from "@/components/site/TopStoryCard";
 import { ArticleImage } from "@/components/site/ArticleImage";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { toast } from "sonner";
 import * as currentAffairsService from "@/services/currentAffairsService";
 import { unwrapList } from "@/lib/api-unwrap";
 
@@ -61,8 +57,6 @@ function tintFor(cat: string) {
 function CADashboard() {
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<"latest" | "oldest">("latest");
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
   const [topIndex, setTopIndex] = useState(0);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
   const [showAllNews, setShowAllNews] = useState(false);
@@ -108,13 +102,6 @@ function CADashboard() {
   // trending / streak computed here previously — unused now that the
   // Trending Topics and Streak cards below are commented out.
   const visibleTop = topStories.slice(topIndex, topIndex + 5);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setSubscribed(true);
-    toast.success("Subscribed! Check your inbox tomorrow.");
-  };
 
   return (
     <SiteShell>
@@ -172,8 +159,7 @@ function CADashboard() {
           </Card>
 
           {/* Main grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
-            <div className="space-y-5 min-w-0">
+          <div className="space-y-5 min-w-0">
               {/* Top Stories */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -253,86 +239,6 @@ function CADashboard() {
                   </div>
                 )}
               </Card>
-            </div>
-
-            {/* Right Sidebar */}
-            <div className="space-y-5">
-              {/* Digest Subscribe */}
-              <Card className="p-4 bg-gradient-to-br from-primary/5 to-blue-500/5">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-display font-bold text-sm">Daily Current Affairs Digest</h3>
-                    <p className="text-[11px] text-muted-foreground mt-1">Get handpicked important news delivered to your inbox daily.</p>
-                  </div>
-                  <Mail className="h-8 w-8 text-primary/40" />
-                </div>
-                <form onSubmit={handleSubscribe} className="mt-2 space-y-2">
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-8 text-xs"
-                    required
-                  />
-                  <Button type="submit" size="sm" className="w-full">
-                    {subscribed ? <><Check className="mr-1 h-3.5 w-3.5" />Subscribed</> : "Subscribe"}
-                  </Button>
-                </form>
-              </Card>
-
-              {/* Streak — hidden on the public landing page: not logged in, so
-                  there's no real per-user streak to show here.
-              <Card className="p-4">
-                <h3 className="font-display font-bold text-sm flex items-center gap-2">
-                  <span className="h-4 w-1 bg-primary rounded-full" /> Current Affairs Streak
-                </h3>
-                <div className="flex items-center gap-3 mt-3">
-                  <div className="h-12 w-12 rounded-xl bg-orange-100 grid place-items-center">
-                    <Flame className="h-6 w-6 text-orange-500" />
-                  </div>
-                  <div>
-                    <div className="text-lg font-display font-extrabold">{streak} Days</div>
-                    <div className="text-[11px] text-muted-foreground">Great going! Keep it up!</div>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-7 gap-1.5">
-                  {days.map((d, i) => {
-                    const done = i <= todayIdx;
-                    return (
-                      <div key={i} className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">{d}</span>
-                        <div className={cn("h-6 w-6 rounded-full grid place-items-center text-[10px]", done ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground")}>
-                          {done && <Check className="h-3 w-3" />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-              */}
-
-              {/* Trending Topics — hidden for now
-              <Card className="p-4">
-                <h3 className="font-display font-bold text-sm flex items-center gap-2 mb-3">
-                  <span className="h-4 w-1 bg-primary rounded-full" /> Trending Topics
-                </h3>
-                <div className="space-y-2">
-                  {trending.map(([name, count]) => (
-                    <div key={name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-3.5 w-3.5 text-rose-500" />
-                        <span className="font-medium">{name}</span>
-                      </div>
-                      <span className="text-muted-foreground">{count * 32} articles</span>
-                    </div>
-                  ))}
-                  {trending.length === 0 && <div className="text-xs text-muted-foreground">No trending topics yet.</div>}
-                </div>
-                <button className="mt-3 text-xs text-primary font-medium hover:underline w-full text-center">View All Topics</button>
-              </Card>
-              */}
-            </div>
           </div>
         </motion.div>
       </div>
