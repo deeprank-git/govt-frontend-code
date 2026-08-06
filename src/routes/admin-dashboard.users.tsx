@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ function UsersPage() {
 
   return (
     <div>
-      <h2 className="text-base font-semibold mb-2">Users</h2>
+      <h2 className="text-lg font-semibold mb-2">Users</h2>
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
@@ -65,7 +65,7 @@ function UsersPage() {
           </SelectContent>
         </Select>
         <Input
-          placeholder="Search by name or email…"
+          placeholder="Search by name or emailâ€¦"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -81,7 +81,7 @@ function UsersPage() {
             <TableRow key={u._id}>
               <TableCell>{u.name}</TableCell>
               <TableCell>{u.email}</TableCell>
-              <TableCell>{u.mobile || "—"}</TableCell>
+              <TableCell>{u.mobile || "â€”"}</TableCell>
               <TableCell>
                 <Select value={u.role} onValueChange={(v) => roleMut.mutate({ id: u._id, role: v })}>
                   <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>

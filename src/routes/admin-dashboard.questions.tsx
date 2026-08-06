@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import Papa from "papaparse";
@@ -25,8 +25,8 @@ export const Route = createFileRoute("/admin-dashboard/questions")({
 
 const OPTION_LETTERS = "ABCDE";
 
-// Real server-generated template — 1-based correctAnswer, requires a `test`
-// column per row (see GovtPrep-Backend-Workflow-and-Status.md §7). Blank
+// Real server-generated template â€” 1-based correctAnswer, requires a `test`
+// column per row (see GovtPrep-Backend-Workflow-and-Status.md Â§7). Blank
 // `test` cells are auto-filled with the currently selected test on import.
 async function downloadCsvTemplate() {
   try {
@@ -49,15 +49,15 @@ interface CsvRow {
   option2: string;
   option3: string;
   option4: string;
-  // Optional 5th option — banking-style exams (e.g. IBPS) use 5 options
+  // Optional 5th option â€” banking-style exams (e.g. IBPS) use 5 options
   // (a-e); the backend accepts 4 or 5.
   option5?: string;
   correctAnswer: string;
   marks: string;
   explanation: string;
   order: string;
-  // Optional — not yet a documented backend column (see
-  // GovtPrep-Backend-Workflow-and-Status.md §7), but passed through as-is
+  // Optional â€” not yet a documented backend column (see
+  // GovtPrep-Backend-Workflow-and-Status.md Â§7), but passed through as-is
   // if present so it starts working the moment the backend accepts it.
   section?: string;
 }
@@ -75,7 +75,7 @@ function QuestionsPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // The Tests *list* endpoint the test-selector uses above is a projected
-  // view that omits `sections` — fetch the full doc for whichever test is
+  // view that omits `sections` â€” fetch the full doc for whichever test is
   // currently selected so the Section dropdown/column have real data.
   const { data: activeTestRes } = useQuery({
     queryKey: ["ad-test-detail", activeTestId],
@@ -85,7 +85,7 @@ function QuestionsPage() {
   const activeTest = unwrapItem<any>(activeTestRes);
   const sections: any[] = activeTest?.sections ?? [];
   const sectionName = (sectionId: string | null | undefined) =>
-    sections.find((s) => s._id === sectionId)?.name ?? "—";
+    sections.find((s) => s._id === sectionId)?.name ?? "â€”";
 
   // CSV state
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -112,7 +112,7 @@ function QuestionsPage() {
       marks: q.marks ?? 1,
       negativeMarks: q.negativeMarks ?? 0,
       // Pre-select if the API already returns a section (matched against this
-      // test's real sections); defaults to blank otherwise — the backend
+      // test's real sections); defaults to blank otherwise â€” the backend
       // doesn't persist this field yet, so q.section just won't be present.
       section: sections.some((s) => s._id === q.section) ? q.section : "",
     });
@@ -151,10 +151,10 @@ function QuestionsPage() {
 
   const bulkMut = useMutation({
     mutationFn: (rows: CsvRow[]) => {
-      // Blank `test` cells default to the currently selected test — the
+      // Blank `test` cells default to the currently selected test â€” the
       // server itself requires the column populated on every row.
       const filled = rows.map((r) => ({ ...r, test: r.test || activeTestId }));
-      // `section` isn't a documented backend column yet — only include it if
+      // `section` isn't a documented backend column yet â€” only include it if
       // the admin's own CSV actually had values in it, so a plain upload
       // (no section data) doesn't send an extra column the server doesn't
       // expect.
@@ -196,7 +196,7 @@ function QuestionsPage() {
           if (!row.option1 || !row.option2 || !row.option3 || !row.option4) errors.push(`Row ${idx + 1}: options 1-4 are required (option5 is optional)`);
           const maxOption = row.option5 && row.option5.trim() ? 5 : 4;
           const ca = Number(row.correctAnswer);
-          if (isNaN(ca) || ca < 1 || ca > maxOption) errors.push(`Row ${idx + 1}: correctAnswer must be 1–${maxOption}`);
+          if (isNaN(ca) || ca < 1 || ca > maxOption) errors.push(`Row ${idx + 1}: correctAnswer must be 1â€“${maxOption}`);
           if (!row.test && !activeTestId) errors.push(`Row ${idx + 1}: no test selected and no test column in CSV`);
         });
         setCsvPreview({ rows: results.data, errors });
@@ -209,7 +209,7 @@ function QuestionsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-base font-semibold">Questions</h2>
+        <h2 className="text-lg font-semibold">Questions</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={activeTestId} onValueChange={setTestId}>
             <SelectTrigger className="w-64"><SelectValue placeholder="Select a test" /></SelectTrigger>
@@ -224,14 +224,14 @@ function QuestionsPage() {
         </div>
       </div>
       {/* <p className="text-xs text-muted-foreground mb-2">
-        Tip: the CSV can include an optional <code className="text-[11px] bg-muted px-1 py-0.5 rounded">section</code> column —
+        Tip: the CSV can include an optional <code className="text-[11px] bg-muted px-1 py-0.5 rounded">section</code> column â€”
         use the exact section name from the target test (e.g. "Quantitative Aptitude").
       </p> */}
 
       {activeTestId && (
         <div className="mb-2">
           <Input
-            placeholder="Search questions…"
+            placeholder="Search questionsâ€¦"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
@@ -248,8 +248,8 @@ function QuestionsPage() {
           {!isLoading && paginated.map((q) => (
             <TableRow key={q._id}>
               <TableCell className="max-w-md truncate">{q.questionText}</TableCell>
-              <TableCell>{q.section ? sectionName(q.section) : "—"}</TableCell>
-              <TableCell>{OPTION_LETTERS[q.correctAnswer] ?? "—"}</TableCell>
+              <TableCell>{q.section ? sectionName(q.section) : "â€”"}</TableCell>
+              <TableCell>{OPTION_LETTERS[q.correctAnswer] ?? "â€”"}</TableCell>
               <TableCell>{q.marks}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(q)}>Edit</Button>
@@ -321,7 +321,7 @@ function QuestionsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.questionText || form.options.some((o) => !o)}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.questionText || form.options.some((o) => !o)}>{saveMut.isPending ? "Savingâ€¦" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -362,7 +362,7 @@ function QuestionsPage() {
                         </TableRow>
                       ))}
                       {csvPreview.rows.length > 20 && (
-                        <TableRow><TableCell colSpan={4} className="text-xs text-center text-muted-foreground">…and {csvPreview.rows.length - 20} more rows</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-xs text-center text-muted-foreground">â€¦and {csvPreview.rows.length - 20} more rows</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
@@ -376,7 +376,7 @@ function QuestionsPage() {
               onClick={() => csvPreview && bulkMut.mutate(csvPreview.rows)}
               disabled={bulkMut.isPending || !csvPreview || csvPreview.rows.length === 0 || csvPreview.errors.length > 0}
             >
-              {bulkMut.isPending ? "Importing…" : `Import ${csvPreview?.rows.length ?? 0} Questions`}
+              {bulkMut.isPending ? "Importingâ€¦" : `Import ${csvPreview?.rows.length ?? 0} Questions`}
             </Button>
           </DialogFooter>
         </DialogContent>

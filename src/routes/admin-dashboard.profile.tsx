@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -133,7 +133,7 @@ function AdminProfilePage() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-base font-semibold mb-1">Profile Settings</h2>
+      <h2 className="text-lg font-semibold mb-1">Profile Settings</h2>
       <p className="text-sm text-muted-foreground mb-4">Manage your personal admin account details.</p>
 
       <div className="flex items-center gap-4 mb-6">
@@ -164,7 +164,7 @@ function AdminProfilePage() {
           <div><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div>
         </div>
         <div className="flex gap-2 pt-2">
-          <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending ? "Saving…" : "Save Changes"}</Button>
+          <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>{saveMut.isPending ? "Savingâ€¦" : "Save Changes"}</Button>
           <Button variant="outline" onClick={load}>Reset</Button>
         </div>
       </div>

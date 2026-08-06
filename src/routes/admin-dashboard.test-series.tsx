@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -134,12 +134,12 @@ function TestSeriesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold">Test Series</h2>
+        <h2 className="text-lg font-semibold">Test Series</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
       </div>
       <div className="mb-2">
         <Input
-          placeholder="Search test series…"
+          placeholder="Search test seriesâ€¦"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -154,7 +154,7 @@ function TestSeriesPage() {
           {!isLoading && paginated.map((s) => (
             <TableRow key={s._id}>
               <TableCell>{s.name}</TableCell>
-              <TableCell>{s.category?.name ?? "—"}</TableCell>
+              <TableCell>{s.category?.name ?? "â€”"}</TableCell>
               <TableCell>{s.totalTests ?? 0}</TableCell>
               <TableCell>{s.isPublished ? "Published" : "Draft"}</TableCell>
               <TableCell className="text-right space-x-2">
@@ -282,7 +282,7 @@ function TestSeriesPage() {
                       <span className="text-xs text-muted-foreground shrink-0">to</span>
                       <Input
                         type="date"
-                        title="To (optional — leave blank for a single date)"
+                        title="To (optional â€” leave blank for a single date)"
                         className="flex-1"
                         value={d.to}
                         onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, to: e.target.value } : x))}
@@ -299,7 +299,7 @@ function TestSeriesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.name || !form.category}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.name || !form.category}>{saveMut.isPending ? "Savingâ€¦" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

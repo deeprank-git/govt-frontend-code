@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ function NotificationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold mb-3">Send Notification</h2>
+        <h2 className="text-lg font-semibold mb-3">Send Notification</h2>
         <div className="space-y-3 max-w-xl">
           <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div><Label>Message</Label><Textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
@@ -82,16 +82,16 @@ function NotificationsPage() {
             </div>
           </div>
           <Button onClick={() => sendMut.mutate()} disabled={sendMut.isPending || !form.title || !form.message}>
-            {sendMut.isPending ? "Sending…" : "Send Notification"}
+            {sendMut.isPending ? "Sendingâ€¦" : "Send Notification"}
           </Button>
         </div>
       </div>
 
       <div>
-        <h2 className="text-base font-semibold mb-3">Sent Notifications</h2>
+        <h2 className="text-lg font-semibold mb-3">Sent Notifications</h2>
         <div className="mb-2">
           <Input
-            placeholder="Search notifications…"
+            placeholder="Search notificationsâ€¦"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,10 @@ function CategoriesPage() {
   const { data: categoriesRes, isLoading } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
   const categories = unwrapList<any>(categoriesRes);
 
-  // GET /api/categories (the list above) intentionally omits `description` —
+  // GET /api/categories (the list above) intentionally omits `description` â€”
   // only GET /api/categories/:id returns the full doc. Fan out one detail
   // fetch per row so the table and edit modal show the real saved text
-  // instead of always "—"/empty.
+  // instead of always "â€”"/empty.
   const detailQueries = useQueries({
     queries: categories.map((c) => ({
       queryKey: ["ad-category-detail", c._id],
@@ -54,7 +54,7 @@ function CategoriesPage() {
 
   const openCreate = () => { setEditing(null); setForm({ name: "", description: "", image: "" }); setOpen(true); };
 
-  // Never trust the trimmed list row for description — always fetch the
+  // Never trust the trimmed list row for description â€” always fetch the
   // full record fresh so the modal doesn't briefly (or permanently) show an
   // empty field for a category that does have a saved description.
   const openEdit = async (c: any) => {
@@ -98,12 +98,12 @@ function CategoriesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold">Categories</h2>
+        <h2 className="text-lg font-semibold">Categories</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
       </div>
       <div className="mb-2">
         <Input
-          placeholder="Search categories…"
+          placeholder="Search categoriesâ€¦"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -118,10 +118,10 @@ function CategoriesPage() {
           {!isLoading && paginated.map((c) => (
             <TableRow key={c._id}>
               <TableCell>{c.name}</TableCell>
-              <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
+              <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "â€¦" : (c.description || "â€”")}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
-                  {editLoadingId === c._id ? "Loading…" : "Edit"}
+                  {editLoadingId === c._id ? "Loadingâ€¦" : "Edit"}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleteMut.isPending}>Delete</Button>
               </TableCell>
@@ -142,7 +142,7 @@ function CategoriesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.name}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.name}>{saveMut.isPending ? "Savingâ€¦" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 // Route intentionally left unregistered so /admin-dashboard/pages is no
 // longer reachable; TanStack Router's codegen drops it from routeTree.gen.ts
 // automatically when this file has no `Route` export. Nothing else in this
-// file (component, pageService calls, etc.) was touched — uncomment below
+// file (component, pageService calls, etc.) was touched â€” uncomment below
 // to re-enable.
 // export const Route = createFileRoute("/admin-dashboard/pages")({
 //   component: PagesPage,
@@ -81,7 +81,7 @@ function PagesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-base font-semibold">Pages</h2>
+        <h2 className="text-lg font-semibold">Pages</h2>
         <div className="flex items-center gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
@@ -96,7 +96,7 @@ function PagesPage() {
       </div>
       <div className="mb-2">
         <Input
-          placeholder="Search pages…"
+          placeholder="Search pagesâ€¦"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -112,7 +112,7 @@ function PagesPage() {
             <TableRow key={p._id}>
               <TableCell>{p.title}</TableCell>
               <TableCell>{p.status === "published" ? <Badge className="bg-success/15 text-success-foreground border-transparent">Published</Badge> : <Badge variant="outline">Draft</Badge>}</TableCell>
-              <TableCell>{p.updatedBy?.name ?? "—"}</TableCell>
+              <TableCell>{p.updatedBy?.name ?? "â€”"}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button size="sm" variant="outline" onClick={() => openEdit(p)}>Edit</Button>
                 <Button size="sm" variant="outline" onClick={() => setDeleteTarget(p._id)} disabled={deleteMut.isPending}>Delete</Button>
@@ -144,7 +144,7 @@ function PagesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.slug || !form.title}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.slug || !form.title}>{saveMut.isPending ? "Savingâ€¦" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -15,6 +15,11 @@ export async function createTest(data: Record<string, unknown>) {
   return res.data;
 }
 
+export async function createTestWithQuestions(data: Record<string, unknown>) {
+  const res = await axiosClient.post("/admin/tests/with-questions", data);
+  return res.data;
+}
+
 export async function updateTest(id: string, data: Record<string, unknown>) {
   const res = await axiosClient.patch(`/admin/tests/${id}`, data);
   return res.data;
