@@ -36,20 +36,20 @@ const COLS = [
 export function Footer() {
   return (
     <footer className="relative mt-24 bg-footer-bg text-primary-foreground overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 -top-12 select-none text-center text-[20vw] leading-none font-display font-extrabold text-white/[0.04]">
+      <div className="pointer-events-none absolute inset-x-0 -top-12 select-none text-center text-[35vw] md:text-[20vw] leading-none font-display font-extrabold text-white/[0.07] md:text-white/[0.04]">
         Testopy
       </div>
       <div className="relative container mx-auto px-4 lg:px-6 pt-16 pb-10">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-2 flex flex-col items-start">
+          <div className="lg:col-span-2 flex flex-col items-center md:items-start">
             <Logo size="h-14" />
-            <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm text-left">
+            <p className="mt-4 text-sm text-primary-foreground/80 max-w-sm text-center md:text-left">
               Building the future of government exam preparation — free mock tests, previous year papers,
               current affairs, and analytics in one place.
             </p>
           </div>
           {COLS.map((col) => (
-            <div key={col.title}>
+            <div key={col.title} className="text-center md:text-left">
               <h4 className="font-display font-semibold mb-4">{col.title}</h4>
               <ul className="space-y-2.5 text-sm text-primary-foreground/80">
                 {col.links.map((l) => (
@@ -64,7 +64,7 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-primary-foreground/70">
             © {new Date().getFullYear()} Testopy. All rights reserved.
           </p>

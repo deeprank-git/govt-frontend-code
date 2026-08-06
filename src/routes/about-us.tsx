@@ -117,12 +117,8 @@ function AboutPage() {
             <p className="text-muted-foreground text-base leading-relaxed italic">
               "When I was preparing for government exams, I struggled to find a single platform that offered quality content, realistic mock tests, and actionable performance insights — all in one place. That struggle became the seed of Testopy. Today, I am proud that millions of aspirants across India trust us to help them achieve their dreams. Our mission is simple: give every aspirant the best possible chance to succeed, regardless of their background or location."
             </p>
-            <div className="mt-8">
-              <div className="font-display font-bold text-lg">Debabrata Roy</div>
-              <div className="text-sm text-muted-foreground">Founder & CEO, Testopy</div>
-            </div>
           </div>
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-4">
             <img
               src="/docs/founderImage.png"
               alt="Debabrata Roy — Founder & CEO, Testopy"
@@ -130,6 +126,10 @@ function AboutPage() {
               style={{ minHeight: "290px", maxHeight: "360px" }}
               loading="lazy"
             />
+            <div className="text-center">
+              <div className="font-display font-bold text-lg">Debabrata Roy</div>
+              <div className="text-sm text-muted-foreground">Founder & CEO, Testopy</div>
+            </div>
           </div>
         </div>
       </section>
