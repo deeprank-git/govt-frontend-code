@@ -16,9 +16,9 @@ const COLS = [
     title: "Products",
     links: [
       { label: "All Exams", to: "/exams" },
-      { label: "SSC", to: "/exams" },
-      { label: "Banking", to: "/exams" },
-      { label: "Railways", to: "/exams" },
+      { label: "SSC", to: "/exams", hash: "SSC" },
+      { label: "Banking", to: "/exams", hash: "Banking" },
+      { label: "Railways", to: "/exams", hash: "Railway" },
     ],
   },
   {
@@ -54,7 +54,7 @@ export function Footer() {
               <ul className="space-y-2.5 text-sm text-primary-foreground/80">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <Link to={l.to} params={"params" in l ? l.params : undefined} className="hover:text-primary-foreground transition">
+                    <Link to={l.to} params={"params" in l ? l.params : undefined} hash={"hash" in l ? l.hash : undefined} className="hover:text-primary-foreground transition">
                       {l.label}
                     </Link>
                   </li>

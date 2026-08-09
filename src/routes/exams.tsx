@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { ChevronRight, Search, BookOpen, FileText, ClipboardList, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,8 @@ export const Route = createFileRoute("/exams")({
 function ExamsPage() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const { hash } = useLocation();
+  const appliedHash = useRef<string | null>(null);
 
   const { data: categoriesRes, isLoading: loadingCats } = useQuery({
     queryKey: ["exams-categories"],
@@ -64,6 +66,16 @@ function ExamsPage() {
   );
 
   const isLoading = loadingCats || loadingSeries || loadingTests;
+
+  useEffect(() => {
+    if (!hash || categories.length === 0 || appliedHash.current === hash) return;
+    appliedHash.current = hash;
+    const term = hash.replace(/^#/, "").toLowerCase();
+    const matched = categories.find((c) =>
+      (c.name as string).toLowerCase().includes(term)
+    );
+    if (matched) setActiveCat(matched._id);
+  }, [hash, categories]);
 
   // Default to the first category once loaded — there's no "All" option here,
   // same as the equivalent logged-in Overview page.
