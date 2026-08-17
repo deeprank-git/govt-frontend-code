@@ -57,7 +57,7 @@ function RankPage() {
       </div>
 
       <Card className="p-4 grid md:grid-cols-2 gap-3 items-end">
-        <div>
+        <div className="min-w-0">
           <label className="text-xs text-muted-foreground">Select Test</label>
           <Select value={activeTestId} onValueChange={setTestId}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Select a test" /></SelectTrigger>
