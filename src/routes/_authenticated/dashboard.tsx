@@ -1,12 +1,12 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { LogOut, Search } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/site/DashboardSidebar";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import * as authService from "@/services/authService";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SearchBar } from "@/components/site/SearchBar";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardLayout,
@@ -28,13 +28,7 @@ function DashboardLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="sticky top-0 z-30 h-16 bg-background border-b border-border flex items-center gap-3 px-4 lg:px-6">
             <SidebarTrigger />
-            <div className="relative hidden md:flex flex-1 max-w-md">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search exams, tests, topics…"
-                className="pl-9 bg-muted/40 border-transparent"
-              />
-            </div>
+            <SearchBar />
             <div className="ml-auto flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
