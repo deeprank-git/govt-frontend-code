@@ -206,7 +206,7 @@ function Dashboard() {
         <Stat icon={Target} value={`${accuracy}%`} label="Accuracy" tone="info" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">Recent Mock Tests</h3>
@@ -292,7 +292,7 @@ function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold flex items-center gap-2">
