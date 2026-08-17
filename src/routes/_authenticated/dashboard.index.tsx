@@ -161,7 +161,7 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl md:text-3xl font-display font-extrabold">
             Welcome back, {name}! 👋
           </h1>
@@ -175,7 +175,7 @@ function Dashboard() {
             <div className="font-display font-bold text-xl leading-none">{streak}</div>
             <div className="text-[11px] text-muted-foreground">Day Streak</div>
           </div>
-          <div className="flex gap-1 ml-3">
+          <div className="hidden sm:flex gap-1 ml-3">
             {last7Days.map((d) => {
               const key = toDayKey(d);
               const isActive = activeDayKeys.has(key);
@@ -207,7 +207,7 @@ function Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-5">
-        <Card className="p-5 lg:col-span-1">
+        <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">Recent Mock Tests</h3>
             <Link to="/dashboard/attempted-tests" className="text-xs text-primary hover:underline">

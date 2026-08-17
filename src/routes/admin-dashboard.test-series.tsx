@@ -40,7 +40,7 @@ function TestSeriesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptySeriesForm);
-  const [importantDates, setImportantDates] = useState<{ label: string; from: string; to: string }[]>([]);
+  const [importantDates, setImportantDates] = useState<{ label: string; from: string; to: string; isSingleDate: boolean }[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImage, setExistingImage] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -75,11 +75,11 @@ function TestSeriesPage() {
       marksPerQuestion: s.marksPerQuestion ?? 1,
     });
     setImportantDates(
-      Object.entries(s.importantDates ?? {}).map(([label, value]: [string, any]) => ({
-        label,
-        from: value?.from ?? "",
-        to: value?.to ?? "",
-      })),
+      Object.entries(s.importantDates ?? {}).map(([label, value]: [string, any]) => {
+        const from = value?.from ?? "";
+        const to = value?.to ?? "";
+        return { label, from, to, isSingleDate: !to || to === from };
+      }),
     );
     setImageFile(null);
     setExistingImage(s.image ?? "");
@@ -258,7 +258,7 @@ function TestSeriesPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setImportantDates([...importantDates, { label: "", from: "", to: "" }])}
+                  onClick={() => setImportantDates([...importantDates, { label: "", from: "", to: "", isSingleDate: true }])}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Date
                 </Button>
@@ -271,22 +271,41 @@ function TestSeriesPage() {
                       value={d.label}
                       onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, label: e.target.value } : x))}
                     />
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch
+                        checked={!d.isSingleDate}
+                        onCheckedChange={(v) =>
+                          setImportantDates(importantDates.map((x, xi) =>
+                            xi === i ? { ...x, isSingleDate: !v, to: !v ? x.from : x.to } : x
+                          ))
+                        }
+                      />
+                      <span>{d.isSingleDate ? "Single date" : "Date range"}</span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Input
                         type="date"
-                        title="From"
+                        title={d.isSingleDate ? "Date" : "From"}
                         className="flex-1"
                         value={d.from}
-                        onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, from: e.target.value } : x))}
+                        onChange={(e) =>
+                          setImportantDates(importantDates.map((x, xi) =>
+                            xi === i ? { ...x, from: e.target.value, to: x.isSingleDate ? e.target.value : x.to } : x
+                          ))
+                        }
                       />
-                      <span className="text-xs text-muted-foreground shrink-0">to</span>
-                      <Input
-                        type="date"
-                        title="To (optional — leave blank for a single date)"
-                        className="flex-1"
-                        value={d.to}
-                        onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, to: e.target.value } : x))}
-                      />
+                      {!d.isSingleDate && (
+                        <>
+                          <span className="text-xs text-muted-foreground shrink-0">to</span>
+                          <Input
+                            type="date"
+                            title="To"
+                            className="flex-1"
+                            value={d.to}
+                            onChange={(e) => setImportantDates(importantDates.map((x, xi) => xi === i ? { ...x, to: e.target.value } : x))}
+                          />
+                        </>
+                      )}
                       <Button type="button" size="icon" variant="ghost" className="shrink-0" onClick={() => setImportantDates(importantDates.filter((_, xi) => xi !== i))}>
                         <X className="h-4 w-4" />
                       </Button>

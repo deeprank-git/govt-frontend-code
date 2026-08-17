@@ -17,6 +17,9 @@ import { cn } from "@/lib/utils";
 import { isPublishedVisible } from "@/lib/publish";
 
 export const Route = createFileRoute("/exams")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "All Government Exams — Testopy" },
@@ -29,8 +32,9 @@ export const Route = createFileRoute("/exams")({
 });
 
 function ExamsPage() {
+  const { q: searchQ } = Route.useSearch();
   const [activeCat, setActiveCat] = useState<string | null>(null);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(searchQ ?? "");
   const { hash } = useLocation();
   const appliedHash = useRef<string | null>(null);
 

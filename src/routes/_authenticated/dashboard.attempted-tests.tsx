@@ -174,7 +174,7 @@ function AttemptedTests() {
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/30">
+        <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/30">
           <div className="col-span-4">Test Details</div>
           <div className="col-span-2">Score</div>
           <div className="col-span-2">Accuracy</div>
@@ -187,44 +187,60 @@ function AttemptedTests() {
             const scorePct = a.test?.totalMarks ? Math.round((Number(a.score) / Number(a.test.totalMarks)) * 1000) / 10 : 0;
             const seriesImage = a.test?.testSeries?.image;
             const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
+            const logo = logoUrl ? (
+              <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="h-10 w-10 rounded-lg grid place-items-center shrink-0 bg-primary/10 text-primary">
+                <FileText className="h-5 w-5" />
+              </div>
+            );
+            const action = a.status !== "in-progress" ? (
+              <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2 w-28 justify-center" asChild>
+                <Link to="/result/$attemptId" params={{ attemptId: a._id }}>View Analysis</Link>
+              </Button>
+            ) : (
+              <Button size="sm" className="h-8 px-2 w-28 justify-center" asChild>
+                <Link to="/test/$testId" params={{ testId: a.test?._id }}>Resume</Link>
+              </Button>
+            );
             return (
               <motion.div
                 key={a._id}
                 whileHover={{ backgroundColor: "hsl(var(--muted) / 0.4)" }}
-                className="grid grid-cols-12 gap-3 items-center px-4 py-3 text-sm"
+                className="px-4 py-3 text-sm"
               >
-                <div className="col-span-4 flex items-center gap-3 min-w-0">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
-                  ) : (
-                    <div className="h-10 w-10 rounded-lg grid place-items-center shrink-0 bg-primary/10 text-primary">
-                      <FileText className="h-5 w-5" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
+                {/* Mobile layout */}
+                <div className="flex items-center gap-3 md:hidden">
+                  {logo}
+                  <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">{a.test?.title ?? "Test"}</div>
-                    <div className="text-[11px] text-muted-foreground">{a.test?.totalMarks ?? 0} Marks</div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                      <span className="text-[11px] text-muted-foreground">{a.score}/{a.test?.totalMarks ?? 0} ({scorePct}%)</span>
+                      <span className="text-[11px] text-muted-foreground">{accuracyOf(a).toFixed(1)}% acc</span>
+                      <span className="text-[11px] text-muted-foreground">{format(new Date(a.submittedAt || a.startedAt), "dd MMM yyyy")}</span>
+                    </div>
                   </div>
+                  <div className="shrink-0">{action}</div>
                 </div>
-                <div className="col-span-2">
-                  <div className="font-semibold">{a.score}/{a.test?.totalMarks ?? 0}</div>
-                  <div className="text-[11px] text-emerald-600 font-medium">{scorePct}%</div>
-                </div>
-                <div className="col-span-2 font-medium">{accuracyOf(a).toFixed(1)}%</div>
-                <div className="col-span-2">
-                  <div className="font-medium">{format(new Date(a.submittedAt || a.startedAt), "dd MMM yyyy")}</div>
-                  <div className="text-[11px] text-muted-foreground">{format(new Date(a.submittedAt || a.startedAt), "hh:mm a")}</div>
-                </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  {a.status !== "in-progress" ? (
-                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2 w-28 justify-center" asChild>
-                      <Link to="/result/$attemptId" params={{ attemptId: a._id }}>View Analysis</Link>
-                    </Button>
-                  ) : (
-                    <Button size="sm" className="h-8 px-2 w-28 justify-center" asChild>
-                      <Link to="/test/$testId" params={{ testId: a.test?._id }}>Resume</Link>
-                    </Button>
-                  )}
+                {/* Desktop layout */}
+                <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                    {logo}
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{a.test?.title ?? "Test"}</div>
+                      <div className="text-[11px] text-muted-foreground">{a.test?.totalMarks ?? 0} Marks</div>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="font-semibold">{a.score}/{a.test?.totalMarks ?? 0}</div>
+                    <div className="text-[11px] text-emerald-600 font-medium">{scorePct}%</div>
+                  </div>
+                  <div className="col-span-2 font-medium">{accuracyOf(a).toFixed(1)}%</div>
+                  <div className="col-span-2">
+                    <div className="font-medium">{format(new Date(a.submittedAt || a.startedAt), "dd MMM yyyy")}</div>
+                    <div className="text-[11px] text-muted-foreground">{format(new Date(a.submittedAt || a.startedAt), "hh:mm a")}</div>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-end gap-1">{action}</div>
                 </div>
               </motion.div>
             );

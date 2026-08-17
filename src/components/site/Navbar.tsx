@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Menu, X, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react";
@@ -34,21 +35,37 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user && query.trim()) navigate({ to: "/exams", search: { q: query } as never });
+    if (query.trim()) navigate({ to: "/exams", search: { q: query } as never });
   };
 
-  const showSearchResults = !!user && searchFocused && query.trim().length > 1;
-  const { data: searchRes } = useQuery({
+  const showSearchResults = searchFocused && query.trim().length > 1;
+
+  useEffect(() => {
+    if (showSearchResults && formRef.current) {
+      const r = formRef.current.getBoundingClientRect();
+      setDropdownRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    } else {
+      setDropdownRect(null);
+    }
+  }, [showSearchResults]);
+  const { data: searchRes, isLoading: searchLoading } = useQuery({
     queryKey: ["nav-search", query],
     queryFn: () => searchService.search(query.trim()),
     enabled: showSearchResults,
   });
-  const searchGroups = searchRes?.data as
+  const searchData = searchRes?.data as
     | { categories: any[]; tests: any[]; testSeries: any[]; currentAffairs: any[] }
     | undefined;
+  const mockTests = searchData?.tests?.filter((t: any) => t.paperType !== "previous_year") ?? [];
+  const pypTests = searchData?.tests?.filter((t: any) => t.paperType === "previous_year") ?? [];
 
   const namePart = user?.name?.trim();
   const initials = namePart
@@ -84,59 +101,19 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Search bar disabled for now — kept here commented out in case it's
-            reinstated. Supporting state/handlers below are left in place too
-            since they don't cause build errors when unused.
-        <form onSubmit={onSearch} className="hidden md:flex flex-1 max-w-md ml-auto relative">
+        <form ref={formRef} onSubmit={onSearch} className="hidden md:flex flex-1 max-w-md ml-auto relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-            placeholder="Search exams, mock tests, notes…"
+            placeholder="Search exams, mock tests…"
             className="pl-9 h-10 bg-muted/40 border-transparent focus-visible:bg-background"
           />
-          {showSearchResults && searchGroups && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-elevate max-h-96 overflow-y-auto z-50 text-sm">
-              {searchRes?.totalResults === 0 && (
-                <div className="p-4 text-muted-foreground text-xs">No results for "{query}".</div>
-              )}
-              {(["categories", "tests", "testSeries", "currentAffairs"] as const).map((key) => {
-                const label = { categories: "Categories", tests: "Tests", testSeries: "Test Series", currentAffairs: "Current Affairs" }[key];
-                const rows = searchGroups[key] ?? [];
-                if (rows.length === 0) return null;
-                return (
-                  <div key={key} className="p-2 border-b border-border last:border-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">{label}</div>
-                    {rows.map((r: any) => (
-                      <div key={r._id} className="px-2 py-1.5 rounded hover:bg-muted/60">
-                        <div className="font-medium truncate">{r.name ?? r.title}</div>
-                        {(r.description ?? r.summary) && (
-                          <div className="text-xs text-muted-foreground truncate">{r.description ?? r.summary}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-              <div className="p-2 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => navigate({ to: "/exams", search: { q: query } as never })}
-                  className="text-xs text-primary hover:underline w-full text-left px-2"
-                >
-                  See all results for "{query}" →
-                </button>
-              </div>
-            </div>
-          )}
         </form>
-        */}
 
-        {/* ml-auto (not just md:ml-0) since the search form that used to
-            provide this right-push at md+ is commented out above. */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto md:ml-0 flex items-center gap-2">
           {user ? (
             <>
               <DropdownMenu>
@@ -203,6 +180,86 @@ export function Navbar() {
           </Button>
         </div>
       </div>
+
+      {mounted && dropdownRect && createPortal(
+        <div
+          style={{ position: "fixed", top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, zIndex: 9999 }}
+          className="bg-background border border-border rounded-md shadow-lg max-h-96 overflow-y-auto text-sm"
+        >
+          {searchLoading ? (
+            <p className="p-4 text-muted-foreground text-xs">Searching…</p>
+          ) : !searchData || (
+            (searchData.testSeries?.length ?? 0) === 0 &&
+            mockTests.length === 0 &&
+            pypTests.length === 0
+          ) ? (
+            <p className="p-4 text-muted-foreground text-xs">No results for "{query}".</p>
+          ) : (
+            <>
+              {(searchData.testSeries?.length ?? 0) > 0 && (
+                <div className="p-2 border-b border-border">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">Exams</div>
+                  {searchData.testSeries!.map((r: any) => (
+                    <button
+                      key={r._id}
+                      type="button"
+                      onMouseDown={() => navigate({
+                        to: "/exams/$id",
+                        params: { id: r._id },
+                        search: { name: r.name, description: r.description } as never,
+                      })}
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-muted/60 block"
+                    >
+                      <div className="font-medium truncate">{r.name}</div>
+                      {r.description && <div className="text-xs text-muted-foreground truncate">{r.description}</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {mockTests.length > 0 && (
+                <div className="p-2 border-b border-border">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">Mock Tests</div>
+                  {mockTests.map((r: any) => (
+                    <button
+                      key={r._id}
+                      type="button"
+                      onMouseDown={() => navigate({ to: "/test/$testId/instructions", params: { testId: r._id } })}
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-muted/60 block"
+                    >
+                      <div className="font-medium truncate">{r.title ?? r.name}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {pypTests.length > 0 && (
+                <div className="p-2 border-b border-border">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground px-2 py-1">Previous Year Papers</div>
+                  {pypTests.map((r: any) => (
+                    <button
+                      key={r._id}
+                      type="button"
+                      onMouseDown={() => navigate({ to: "/test/$testId/instructions", params: { testId: r._id } })}
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-muted/60 block"
+                    >
+                      <div className="font-medium truncate">{r.title ?? r.name}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="p-2 border-t border-border">
+                <button
+                  type="button"
+                  onMouseDown={() => navigate({ to: "/exams", search: { q: query } as never })}
+                  className="text-xs text-primary hover:underline w-full text-left px-2"
+                >
+                  See all results for "{query}" →
+                </button>
+              </div>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
 
       {open && (
         <div className="lg:hidden border-t border-border bg-background">
