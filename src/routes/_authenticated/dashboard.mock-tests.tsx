@@ -111,7 +111,7 @@ function MockTests() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[240px_1fr] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 items-start">
         {/* Categories */}
         <Card className="p-3 h-fit">
           <h3 className="font-display font-semibold mb-2 text-sm px-1">Exam Categories</h3>
@@ -161,13 +161,13 @@ function MockTests() {
             </div>
 
             {loadingSeries ? (
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
               </div>
             ) : seriesInCategory.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">No test series available in this category yet.</p>
             ) : (
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {seriesInCategory.map((s) => {
                   const logoUrl = s.image ? mediaService.resolveMediaUrl(s.image) : undefined;
                   return (
@@ -204,13 +204,13 @@ function MockTests() {
             </h2>
 
             {loadingSeriesTests || loadingTests ? (
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
               </div>
             ) : seriesTests.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No mock tests available in this series yet.</p>
             ) : (
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {seriesTests.map((t) => (
                   <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
                     <div className="flex items-start gap-3">
@@ -268,7 +268,7 @@ function Stat({
     purple: "bg-purple-100 text-purple-600",
   };
   return (
-    <Card className="px-3 py-2.5 flex items-center gap-2.5 min-w-[160px]">
+    <Card className="px-3 py-2.5 flex items-center gap-2.5 min-w-0">
       <span className={cn("h-9 w-9 rounded-lg grid place-items-center shrink-0", toneMap[tone])}>
         <Icon className="h-4 w-4" />
       </span>
