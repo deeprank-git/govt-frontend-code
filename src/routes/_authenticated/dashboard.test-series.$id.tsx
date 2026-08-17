@@ -241,13 +241,13 @@ function TestSeriesDetailPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
-                <Button className="flex-1 sm:flex-none" asChild>
+              <div className="flex flex-col gap-2 w-full sm:w-auto sm:shrink-0">
+                <Button asChild>
                   <a href={series?.applyLink ?? "#"} target="_blank" rel="noopener noreferrer">
                     Apply Online <ExternalLink className="h-4 w-4 ml-1.5" />
                   </a>
                 </Button>
-                <Button variant="outline" className="flex-1 sm:flex-none" asChild>
+                <Button variant="outline" asChild>
                   <a href={notificationPdfUrl ?? "#"} target="_blank" rel="noopener noreferrer">
                     <Download className="h-4 w-4 mr-1.5" /> Download Notification
                   </a>
