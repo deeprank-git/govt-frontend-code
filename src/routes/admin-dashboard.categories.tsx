@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { ChevronRight } from "lucide-react";
 import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
@@ -44,6 +45,7 @@ function CategoriesPage() {
   });
 
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", image: "" });
@@ -120,6 +122,14 @@ function CategoriesPage() {
               <TableCell>{c.name}</TableCell>
               <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
               <TableCell className="text-right space-x-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-primary gap-1"
+                  onClick={() => navigate({ to: "/admin-dashboard/test-series", search: { categoryId: c._id, categoryName: c.name } as any })}
+                >
+                  Test Series <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
                   {editLoadingId === c._id ? "Loading…" : "Edit"}
                 </Button>
