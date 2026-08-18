@@ -66,7 +66,7 @@ function MediaPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-lg font-semibold">Media</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Media</h2>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>

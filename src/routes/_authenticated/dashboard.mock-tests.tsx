@@ -99,7 +99,7 @@ function MockTests() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
-            Mock Tests <ClipboardList className="h-5 w-5 text-primary" />
+            <span className="text-gradient-primary">Mock Tests</span> <ClipboardList className="h-5 w-5 text-primary" />
           </h1>
           <p className="text-sm text-muted-foreground">
             Take mock tests to evaluate your preparation and improve your performance.

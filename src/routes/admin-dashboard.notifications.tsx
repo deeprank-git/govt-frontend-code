@@ -52,7 +52,7 @@ function NotificationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold mb-3">Send Notification</h2>
+        <h2 className="text-lg font-semibold mb-3 text-gradient-primary">Send Notification</h2>
         <div className="space-y-3 max-w-xl">
           <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div><Label>Message</Label><Textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} /></div>
@@ -88,7 +88,7 @@ function NotificationsPage() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold mb-3">Sent Notifications</h2>
+        <h2 className="text-lg font-semibold mb-3 text-gradient-primary">Sent Notifications</h2>
         <div className="mb-2">
           <Input
             placeholder="Search notifications…"

@@ -263,7 +263,7 @@ function TestSeriesPage() {
       )}
 
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-semibold">Test Series</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Test Series</h2>
         {showSeries && (
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => { setBulkFile(null); setBulkResults([]); setBulkOpen(true); }}>

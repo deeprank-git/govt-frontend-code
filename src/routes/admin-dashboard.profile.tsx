@@ -133,7 +133,7 @@ function AdminProfilePage() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-lg font-semibold mb-1">Profile Settings</h2>
+      <h2 className="text-lg font-semibold mb-1 text-gradient-primary">Profile Settings</h2>
       <p className="text-sm text-muted-foreground mb-4">Manage your personal admin account details.</p>
 
       <div className="flex items-center gap-4 mb-6">

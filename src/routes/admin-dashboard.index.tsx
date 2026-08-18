@@ -163,7 +163,7 @@ function AdminDashboardHome() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">Dashboard</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Dashboard</h2>
         <p className="text-sm text-muted-foreground mt-0.5">Overview of your platform's content and activity.</p>
       </div>
 

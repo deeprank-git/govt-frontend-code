@@ -86,7 +86,7 @@ function SettingsPage() {
 
   return (
     <div className="max-w-xl">
-      <h2 className="text-lg font-semibold mb-4">Settings</h2>
+      <h2 className="text-lg font-semibold mb-4 text-gradient-primary">Settings</h2>
       <div className="space-y-4">
         <div><Label>Site Name</Label><Input value={form.siteName} onChange={(e) => setForm({ ...form, siteName: e.target.value })} disabled={loading} /></div>
         <div><Label>Logo URL</Label><Input value={form.logo} onChange={(e) => setForm({ ...form, logo: e.target.value })} disabled={loading} /></div>

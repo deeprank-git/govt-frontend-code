@@ -53,7 +53,7 @@ function UsersPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-2">Users</h2>
+      <h2 className="text-lg font-semibold mb-2 text-gradient-primary">Users</h2>
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>

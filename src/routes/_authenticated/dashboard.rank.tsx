@@ -43,7 +43,7 @@ function RankPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
-            Leaderboard <Trophy className="h-5 w-5 text-warning" />
+            <span className="text-gradient-primary">Leaderboard</span> <Trophy className="h-5 w-5 text-warning" />
           </h1>
           <p className="text-sm text-muted-foreground">See how you stand among everyone who has completed this test.</p>
         </div>

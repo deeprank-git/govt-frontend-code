@@ -111,7 +111,7 @@ function KeyPage() {
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
-            Answer Key <KeyRound className="h-5 w-5 text-primary" />
+            <span className="text-gradient-primary">Answer Key</span> <KeyRound className="h-5 w-5 text-primary" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Get official answer keys, response sheets and challenge updates.

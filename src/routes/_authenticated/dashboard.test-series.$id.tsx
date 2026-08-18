@@ -230,7 +230,7 @@ function TestSeriesDetailPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-xl md:text-2xl font-display font-extrabold">{displayName}</h1>
+                    <h1 className="text-xl md:text-2xl font-display font-extrabold text-gradient-primary">{displayName}</h1>
                     <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-transparent">
                       Graduate Level
                     </Badge>

@@ -100,7 +100,7 @@ function CategoriesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-semibold">Categories</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Categories</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
       </div>
       <div className="mb-2">

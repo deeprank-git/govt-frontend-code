@@ -132,7 +132,7 @@ function ProfilePage() {
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-display font-extrabold tracking-tight">Profile Settings</h1>
+            <h1 className="text-2xl font-display font-extrabold tracking-tight text-gradient-primary">Profile Settings</h1>
             <Settings className="h-5 w-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground mt-1">

@@ -112,7 +112,7 @@ function AttemptedTests() {
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-display font-extrabold">Attended Tests</h1>
+            <h1 className="text-2xl font-display font-extrabold text-gradient-primary">Attended Tests</h1>
             <ClipboardList className="h-5 w-5 text-primary" />
           </div>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">

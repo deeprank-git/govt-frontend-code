@@ -270,7 +270,7 @@ function QuestionsPage() {
       )}
 
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-lg font-semibold">Questions</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Questions</h2>
         {showQuestions && (
           <div className="flex items-center gap-2 flex-wrap">
             <Button size="sm" onClick={openCreate}>New</Button>
