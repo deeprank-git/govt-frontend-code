@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Flame,
   ClipboardList,
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import * as testService from "@/services/testService";
 import * as testAttemptService from "@/services/testAttemptService";
+import * as testSeriesService from "@/services/testSeriesService";
 import * as currentAffairsService from "@/services/currentAffairsService";
 import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
@@ -130,6 +131,16 @@ function Dashboard() {
     .slice()
     .sort((a, b) => new Date(b.examDate ?? 0).getTime() - new Date(a.examDate ?? 0).getTime())
     .slice(0, 3);
+
+  const { data: seriesRes } = useQuery({
+    queryKey: ["dashboard-home-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
+  });
+  const seriesById = useMemo(() => {
+    const map = new Map<string, any>();
+    unwrapList<any>(seriesRes).forEach((s) => map.set(s._id, s));
+    return map;
+  }, [seriesRes]);
 
   const startPyq = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
@@ -275,25 +286,37 @@ function Dashboard() {
             {previousYearPapers.length === 0 && (
               <p className="text-sm text-muted-foreground">No previous year papers yet.</p>
             )}
-            {previousYearPapers.map((p) => (
-              <div key={p._id} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{p.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {p.totalQuestions ?? 0} Qs · {p.totalMarks ?? 0} Marks · {p.duration ?? 0} Min
+            {previousYearPapers.map((p) => {
+              const seriesId = p.testSeries?._id ?? p.testSeries;
+              const seriesImage = seriesById.get(seriesId)?.image;
+              const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
+              return (
+                <div key={p._id} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="h-8 w-8 rounded-md object-cover shrink-0" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{p.title}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {p.totalQuestions ?? 0} Qs · {p.totalMarks ?? 0} Marks · {p.duration ?? 0} Min
+                      </div>
+                    </div>
                   </div>
+                  <Button size="sm" variant="outline" onClick={() => startPyq(p._id)}>
+                    Start Test
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => startPyq(p._id)}>
-                  Start Test
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Card className="p-5">
+        <Card className="p-5 lg:col-span-3">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold flex items-center gap-2">
               <Newspaper className="h-4 w-4 text-primary" />
@@ -303,22 +326,22 @@ function Dashboard() {
               View All
             </Link>
           </div>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {currentAffairs.map((a) => (
-              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex items-start gap-2.5 hover:bg-muted/40 -mx-1 px-1 py-0.5 rounded transition">
-                <ArticleImage image={a.image} alt={a.title} className="h-10 w-14 rounded-md" />
-                <div className="flex-1 min-w-0">
+              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex flex-col gap-2 hover:bg-muted/40 rounded-md p-1.5 transition">
+                <ArticleImage image={a.image} alt={a.title} className="w-full h-32 rounded-md object-cover" />
+                <div className="min-w-0">
                   <Badge variant="outline" className="text-[10px]">
                     {a.category}
                   </Badge>
                   <div className="text-sm font-medium leading-snug line-clamp-2 mt-0.5">{a.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
                     {new Date(a.date).toLocaleDateString()}
                   </div>
                 </div>
               </Link>
             ))}
-            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
+            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground sm:col-span-3">No current affairs yet.</p>}
           </div>
         </Card>
 

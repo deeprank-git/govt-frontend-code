@@ -15,7 +15,6 @@ import {
   Bell,
   UserCircle,
   LogOut,
-  ShieldCheck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin-dashboard")({
@@ -85,9 +84,7 @@ function AdminDashboardLayout() {
       <aside className="w-[240px] shrink-0 border-r border-border bg-muted/30 flex flex-col">
         {/* Brand */}
         <div className="px-4 py-4 border-b border-border flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img src="/docs/testopy-favico.png" alt="Testopy" className="w-8 h-8 rounded-lg shrink-0" />
           <div className="min-w-0">
             <h1 className="text-sm font-semibold leading-tight">Testopy Admin</h1>
             <p className="text-[10px] text-muted-foreground leading-tight">Management Console</p>
