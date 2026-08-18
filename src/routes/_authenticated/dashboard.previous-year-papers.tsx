@@ -75,7 +75,7 @@ function PYQPage() {
     queryKey: ["pyq-categories"],
     queryFn: () => categoryService.getCategories(),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const categories = unwrapList<any>(categoriesRes).filter((c: any) => c.isActive !== false);
   // Default to SSC once categories load; falls back to the first real
   // category if "SSC" isn't present rather than showing nothing.
   const resolvedCategory = category
@@ -87,7 +87,7 @@ function PYQPage() {
     queryKey: ["pyq-test-series"],
     queryFn: () => testSeriesService.getTestSeries(),
   });
-  const allSeries = unwrapList<any>(seriesRes);
+  const allSeries = unwrapList<any>(seriesRes).filter((s: any) => s.isActive !== false);
   const seriesById = useMemo(() => {
     const map = new Map<string, any>();
     allSeries.forEach((s) => map.set(s._id, s));

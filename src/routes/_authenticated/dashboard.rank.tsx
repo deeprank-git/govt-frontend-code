@@ -1,4 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Trophy } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/dashboard/rank")({
+  component: RankPage,
+});
+
+function RankPage() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+      <Trophy className="h-16 w-16 text-warning opacity-50" />
+      <h1 className="text-3xl font-display font-extrabold">
+        <span className="text-gradient-primary">Leaderboard</span>
+      </h1>
+      <p className="text-muted-foreground text-lg font-medium">Coming Soon</p>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        The leaderboard feature is currently under construction. Check back soon to see how you rank among fellow aspirants!
+      </p>
+    </div>
+  );
+}
+
+/*
+ORIGINAL LEADERBOARD IMPLEMENTATION — uncomment to restore
+
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Trophy, Users, Medal } from "lucide-react";
@@ -115,3 +140,4 @@ function RankPage() {
     </div>
   );
 }
+*/

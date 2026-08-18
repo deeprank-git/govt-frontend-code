@@ -25,7 +25,12 @@ export function isTestVisible(test: TestWithSeries | null | undefined): boolean 
   if (!isPublishedVisible(test)) return false;
   const series = test?.testSeries;
   if (series && typeof series === "object") {
-    if (!isPublishedVisible(series)) return false;
+    // Only apply publish-flag checks when the backend actually included them in
+    // the populated object; GET /tests/:id selects only display fields (name,
+    // image) on the nested series, so missing flags mean "backend already
+    // filtered" — not "series is unpublished".
+    const hasPubFlags = "isPublished" in series || "isActive" in series;
+    if (hasPubFlags && !isPublishedVisible(series)) return false;
     if (series.category && series.category.isActive === false) return false;
   }
   return true;

@@ -34,11 +34,11 @@ import { Button } from "@/components/ui/button";
 const ITEMS = [
   { to: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/dashboard/overview" as const, label: "Exams Overview", icon: Gauge },
-  { to: "/dashboard/rank" as const, label: "All India Rank", icon: Trophy },
   { to: "/dashboard/mock-tests" as const, label: "Mock Tests", icon: ClipboardList },
   { to: "/dashboard/attempted-tests" as const, label: "Attempted Tests", icon: History },
   { to: "/dashboard/previous-year-papers" as const, label: "Previous Year Papers", icon: FileText },
   { to: "/dashboard/current-affairs" as const, label: "Current Affairs", icon: Newspaper },
+  { to: "/dashboard/rank" as const, label: "All India Rank", icon: Trophy },
   // Answer Key and Exam Alerts are still fully static/mock-data pages with no
   // backend support — hidden from the sidebar until that's built. Not deleted,
   // just unlinked; the routes still exist and work if navigated to directly.

@@ -46,7 +46,7 @@ function AttemptedTests() {
 
   const { data: seriesRes } = useQuery({
     queryKey: ["exam-options"],
-    queryFn: () => testSeriesService.getTestSeries(),
+    queryFn: () => testSeriesService.getTestSeries({ isActive: true }),
   });
   const series = unwrapList<any>(seriesRes);
 

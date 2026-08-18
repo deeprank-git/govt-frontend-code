@@ -259,6 +259,18 @@ function Dashboard() {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">All India Rank</h3>
+          </div>
+          <div className="text-center py-4">
+            <Trophy className="h-10 w-10 text-warning mx-auto opacity-50" />
+            <div className="text-sm font-medium mt-2">Coming Soon</div>
+            <div className="text-xs text-muted-foreground mt-1">Leaderboard is under construction. Check back soon!</div>
+          </div>
+        </Card>
+        {/*
+        ORIGINAL ALL INDIA RANK CARD — uncomment to restore
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-bold">All India Rank</h3>
             <Link to="/dashboard/rank" className="text-xs text-primary hover:underline">
               View Details
             </Link>
@@ -268,6 +280,7 @@ function Dashboard() {
             <div className="text-xs text-muted-foreground mt-2">Take a test to see your rank on the leaderboard</div>
           </div>
         </Card>
+        */}
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
