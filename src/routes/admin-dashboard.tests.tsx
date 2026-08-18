@@ -25,7 +25,7 @@ function TestsPage() {
   const { data: seriesRes } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
   const series = unwrapList<any>(seriesRes);
   const { data: testsRes, isLoading } = useQuery({ queryKey: ["ad-tests"], queryFn: () => testService.getTests() });
-  const tests = unwrapList<any>(testsRes);
+  const tests = unwrapList<any>(testsRes).filter((t: any) => t.isActive !== false);
 
   const qc = useQueryClient();
   const [wizardOpen, setWizardOpen] = useState(false);

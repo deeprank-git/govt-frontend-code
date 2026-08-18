@@ -21,7 +21,7 @@ export const Route = createFileRoute("/admin-dashboard/categories")({
 
 function CategoriesPage() {
   const { data: categoriesRes, isLoading } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
-  const categories = unwrapList<any>(categoriesRes);
+  const categories = unwrapList<any>(categoriesRes).filter((c: any) => c.isActive !== false);
 
   // GET /api/categories (the list above) intentionally omits `description` —
   // only GET /api/categories/:id returns the full doc. Fan out one detail

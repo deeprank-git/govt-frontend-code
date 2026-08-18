@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
@@ -34,7 +34,7 @@ function TestSeriesPage() {
   const { data: categoriesRes } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
   const categories = unwrapList<any>(categoriesRes);
   const { data: seriesRes, isLoading } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
-  const series = unwrapList<any>(seriesRes);
+  const series = unwrapList<any>(seriesRes).filter((s: any) => s.isActive !== false);
 
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -50,6 +50,104 @@ function TestSeriesPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(series, ["name", "description"]);
+
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkResults, setBulkResults] = useState<{ name: string; status: "success" | "error"; message?: string }[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+
+  const downloadTemplate = () => {
+    const headers = ["name", "description", "category", "isPublished", "isPaid", "price", "marksPerQuestion", "negativeMarking", "negativeMarksPerQuestion", "importantDates"];
+    const rows = [
+      ["Sample Test Series", "A free published test series", "General Studies", "true", "false", "0", "1", "false", "0", "examDate:2025-03-15"],
+      ["Premium Mock Test", "A paid series with negative marking", "Current Affairs", "false", "true", "299", "2", "true", "0.5", "applicationDate:2025-01-01:2025-01-31;examDate:2025-03-20"],
+    ];
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "test-series-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCSV = (text: string): Record<string, string>[] => {
+    const parseCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += ch;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+    const lines = text.trim().split(/\r?\n/);
+    const headers = parseCSVLine(lines[0]);
+    return lines.slice(1).filter((l) => l.trim()).map((line) => {
+      const values = parseCSVLine(line);
+      return Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ""]));
+    });
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) return;
+    setBulkUploading(true);
+    setBulkResults([]);
+    const text = await bulkFile.text();
+    const rows = parseCSV(text);
+    const results: { name: string; status: "success" | "error"; message?: string }[] = [];
+    for (const row of rows) {
+      const cat = categories.find((c: any) => c.name.toLowerCase() === (row.category ?? "").toLowerCase());
+      if (!cat) {
+        results.push({ name: row.name || "Unknown", status: "error", message: `Category "${row.category}" not found` });
+        continue;
+      }
+      try {
+        const parsedDates: Record<string, { from: string; to: string }> = {};
+        if (row.importantDates?.trim()) {
+          for (const entry of row.importantDates.split(";")) {
+            const parts = entry.trim().split(":");
+            if (parts.length >= 2) {
+              const label = parts[0].trim();
+              const from = parts[1].trim();
+              const to = parts[2]?.trim() || from;
+              if (label && from) parsedDates[label] = { from, to };
+            }
+          }
+        }
+        await testSeriesService.createTestSeries({
+          name: row.name,
+          description: row.description ?? "",
+          category: cat._id,
+          isPublished: row.isPublished === "true",
+          isPaid: row.isPaid === "true",
+          price: Number(row.price) || 0,
+          marksPerQuestion: Number(row.marksPerQuestion) || 1,
+          negativeMarking: row.negativeMarking === "true",
+          negativeMarksPerQuestion: Number(row.negativeMarksPerQuestion) || 0,
+          importantDates: Object.keys(parsedDates).length ? parsedDates : undefined,
+        });
+        results.push({ name: row.name, status: "success" });
+      } catch (err: any) {
+        results.push({ name: row.name, status: "error", message: err?.response?.data?.message ?? "Failed to create" });
+      }
+    }
+    setBulkResults(results);
+    setBulkUploading(false);
+    qc.invalidateQueries({ queryKey: ["ad-series"] });
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -135,7 +233,12 @@ function TestSeriesPage() {
     <div>
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold">Test Series</h2>
-        <Button size="sm" onClick={openCreate}>New</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setBulkFile(null); setBulkResults([]); setBulkOpen(true); }}>
+            <Upload className="h-3.5 w-3.5 mr-1" /> Bulk Upload
+          </Button>
+          <Button size="sm" onClick={openCreate}>New</Button>
+        </div>
       </div>
       <div className="mb-2">
         <Input
@@ -319,6 +422,58 @@ function TestSeriesPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !form.name || !form.category}>{saveMut.isPending ? "Saving…" : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkOpen} onOpenChange={(o) => { if (!bulkUploading) { setBulkOpen(o); if (!o) { setBulkFile(null); setBulkResults([]); } } }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Bulk Upload Test Series</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+              <p className="text-sm font-medium">CSV Format</p>
+              <p className="text-xs text-muted-foreground">Columns: name, description, category, isPublished, isPaid, price, marksPerQuestion, negativeMarking, negativeMarksPerQuestion, importantDates</p>
+              <p className="text-xs text-muted-foreground">Use exact category names. Booleans: <code className="font-mono">true</code> / <code className="font-mono">false</code>.</p>
+              <p className="text-xs text-muted-foreground"><span className="font-medium">importantDates</span> format — single date: <code className="font-mono">label:YYYY-MM-DD</code>, range: <code className="font-mono">label:from:to</code>, multiple separated by <code className="font-mono">;</code> (e.g. <code className="font-mono">examDate:2025-03-15;appDate:2025-01-01:2025-01-31</code>)</p>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={downloadTemplate}>
+              <Download className="h-3.5 w-3.5 mr-1" /> Download Template
+            </Button>
+            <div>
+              <Label>Upload CSV</Label>
+              <div className="flex items-center gap-3 mt-1">
+                <input
+                  ref={bulkFileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) { setBulkFile(f); setBulkResults([]); } }}
+                />
+                <Button type="button" size="sm" variant="outline" onClick={() => bulkFileInputRef.current?.click()}>
+                  {bulkFile ? "Replace File" : "Choose CSV"}
+                </Button>
+                {bulkFile && <span className="text-xs text-muted-foreground truncate max-w-[200px]">{bulkFile.name}</span>}
+              </div>
+            </div>
+            {bulkResults.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Results ({bulkResults.filter(r => r.status === "success").length}/{bulkResults.length} succeeded)</p>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {bulkResults.map((r, i) => (
+                    <div key={i} className={`flex items-start gap-2 rounded px-2 py-1 text-xs ${r.status === "success" ? "bg-green-500/10 text-green-700 dark:text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                      <span className="font-medium shrink-0">{r.status === "success" ? "✓" : "✗"}</span>
+                      <span>{r.name}{r.message ? ` — ${r.message}` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setBulkOpen(false); setBulkFile(null); setBulkResults([]); }} disabled={bulkUploading}>Cancel</Button>
+            <Button onClick={handleBulkUpload} disabled={!bulkFile || bulkUploading}>
+              {bulkUploading ? "Uploading…" : "Upload"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
