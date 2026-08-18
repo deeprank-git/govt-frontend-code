@@ -209,9 +209,9 @@ function TestsPage() {
         <h2 className="text-lg font-semibold text-gradient-primary">Tests</h2>
         {showTests && (
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => { setBulkFile(null); setBulkResults([]); setBulkOpen(true); }}>
+            {/* <Button size="sm" variant="outline" onClick={() => { setBulkFile(null); setBulkResults([]); setBulkOpen(true); }}>
               <Upload className="h-3.5 w-3.5 mr-1" /> Bulk Upload
-            </Button>
+            </Button> */}
             <Button size="sm" onClick={openCreate}>New</Button>
           </div>
         )}

@@ -186,7 +186,7 @@ function Dashboard() {
             <div className="font-display font-bold text-xl leading-none">{streak}</div>
             <div className="text-[11px] text-muted-foreground">Day Streak</div>
           </div>
-          <div className="hidden sm:flex gap-1 ml-3">
+          <div className="flex gap-1 ml-3">
             {last7Days.map((d) => {
               const key = toDayKey(d);
               const isActive = activeDayKeys.has(key);
