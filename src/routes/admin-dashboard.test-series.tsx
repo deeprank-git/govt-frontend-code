@@ -32,6 +32,7 @@ const emptySeriesForm = {
   name: "", description: "", category: "",
   isPublished: false, isPaid: false, price: 0,
   negativeMarking: false, negativeMarksPerQuestion: 0, marksPerQuestion: 1,
+  applyLink: "", officialWebsite: "",
 };
 
 function TestSeriesPage() {
@@ -78,10 +79,10 @@ function TestSeriesPage() {
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    const headers = ["name", "description", "category", "isPublished", "isPaid", "price", "marksPerQuestion", "negativeMarking", "negativeMarksPerQuestion", "importantDates"];
+    const headers = ["name", "description", "category", "isPublished", "isPaid", "price", "marksPerQuestion", "negativeMarking", "negativeMarksPerQuestion", "importantDates", "applyLink", "officialWebsite"];
     const rows = [
-      ["Sample Test Series", "A free published test series", "General Studies", "true", "false", "0", "1", "false", "0", "examDate:2025-03-15"],
-      ["Premium Mock Test", "A paid series with negative marking", "Current Affairs", "false", "true", "299", "2", "true", "0.5", "applicationDate:2025-01-01:2025-01-31;examDate:2025-03-20"],
+      ["Sample Test Series", "A free published test series", "General Studies", "true", "false", "0", "1", "false", "0", "examDate:2025-03-15", "https://apply.example.com", "https://www.example.com"],
+      ["Premium Mock Test", "A paid series with negative marking", "Current Affairs", "false", "true", "299", "2", "true", "0.5", "applicationDate:2025-01-01:2025-01-31;examDate:2025-03-20", "", ""],
     ];
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -158,6 +159,8 @@ function TestSeriesPage() {
           negativeMarking: row.negativeMarking === "true",
           negativeMarksPerQuestion: Number(row.negativeMarksPerQuestion) || 0,
           importantDates: Object.keys(parsedDates).length ? parsedDates : undefined,
+          applyLink: row.applyLink?.trim() || undefined,
+          officialWebsite: row.officialWebsite?.trim() || undefined,
         });
         results.push({ name: row.name, status: "success" });
       } catch (err: any) {
@@ -191,6 +194,8 @@ function TestSeriesPage() {
       negativeMarking: !!s.negativeMarking,
       negativeMarksPerQuestion: s.negativeMarksPerQuestion ?? 0,
       marksPerQuestion: s.marksPerQuestion ?? 1,
+      applyLink: s.applyLink ?? "",
+      officialWebsite: s.officialWebsite ?? "",
     });
     setImportantDates(
       Object.entries(s.importantDates ?? {}).map(([label, value]: [string, any]) => {
@@ -210,6 +215,8 @@ function TestSeriesPage() {
     mutationFn: () => {
       const payload: testSeriesService.TestSeriesInput = {
         ...form,
+        applyLink: form.applyLink || undefined,
+        officialWebsite: form.officialWebsite || undefined,
         importantDates: importantDates.length
           ? Object.fromEntries(
               importantDates
@@ -372,6 +379,8 @@ function TestSeriesPage() {
               <div className="space-y-3">
                 <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+                <div><Label>Apply Link</Label><Input type="url" placeholder="https://…" value={form.applyLink} onChange={(e) => setForm({ ...form, applyLink: e.target.value })} /></div>
+                <div><Label>Official Website</Label><Input type="url" placeholder="https://…" value={form.officialWebsite} onChange={(e) => setForm({ ...form, officialWebsite: e.target.value })} /></div>
                 <div>
                   <Label>Category</Label>
                   <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
@@ -519,7 +528,7 @@ function TestSeriesPage() {
               <div className="space-y-4">
                 <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
                   <p className="text-sm font-medium">CSV Format</p>
-                  <p className="text-xs text-muted-foreground">Columns: name, description, category, isPublished, isPaid, price, marksPerQuestion, negativeMarking, negativeMarksPerQuestion, importantDates</p>
+                  <p className="text-xs text-muted-foreground">Columns: name, description, category, isPublished, isPaid, price, marksPerQuestion, negativeMarking, negativeMarksPerQuestion, importantDates, applyLink, officialWebsite</p>
                   <p className="text-xs text-muted-foreground">Use exact category names. Booleans: <code className="font-mono">true</code> / <code className="font-mono">false</code>.</p>
                   <p className="text-xs text-muted-foreground"><span className="font-medium">importantDates</span> format — single date: <code className="font-mono">label:YYYY-MM-DD</code>, range: <code className="font-mono">label:from:to</code>, multiple separated by <code className="font-mono">;</code> (e.g. <code className="font-mono">examDate:2025-03-15;appDate:2025-01-01:2025-01-31</code>)</p>
                 </div>

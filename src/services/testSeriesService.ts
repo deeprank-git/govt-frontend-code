@@ -24,6 +24,8 @@ export type TestSeriesInput = {
   importantDates?: Record<string, { from: string; to: string }>;
   image?: File;
   notificationPdf?: File;
+  applyLink?: string;
+  officialWebsite?: string;
 };
 
 // Create/update are multipart/form-data (see Testopy-Backend-Workflow-and-Status.md
