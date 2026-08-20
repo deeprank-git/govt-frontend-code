@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, X, Download, Upload, ChevronRight, ArrowLeft } from "lucide-react";
+import { Plus, X, Download, Upload, ChevronRight, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { unwrapList } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
@@ -261,6 +261,28 @@ function TestSeriesPage() {
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not update publish status"),
   });
 
+  // Moving one row re-numbers the whole (in-category) list sequentially
+  // (1, 2, 3, …) so there's never a manual "shuffle the other orders" step —
+  // only the rows whose order actually changed get PATCHed.
+  const reorderMut = useMutation({
+    mutationFn: async (nextList: any[]) => {
+      const changed = nextList
+        .map((s, i) => ({ id: s._id, order: i + 1, prevOrder: s.order ?? 0 }))
+        .filter((s) => s.order !== s.prevOrder);
+      await Promise.all(changed.map((s) => testSeriesService.updateTestSeries(s.id, { order: s.order })));
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ad-series"] }),
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not reorder test series"),
+  });
+
+  const moveSeries = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= filteredSeries.length) return;
+    const next = [...filteredSeries];
+    [next[index], next[target]] = [next[target], next[index]];
+    reorderMut.mutate(next);
+  };
+
   return (
     <div>
       {/* Breadcrumb — only in series view */}
@@ -343,9 +365,37 @@ function TestSeriesPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <LoadingRows colSpan={5} />}
-            {!isLoading && paginated.map((s: any) => (
+            {!isLoading && paginated.map((s: any) => {
+              const seriesIndex = filteredSeries.findIndex((x: any) => x._id === s._id);
+              return (
               <TableRow key={s._id}>
-                <TableCell>{s.order ?? 0}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <span className="tabular-nums w-5">{s.order ?? 0}</span>
+                    <div className="flex flex-col">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        disabled={reorderMut.isPending || seriesIndex <= 0 || !!search}
+                        title={search ? "Clear search to reorder" : "Move up"}
+                        onClick={() => moveSeries(seriesIndex, -1)}
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        disabled={reorderMut.isPending || seriesIndex >= filteredSeries.length - 1 || !!search}
+                        title={search ? "Clear search to reorder" : "Move down"}
+                        onClick={() => moveSeries(seriesIndex, 1)}
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </TableCell>
                 <TableCell>{s.name}</TableCell>
                 <TableCell>{s.totalTests ?? 0}</TableCell>
                 <TableCell>{s.isPublished ? "Published" : "Draft"}</TableCell>
@@ -365,7 +415,8 @@ function TestSeriesPage() {
                   <Button size="sm" variant="outline" onClick={() => setDeleteTarget(s._id)} disabled={deleteMut.isPending}>Delete</Button>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
             {!isLoading && filteredSeries.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No test series in this category yet.</TableCell>

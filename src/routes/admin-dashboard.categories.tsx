@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
 import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
@@ -100,6 +100,31 @@ function CategoriesPage() {
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete category"),
   });
 
+  // Moving one row re-numbers the whole list sequentially (1, 2, 3, …) so
+  // there's never a manual "shuffle the other 11 orders" step — only the
+  // rows whose order actually changed get PATCHed.
+  const reorderMut = useMutation({
+    mutationFn: async (nextList: any[]) => {
+      const changed = nextList
+        .map((c, i) => ({ id: c._id, order: i + 1, prevOrder: c.order ?? 0 }))
+        .filter((c) => c.order !== c.prevOrder);
+      await Promise.all(changed.map((c) => categoryService.updateCategory(c.id, { order: c.order })));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ad-categories"] });
+      qc.invalidateQueries({ queryKey: ["ad-category-detail"] });
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not reorder categories"),
+  });
+
+  const moveCategory = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= sortedCategories.length) return;
+    const next = [...sortedCategories];
+    [next[index], next[target]] = [next[target], next[index]];
+    reorderMut.mutate(next);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -120,27 +145,56 @@ function CategoriesPage() {
         </TableHeader>
         <TableBody>
           {isLoading && <LoadingRows colSpan={4} />}
-          {!isLoading && paginated.map((c) => (
-            <TableRow key={c._id}>
-              <TableCell>{c.order ?? 0}</TableCell>
-              <TableCell>{c.name}</TableCell>
-              <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-primary gap-1"
-                  onClick={() => navigate({ to: "/admin-dashboard/test-series", search: { categoryId: c._id, categoryName: c.name } as any })}
-                >
-                  Test Series <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
-                  {editLoadingId === c._id ? "Loading…" : "Edit"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleteMut.isPending}>Delete</Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {!isLoading && paginated.map((c) => {
+            const sortedIndex = sortedCategories.findIndex((x) => x._id === c._id);
+            return (
+              <TableRow key={c._id}>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <span className="tabular-nums w-5">{c.order ?? 0}</span>
+                    <div className="flex flex-col">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        disabled={reorderMut.isPending || sortedIndex <= 0 || !!search}
+                        title={search ? "Clear search to reorder" : "Move up"}
+                        onClick={() => moveCategory(sortedIndex, -1)}
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        disabled={reorderMut.isPending || sortedIndex >= sortedCategories.length - 1 || !!search}
+                        title={search ? "Clear search to reorder" : "Move down"}
+                        onClick={() => moveCategory(sortedIndex, 1)}
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>{c.name}</TableCell>
+                <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-primary gap-1"
+                    onClick={() => navigate({ to: "/admin-dashboard/test-series", search: { categoryId: c._id, categoryName: c.name } as any })}
+                  >
+                    Test Series <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
+                    {editLoadingId === c._id ? "Loading…" : "Edit"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleteMut.isPending}>Delete</Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
           {!isLoading && categories.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
