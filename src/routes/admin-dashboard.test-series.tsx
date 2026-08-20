@@ -32,7 +32,7 @@ const emptySeriesForm = {
   name: "", description: "", category: "",
   isPublished: false, isPaid: false, price: 0,
   negativeMarking: false, negativeMarksPerQuestion: 0, marksPerQuestion: 1,
-  applyLink: "", officialWebsite: "",
+  applyLink: "", officialWebsite: "", order: 0,
 };
 
 function TestSeriesPage() {
@@ -44,13 +44,16 @@ function TestSeriesPage() {
   const showSeries = !!categoryId;
 
   const { data: categoriesRes, isLoading: catsLoading } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
-  const categories = unwrapList<any>(categoriesRes).filter((c: any) => c.isActive !== false);
+  const categories = unwrapList<any>(categoriesRes)
+    .filter((c: any) => c.isActive !== false)
+    .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
   const { data: seriesRes, isLoading: seriesLoading } = useQuery({ queryKey: ["ad-series"], queryFn: () => testSeriesService.getTestSeries() });
   const allSeries = unwrapList<any>(seriesRes).filter((s: any) => s.isActive !== false);
-  const filteredSeries = categoryId
+  const filteredSeries = (categoryId
     ? allSeries.filter((s: any) => (s.category?._id ?? s.category) === categoryId)
-    : allSeries;
+    : allSeries
+  ).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
   const isLoading = showCategories ? catsLoading : seriesLoading;
 
@@ -79,10 +82,10 @@ function TestSeriesPage() {
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    const headers = ["name", "description", "category", "isPublished", "isPaid", "price", "marksPerQuestion", "negativeMarking", "negativeMarksPerQuestion", "importantDates", "applyLink", "officialWebsite"];
+    const headers = ["name", "description", "category", "isPublished", "isPaid", "price", "marksPerQuestion", "negativeMarking", "negativeMarksPerQuestion", "importantDates", "applyLink", "officialWebsite", "order"];
     const rows = [
-      ["Sample Test Series", "A free published test series", "General Studies", "true", "false", "0", "1", "false", "0", "examDate:2025-03-15", "https://apply.example.com", "https://www.example.com"],
-      ["Premium Mock Test", "A paid series with negative marking", "Current Affairs", "false", "true", "299", "2", "true", "0.5", "applicationDate:2025-01-01:2025-01-31;examDate:2025-03-20", "", ""],
+      ["Sample Test Series", "A free published test series", "General Studies", "true", "false", "0", "1", "false", "0", "examDate:2025-03-15", "https://apply.example.com", "https://www.example.com", "1"],
+      ["Premium Mock Test", "A paid series with negative marking", "Current Affairs", "false", "true", "299", "2", "true", "0.5", "applicationDate:2025-01-01:2025-01-31;examDate:2025-03-20", "", "", "2"],
     ];
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -161,6 +164,7 @@ function TestSeriesPage() {
           importantDates: Object.keys(parsedDates).length ? parsedDates : undefined,
           applyLink: row.applyLink?.trim() || undefined,
           officialWebsite: row.officialWebsite?.trim() || undefined,
+          order: row.order?.trim() ? Number(row.order) : undefined,
         });
         results.push({ name: row.name, status: "success" });
       } catch (err: any) {
@@ -196,6 +200,7 @@ function TestSeriesPage() {
       marksPerQuestion: s.marksPerQuestion ?? 1,
       applyLink: s.applyLink ?? "",
       officialWebsite: s.officialWebsite ?? "",
+      order: s.order ?? 0,
     });
     setImportantDates(
       Object.entries(s.importantDates ?? {}).map(([label, value]: [string, any]) => {
@@ -329,6 +334,7 @@ function TestSeriesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Order</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Total Tests</TableHead>
               <TableHead>Published</TableHead>
@@ -336,9 +342,10 @@ function TestSeriesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <LoadingRows colSpan={4} />}
+            {isLoading && <LoadingRows colSpan={5} />}
             {!isLoading && paginated.map((s: any) => (
               <TableRow key={s._id}>
+                <TableCell>{s.order ?? 0}</TableCell>
                 <TableCell>{s.name}</TableCell>
                 <TableCell>{s.totalTests ?? 0}</TableCell>
                 <TableCell>{s.isPublished ? "Published" : "Draft"}</TableCell>
@@ -361,7 +368,7 @@ function TestSeriesPage() {
             ))}
             {!isLoading && filteredSeries.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No test series in this category yet.</TableCell>
+                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No test series in this category yet.</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -381,6 +388,11 @@ function TestSeriesPage() {
                 <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
                 <div><Label>Apply Link</Label><Input type="url" placeholder="https://…" value={form.applyLink} onChange={(e) => setForm({ ...form, applyLink: e.target.value })} /></div>
                 <div><Label>Official Website</Label><Input type="url" placeholder="https://…" value={form.officialWebsite} onChange={(e) => setForm({ ...form, officialWebsite: e.target.value })} /></div>
+                <div>
+                  <Label>Order</Label>
+                  <Input type="number" value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} />
+                  <p className="text-xs text-muted-foreground mt-1">Lower numbers appear first (e.g. 1–12).</p>
+                </div>
                 <div>
                   <Label>Category</Label>
                   <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
@@ -528,7 +540,7 @@ function TestSeriesPage() {
               <div className="space-y-4">
                 <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
                   <p className="text-sm font-medium">CSV Format</p>
-                  <p className="text-xs text-muted-foreground">Columns: name, description, category, isPublished, isPaid, price, marksPerQuestion, negativeMarking, negativeMarksPerQuestion, importantDates, applyLink, officialWebsite</p>
+                  <p className="text-xs text-muted-foreground">Columns: name, description, category, isPublished, isPaid, price, marksPerQuestion, negativeMarking, negativeMarksPerQuestion, importantDates, applyLink, officialWebsite, order</p>
                   <p className="text-xs text-muted-foreground">Use exact category names. Booleans: <code className="font-mono">true</code> / <code className="font-mono">false</code>.</p>
                   <p className="text-xs text-muted-foreground"><span className="font-medium">importantDates</span> format — single date: <code className="font-mono">label:YYYY-MM-DD</code>, range: <code className="font-mono">label:from:to</code>, multiple separated by <code className="font-mono">;</code> (e.g. <code className="font-mono">examDate:2025-03-15;appDate:2025-01-01:2025-01-31</code>)</p>
                 </div>

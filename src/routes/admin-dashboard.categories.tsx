@@ -40,6 +40,7 @@ function CategoriesPage() {
     return {
       ...c,
       description: detail?.description ?? c.description,
+      order: detail?.order ?? c.order,
       _descriptionLoading: detailQueries[i]?.isLoading && detail === null,
     };
   });
@@ -48,13 +49,15 @@ function CategoriesPage() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", description: "", image: "" });
+  const [form, setForm] = useState({ name: "", description: "", image: "", order: 0 });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editLoadingId, setEditLoadingId] = useState<string | null>(null);
 
-  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(enrichedCategories, ["name", "description"]);
+  const sortedCategories = [...enrichedCategories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", description: "", image: "" }); setOpen(true); };
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(sortedCategories, ["name", "description"]);
+
+  const openCreate = () => { setEditing(null); setForm({ name: "", description: "", image: "", order: 0 }); setOpen(true); };
 
   // Never trust the trimmed list row for description — always fetch the
   // full record fresh so the modal doesn't briefly (or permanently) show an
@@ -65,7 +68,7 @@ function CategoriesPage() {
       const res = await categoryService.getCategoryById(c._id);
       const full = unwrapItem<any>(res) ?? c;
       setEditing(full);
-      setForm({ name: full.name ?? "", description: full.description ?? "", image: full.image ?? "" });
+      setForm({ name: full.name ?? "", description: full.description ?? "", image: full.image ?? "", order: full.order ?? 0 });
       setOpen(true);
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Could not load category details");
@@ -113,12 +116,13 @@ function CategoriesPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Order</TableHead><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={3} />}
+          {isLoading && <LoadingRows colSpan={4} />}
           {!isLoading && paginated.map((c) => (
             <TableRow key={c._id}>
+              <TableCell>{c.order ?? 0}</TableCell>
               <TableCell>{c.name}</TableCell>
               <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
               <TableCell className="text-right space-x-2">
@@ -137,7 +141,7 @@ function CategoriesPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && categories.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
+          {!isLoading && categories.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -149,6 +153,15 @@ function CategoriesPage() {
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div><Label>Image URL</Label><Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} /></div>
+            <div>
+              <Label>Order</Label>
+              <Input
+                type="number"
+                value={form.order}
+                onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Lower numbers appear first (e.g. 1–12).</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

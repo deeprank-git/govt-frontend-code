@@ -26,6 +26,7 @@ export type TestSeriesInput = {
   notificationPdf?: File;
   applyLink?: string;
   officialWebsite?: string;
+  order?: number;
 };
 
 // Create/update are multipart/form-data (see Testopy-Backend-Workflow-and-Status.md

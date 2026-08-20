@@ -93,7 +93,7 @@ function HomePage() {
     queryKey: ["home-categories"],
     queryFn: () => categoryService.getCategories(),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const categories = [...unwrapList<any>(categoriesRes)].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   // The backend already excludes inactive categories from this endpoint, so
   // membership in this set is also how unpublished categories cascade to
   // hide their test series below, with no extra category-level flag needed.
@@ -103,9 +103,9 @@ function HomePage() {
     queryKey: ["home-series"],
     queryFn: () => testSeriesService.getTestSeries({ isPublished: true, isActive: true }),
   });
-  const series = unwrapList<any>(seriesRes).filter(
-    (s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category),
-  );
+  const series = unwrapList<any>(seriesRes)
+    .filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const resolvedCat = activeCat ?? categories[0]?._id ?? null;
 

@@ -26,7 +26,10 @@ function OverviewPage() {
     queryKey: ["ov-categories"],
     queryFn: () => categoryService.getCategories(),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const categories = useMemo(
+    () => [...unwrapList<any>(categoriesRes)].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [categoriesRes],
+  );
   // The backend already excludes inactive categories from this endpoint, so
   // membership in this set is also how unpublished categories cascade to
   // hide their test series/tests below, with no extra category-level flag needed.
@@ -38,7 +41,10 @@ function OverviewPage() {
   });
   const allSeries = unwrapList<any>(seriesRes);
   const series = useMemo(
-    () => allSeries.filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category)),
+    () =>
+      allSeries
+        .filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [allSeries, activeCategoryIds],
   );
 
