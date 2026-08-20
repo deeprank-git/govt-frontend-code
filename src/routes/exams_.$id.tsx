@@ -303,7 +303,7 @@ function TestSeriesDetailPage() {
                   </div>
                   {/* Same dummy info sheet for every exam until real per-series documents exist */}
                   <Button size="lg" className="h-auto py-2.5 px-5" asChild>
-                    <a href="/docs/ssc-exam-info.pdf" download={`${displayName}-info.pdf`}>
+                    <a href={notificationPdfUrl ?? "#"} target="_blank" rel="noopener noreferrer">
                       <Download className="h-5 w-5 mr-2 shrink-0" />
                       <span className="text-left leading-tight">
                         <span className="block text-sm font-semibold">Download All Details</span>
