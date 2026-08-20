@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutGrid, ClipboardList, FileText,
@@ -95,6 +95,9 @@ function TestSeriesDetailPage() {
   const { name, category, image, description } = Route.useSearch();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<(typeof NAV_ITEMS)[number]["id"]>("overview");
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [isDescriptionLong, setIsDescriptionLong] = useState(false);
+  const descriptionRef = useRef<HTMLParagraphElement>(null);
   const { setOpen } = useSidebar();
 
   // Collapse the main dashboard sidebar to icon-only while this page is
@@ -138,6 +141,30 @@ function TestSeriesDetailPage() {
   const rawImage = series?.image ?? image;
   const logoUrl = rawImage ? mediaService.resolveMediaUrl(rawImage) : undefined;
   const displayDescription = series?.description ?? description;
+
+  // Measures actual overflow rather than guessing from character count,
+  // since line count depends on container width/font, not text length.
+  useLayoutEffect(() => {
+    const el = descriptionRef.current;
+    if (!el) return;
+
+    // Always measure with the clamp forced on so expanding doesn't change
+    // the result (comparing unclamped height to itself would always match).
+    const measure = () => {
+      const wasClamped = el.classList.contains("line-clamp-2");
+      if (!wasClamped) el.classList.add("line-clamp-2");
+      setIsDescriptionLong(el.scrollHeight > el.clientHeight + 1);
+      if (!wasClamped) el.classList.remove("line-clamp-2");
+    };
+
+    // Re-measure on layout/width changes (container width isn't final on
+    // first paint, and web fonts loading later can shift line count too).
+    measure();
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(el);
+    document.fonts?.ready.then(measure).catch(() => {});
+    return () => resizeObserver.disconnect();
+  }, [displayDescription]);
   const notificationPdfUrl = series?.notificationPdf
     ? mediaService.resolveMediaUrl(series.notificationPdf)
     : undefined;
@@ -235,10 +262,22 @@ function TestSeriesDetailPage() {
                       Graduate Level
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1.5">
+                  <p
+                    ref={descriptionRef}
+                    className={cn("text-sm text-muted-foreground mt-1.5", !descriptionExpanded && "line-clamp-2")}
+                  >
                     {displayDescription ??
                       "Staff Selection Commission Combined Graduate Level Examination is conducted to recruit candidates for various Group B and Group C posts."}
                   </p>
+                  {isDescriptionLong && (
+                    <button
+                      type="button"
+                      onClick={() => setDescriptionExpanded((v) => !v)}
+                      className="text-xs font-semibold text-primary hover:underline mt-1"
+                    >
+                      {descriptionExpanded ? "Read Less" : "Read More"}
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-2 w-full sm:w-auto sm:shrink-0">
