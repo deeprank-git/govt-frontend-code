@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { unwrapList } from "@/lib/api-unwrap";
+import { ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
+import { unwrapList, unwrapItem } from "@/lib/api-unwrap";
 import * as categoryService from "@/services/categoryService";
 import { LoadingRows } from "@/components/admin/LoadingRows";
 import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
@@ -21,24 +22,69 @@ export const Route = createFileRoute("/admin-dashboard/categories")({
 
 function CategoriesPage() {
   const { data: categoriesRes, isLoading } = useQuery({ queryKey: ["ad-categories"], queryFn: () => categoryService.getCategories() });
-  const categories = unwrapList<any>(categoriesRes);
+  const categories = unwrapList<any>(categoriesRes).filter((c: any) => c.isActive !== false);
+
+  // GET /api/categories (the list above) intentionally omits `description` —
+  // only GET /api/categories/:id returns the full doc. Fan out one detail
+  // fetch per row so the table and edit modal show the real saved text
+  // instead of always "—"/empty.
+  const detailQueries = useQueries({
+    queries: categories.map((c) => ({
+      queryKey: ["ad-category-detail", c._id],
+      queryFn: () => categoryService.getCategoryById(c._id),
+      enabled: !!c._id,
+    })),
+  });
+  const enrichedCategories = categories.map((c, i) => {
+    const detail = unwrapItem<any>(detailQueries[i]?.data);
+    return {
+      ...c,
+      description: detail?.description ?? c.description,
+      order: detail?.order ?? c.order,
+      _descriptionLoading: detailQueries[i]?.isLoading && detail === null,
+    };
+  });
 
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", description: "", image: "" });
+  const [form, setForm] = useState({ name: "", description: "", image: "", order: 0 });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editLoadingId, setEditLoadingId] = useState<string | null>(null);
 
-  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(categories, ["name", "description"]);
+  const sortedCategories = [...enrichedCategories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", description: "", image: "" }); setOpen(true); };
-  const openEdit = (c: any) => { setEditing(c); setForm({ name: c.name ?? "", description: c.description ?? "", image: c.image ?? "" }); setOpen(true); };
+  const { search, setSearch, paginated, page, setPage, totalPages } = usePaginatedSearch(sortedCategories, ["name", "description"]);
+
+  const openCreate = () => { setEditing(null); setForm({ name: "", description: "", image: "", order: 0 }); setOpen(true); };
+
+  // Never trust the trimmed list row for description — always fetch the
+  // full record fresh so the modal doesn't briefly (or permanently) show an
+  // empty field for a category that does have a saved description.
+  const openEdit = async (c: any) => {
+    setEditLoadingId(c._id);
+    try {
+      const res = await categoryService.getCategoryById(c._id);
+      const full = unwrapItem<any>(res) ?? c;
+      setEditing(full);
+      setForm({ name: full.name ?? "", description: full.description ?? "", image: full.image ?? "", order: full.order ?? 0 });
+      setOpen(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Could not load category details");
+    } finally {
+      setEditLoadingId(null);
+    }
+  };
 
   const saveMut = useMutation({
     mutationFn: () => (editing ? categoryService.updateCategory(editing._id, form) : categoryService.createCategory(form)),
     onSuccess: () => {
       toast.success(editing ? "Category updated" : "Category created");
       qc.invalidateQueries({ queryKey: ["ad-categories"] });
+      // Partial key match invalidates every ["ad-category-detail", id] entry,
+      // so both the table and any reopened edit modal refetch fresh data.
+      qc.invalidateQueries({ queryKey: ["ad-category-detail"] });
       setOpen(false);
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not save category"),
@@ -54,15 +100,40 @@ function CategoriesPage() {
     onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not delete category"),
   });
 
+  // Moving one row re-numbers the whole list sequentially (1, 2, 3, …) so
+  // there's never a manual "shuffle the other 11 orders" step — only the
+  // rows whose order actually changed get PATCHed.
+  const reorderMut = useMutation({
+    mutationFn: async (nextList: any[]) => {
+      const changed = nextList
+        .map((c, i) => ({ id: c._id, order: i + 1, prevOrder: c.order ?? 0 }))
+        .filter((c) => c.order !== c.prevOrder);
+      await Promise.all(changed.map((c) => categoryService.updateCategory(c.id, { order: c.order })));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ad-categories"] });
+      qc.invalidateQueries({ queryKey: ["ad-category-detail"] });
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? "Could not reorder categories"),
+  });
+
+  const moveCategory = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= sortedCategories.length) return;
+    const next = [...sortedCategories];
+    [next[index], next[target]] = [next[target], next[index]];
+    reorderMut.mutate(next);
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold">Categories</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Categories</h2>
         <Button size="sm" onClick={openCreate}>New</Button>
       </div>
       <div className="mb-2">
         <Input
-          placeholder="Search categories…"
+          placeholder="Search categories"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
@@ -70,21 +141,60 @@ function CategoriesPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Name</TableHead><TableHead>Slug</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Order</TableHead><TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
           {isLoading && <LoadingRows colSpan={4} />}
-          {!isLoading && paginated.map((c) => (
-            <TableRow key={c._id}>
-              <TableCell>{c.name}</TableCell>
-              <TableCell>{c.slug}</TableCell>
-              <TableCell className="max-w-xs truncate">{c.description || "—"}</TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button size="sm" variant="outline" onClick={() => openEdit(c)}>Edit</Button>
-                <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleteMut.isPending}>Delete</Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {!isLoading && paginated.map((c) => {
+            const sortedIndex = sortedCategories.findIndex((x) => x._id === c._id);
+            return (
+              <TableRow key={c._id}>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <span className="tabular-nums w-5">{c.order ?? 0}</span>
+                    <div className="flex flex-col">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        disabled={reorderMut.isPending || sortedIndex <= 0 || !!search}
+                        title={search ? "Clear search to reorder" : "Move up"}
+                        onClick={() => moveCategory(sortedIndex, -1)}
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        disabled={reorderMut.isPending || sortedIndex >= sortedCategories.length - 1 || !!search}
+                        title={search ? "Clear search to reorder" : "Move down"}
+                        onClick={() => moveCategory(sortedIndex, 1)}
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>{c.name}</TableCell>
+                <TableCell className="max-w-xs truncate">{c._descriptionLoading ? "…" : (c.description || "—")}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-primary gap-1"
+                    onClick={() => navigate({ to: "/admin-dashboard/test-series", search: { categoryId: c._id, categoryName: c.name } as any })}
+                  >
+                    Test Series <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(c)} disabled={editLoadingId === c._id}>
+                    {editLoadingId === c._id ? "Loading…" : "Edit"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setDeleteTarget(c._id)} disabled={deleteMut.isPending}>Delete</Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
           {!isLoading && categories.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No categories yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
@@ -97,6 +207,15 @@ function CategoriesPage() {
             <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div><Label>Image URL</Label><Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} /></div>
+            <div>
+              <Label>Order</Label>
+              <Input
+                type="number"
+                value={form.order}
+                onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Lower numbers appear first (e.g. 1–12).</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

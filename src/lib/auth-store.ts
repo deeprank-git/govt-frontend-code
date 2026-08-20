@@ -6,6 +6,9 @@ export type AuthUser = {
   email: string;
   role: Role;
   isActive: boolean;
+  mobile?: string;
+  username?: string;
+  profilePicture?: string;
 };
 
 const TOKEN_KEY = "gp_token";

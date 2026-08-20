@@ -1,6 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Papa from "papaparse";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -382,6 +383,8 @@ function TestsTab({ tests, categories, series }: { tests: any[]; categories: any
 
 // ---------------- Questions ----------------
 
+const OPTION_LETTERS = "ABCDE";
+
 function QuestionsTab({ tests }: { tests: any[] }) {
   const qc = useQueryClient();
   const [testId, setTestId] = useState<string>(tests[0]?._id ?? "");
@@ -439,8 +442,31 @@ function QuestionsTab({ tests }: { tests: any[] }) {
   const bulkMut = useMutation({
     mutationFn: () => {
       const parsed = JSON.parse(bulkText);
-      const withTest = (Array.isArray(parsed) ? parsed : []).map((q: any) => ({ ...q, test: testId }));
-      return questionService.bulkCreateQuestions(withTest);
+      const rows = (Array.isArray(parsed) ? parsed : []).map((q: any) => ({
+        test: testId,
+        questionText: q.questionText ?? "",
+        option1: q.options?.[0]?.text ?? "",
+        option2: q.options?.[1]?.text ?? "",
+        option3: q.options?.[2]?.text ?? "",
+        option4: q.options?.[3]?.text ?? "",
+        // Optional 5th option — banking-style exams (e.g. IBPS) use 5 options.
+        option5: q.options?.[4]?.text ?? "",
+        // JSON body used a 0-based correctAnswer; the real bulk CSV endpoint expects 1-based.
+        correctAnswer: Number(q.correctAnswer) + 1,
+        marks: q.marks ?? 1,
+        explanation: q.explanation ?? "",
+        order: q.order ?? "",
+      }));
+      const hasOption5 = rows.some((r) => r.option5 && r.option5.trim());
+      const csvText = Papa.unparse(rows, {
+        columns: [
+          "test", "questionText", "option1", "option2", "option3", "option4",
+          ...(hasOption5 ? ["option5"] : []),
+          "correctAnswer", "marks", "explanation", "order",
+        ],
+      });
+      const blob = new Blob([csvText], { type: "text/csv" });
+      return questionService.bulkCreateQuestions(blob, "questions-bulk-upload.csv");
     },
     onSuccess: (res: any) => {
       toast.success(res?.message ?? "Questions uploaded");
@@ -475,7 +501,7 @@ function QuestionsTab({ tests }: { tests: any[] }) {
           {!isLoading && questions.map((q) => (
             <TableRow key={q._id}>
               <TableCell className="max-w-md truncate">{q.questionText}</TableCell>
-              <TableCell>{"ABCD"[q.correctAnswer] ?? "—"}</TableCell>
+              <TableCell>{OPTION_LETTERS[q.correctAnswer] ?? "—"}</TableCell>
               <TableCell>{q.marks}</TableCell>
               <TableCell className="text-right space-x-1">
                 <Button size="icon" variant="ghost" onClick={() => openEdit(q)}><Pencil className="h-4 w-4" /></Button>
@@ -494,15 +520,35 @@ function QuestionsTab({ tests }: { tests: any[] }) {
             <div><Label>Question Text</Label><Textarea value={form.questionText} onChange={(e) => setForm({ ...form, questionText: e.target.value })} /></div>
             {form.options.map((opt, i) => (
               <div key={i}>
-                <Label>Option {"ABCD"[i]}</Label>
-                <Input value={opt} onChange={(e) => { const next = [...form.options]; next[i] = e.target.value; setForm({ ...form, options: next }); }} />
+                <Label>Option {OPTION_LETTERS[i]}</Label>
+                <div className="flex items-center gap-2">
+                  <Input value={opt} onChange={(e) => { const next = [...form.options]; next[i] = e.target.value; setForm({ ...form, options: next }); }} />
+                  {i === 4 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const next = form.options.slice(0, 4);
+                        setForm({ ...form, options: next, correctAnswer: form.correctAnswer > 3 ? 0 : form.correctAnswer });
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
+            {form.options.length < 5 && (
+              <Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, options: [...form.options, ""] })}>
+                + Add Option {OPTION_LETTERS[form.options.length]}
+              </Button>
+            )}
             <div>
               <Label>Correct Answer</Label>
               <Select value={String(form.correctAnswer)} onValueChange={(v) => setForm({ ...form, correctAnswer: Number(v) })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{form.options.map((_, i) => <SelectItem key={i} value={String(i)}>{"ABCD"[i]}</SelectItem>)}</SelectContent>
+                <SelectContent>{form.options.map((_, i) => <SelectItem key={i} value={String(i)}>{OPTION_LETTERS[i]}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Explanation (optional)</Label><Textarea value={form.explanation} onChange={(e) => setForm({ ...form, explanation: e.target.value })} /></div>
@@ -522,7 +568,7 @@ function QuestionsTab({ tests }: { tests: any[] }) {
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Bulk Upload Questions</DialogTitle></DialogHeader>
           <p className="text-xs text-muted-foreground">
-            Paste a JSON array. Each item needs: questionText, options (array of 4 {"{ text }"}), correctAnswer (0-3), marks, negativeMarks.
+            Paste a JSON array. Each item needs: questionText, options (array of 4 or 5 {"{ text }"}), correctAnswer (0-3, or 0-4 for 5 options), marks, negativeMarks.
           </p>
           <Textarea rows={10} className="font-mono text-xs" value={bulkText} onChange={(e) => setBulkText(e.target.value)} placeholder='[{"questionText":"2+2=?","options":[{"text":"3"},{"text":"4"},{"text":"5"},{"text":"6"}],"correctAnswer":1,"marks":1,"negativeMarks":0}]' />
           <DialogFooter>

@@ -1,88 +1,97 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { ClipboardList, FileText, BookOpenCheck, TrendingUp, Database, RefreshCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ClipboardList, Database, Search, ChevronRight, ArrowLeft, FileText, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import * as testService from "@/services/testService";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExamIcon } from "@/components/site/ExamIcon";
 import * as categoryService from "@/services/categoryService";
-import * as testAttemptService from "@/services/testAttemptService";
+import * as testService from "@/services/testService";
+import * as testSeriesService from "@/services/testSeriesService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isPublishedVisible } from "@/lib/publish";
 
 export const Route = createFileRoute("/_authenticated/dashboard/mock-tests")({
   component: MockTests,
 });
 
-const TABS = [
-  { value: "all", label: "All Tests" },
-  { value: "free", label: "Free Tests" },
-  { value: "paid", label: "Paid Tests" },
-];
-
-const PAGE_SIZE = 6;
-
-const ICONS = [
-  { bg: "bg-primary/10", fg: "text-primary", icon: FileText },
-  { bg: "bg-warning/10", fg: "text-warning", icon: BookOpenCheck },
-  { bg: "bg-success/10", fg: "text-success", icon: ClipboardList },
-  { bg: "bg-info/10", fg: "text-info", icon: TrendingUp },
-  { bg: "bg-purple-100", fg: "text-purple-600", icon: Database },
-];
-
 function MockTests() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("all");
-  const [category, setCategory] = useState("all");
-  const [duration, setDuration] = useState("all");
-  const [page, setPage] = useState(1);
-  const [starting, setStarting] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [catSearch, setCatSearch] = useState("");
+  const [activeSeriesId, setActiveSeriesId] = useState<string | null>(null);
 
-  const { data: categoriesRes } = useQuery({
+  const { data: categoriesRes, isLoading: loadingCats } = useQuery({
     queryKey: ["mt-categories"],
     queryFn: () => categoryService.getCategories(),
   });
   const categories = unwrapList<any>(categoriesRes);
+  // The backend already excludes inactive categories from this endpoint, so
+  // membership in this set is also how unpublished categories cascade to
+  // hide their test series/tests below, with no extra category-level flag needed.
+  const activeCategoryIds = useMemo(() => new Set(categories.map((c) => c._id)), [categories]);
+  // Default to the first category once loaded, same as the Overview page —
+  // there's no "All" option here either.
+  const resolvedCategory = activeCategory ?? categories[0]?._id ?? null;
+  const activeCategoryName = categories.find((c) => c._id === resolvedCategory)?.name ?? "";
 
-  const { data: testsRes, isLoading } = useQuery({
+  const filteredCategories = useMemo(() => {
+    if (!catSearch.trim()) return categories;
+    const q = catSearch.trim().toLowerCase();
+    return categories.filter((c) => String(c.name ?? "").toLowerCase().includes(q));
+  }, [categories, catSearch]);
+
+  const { data: seriesRes, isLoading: loadingSeries } = useQuery({
+    queryKey: ["mt-series"],
+    queryFn: () => testSeriesService.getTestSeries({ isPublished: true, isActive: true }),
+  });
+  const allSeries = unwrapList<any>(seriesRes);
+  const series = useMemo(
+    () => allSeries.filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category)),
+    [allSeries, activeCategoryIds],
+  );
+  const seriesInCategory = useMemo(
+    () => series.filter((s) => (s.category?._id ?? s.category) === resolvedCategory),
+    [series, resolvedCategory],
+  );
+  const activeSeries = series.find((s) => s._id === activeSeriesId) ?? null;
+  const seriesLogoUrl = activeSeries?.image ? mediaService.resolveMediaUrl(activeSeries.image) : undefined;
+
+  const visibleSeriesIds = useMemo(() => new Set(series.map((s) => s._id)), [series]);
+
+  const { data: testsRes, isLoading: loadingTests } = useQuery({
     queryKey: ["all-mock-tests"],
-    queryFn: () => testService.getTests(),
+    queryFn: () => testService.getTests({ paperType: "mock", isPublished: true, isActive: true }),
   });
-  const tests = unwrapList<any>(testsRes);
+  const allTests = unwrapList<any>(testsRes);
+  const tests = useMemo(
+    () => allTests.filter((t) => isPublishedVisible(t) && visibleSeriesIds.has(typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries)),
+    [allTests, visibleSeriesIds],
+  );
 
-  const filtered = tests.filter((t) => {
-    if (tab === "free" && t.isPaid) return false;
-    if (tab === "paid" && !t.isPaid) return false;
-    if (category !== "all" && t.category !== category) return false;
-    if (duration === "short" && (t.duration ?? 0) > 60) return false;
-    if (duration === "medium" && ((t.duration ?? 0) <= 60 || (t.duration ?? 0) > 120)) return false;
-    if (duration === "long" && (t.duration ?? 0) <= 120) return false;
-    return true;
+  const { data: seriesTestsRes, isLoading: loadingSeriesTests } = useQuery({
+    queryKey: ["mt-series-tests", activeSeriesId],
+    queryFn: () => testService.getTests({ testSeries: activeSeriesId!, paperType: "mock", isPublished: true, isActive: true }),
+    enabled: !!activeSeriesId,
   });
+  const allSeriesTests = unwrapList<any>(seriesTestsRes);
+  // activeSeries is only ever set from an already-visible series card, but
+  // re-check here too in case activeSeriesId was set before this series lost
+  // its published/active status (e.g. an admin unpublished it moments ago).
+  const seriesTests = useMemo(
+    () => (activeSeries ? allSeriesTests.filter((t) => isPublishedVisible(t)) : []),
+    [allSeriesTests, activeSeries],
+  );
 
-  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const goToInstructions = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
-  const start = async (testId: string) => {
-    setStarting(testId);
-    try {
-      await testAttemptService.startTest(testId);
-      navigate({ to: "/test/$testId", params: { testId } });
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Could not start test");
-    } finally {
-      setStarting(null);
-    }
+  const selectCategory = (id: string) => {
+    setActiveCategory(id);
+    setActiveSeriesId(null);
   };
 
   return (
@@ -90,7 +99,7 @@ function MockTests() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
-            Mock Tests <ClipboardList className="h-5 w-5 text-primary" />
+            <span className="text-gradient-primary">Mock Tests</span> <ClipboardList className="h-5 w-5 text-primary" />
           </h1>
           <p className="text-sm text-muted-foreground">
             Take mock tests to evaluate your preparation and improve your performance.
@@ -98,133 +107,145 @@ function MockTests() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
           <Stat icon={ClipboardList} value={`${tests.length}`} label="Mock Tests Available" tone="primary" />
-          <Stat icon={Database} value={`${categories.length}`} label="Categories" tone="success" />
+          <Stat icon={Database} value={`${series.length}`} label="Exams" tone="success" />
         </div>
       </div>
 
-      <Tabs
-        value={tab}
-        onValueChange={(v) => {
-          setTab(v);
-          setPage(1);
-        }}
-      >
-        <TabsList className="bg-transparent p-0 h-auto flex flex-wrap gap-1 justify-start border-b border-border w-full rounded-none">
-          {TABS.map((t) => (
-            <TabsTrigger
-              key={t.value}
-              value={t.value}
-              className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      <Card className="p-4">
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground">Select Category</label>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((c) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4 items-start">
+        {/* Categories */}
+        <Card className="p-3 h-fit">
+          <h3 className="font-display font-semibold mb-2 text-sm px-1">Exam Categories</h3>
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={catSearch}
+              onChange={(e) => setCatSearch(e.target.value)}
+              placeholder="Search categories…"
+              className="pl-8 h-8 text-sm"
+            />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Duration</label>
-            <Select value={duration} onValueChange={(v) => { setDuration(v); setPage(1); }}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Durations</SelectItem>
-                <SelectItem value="short">≤ 60 min</SelectItem>
-                <SelectItem value="medium">60-120 min</SelectItem>
-                <SelectItem value="long">≥ 120 min</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end">
-            <Button variant="outline" className="w-full bg-primary/5 border-primary/30 text-primary" onClick={() => { setCategory("all"); setDuration("all"); }}>
-              <RefreshCw className="h-4 w-4 mr-1" /> Reset Filters
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="font-display font-bold">All Mock Tests ({filtered.length})</h2>
-        </div>
-
-        <div className="hidden lg:grid grid-cols-[1fr_90px_70px_80px_140px] gap-3 px-5 py-2.5 text-xs font-medium text-muted-foreground border-b border-border bg-muted/30">
-          <div>Test Name</div>
-          <div className="text-center">Questions</div>
-          <div className="text-center">Marks</div>
-          <div className="text-center">Duration</div>
-          <div className="text-center">Action</div>
-        </div>
-
-        <div className="divide-y divide-border">
-          {isLoading && <div className="px-5 py-10 text-center text-sm text-muted-foreground">Loading tests…</div>}
-          {!isLoading && pageItems.length === 0 && (
-            <div className="px-5 py-10 text-center text-sm text-muted-foreground">No tests match your filters.</div>
+          {loadingCats ? (
+            <div className="space-y-1.5">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 rounded-md" />)}
+            </div>
+          ) : filteredCategories.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-1 py-2">No categories match your search.</p>
+          ) : (
+            filteredCategories.map((c) => {
+              const count = series.filter((s) => (s.category?._id ?? s.category) === c._id).length;
+              const active = resolvedCategory === c._id;
+              return (
+                <button
+                  key={c._id}
+                  onClick={() => selectCategory(c._id)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between mt-0.5",
+                    active ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted",
+                  )}
+                >
+                  {c.name}
+                  <span className="text-xs text-muted-foreground">{count}</span>
+                </button>
+              );
+            })
           )}
-          {pageItems.map((t: any, i: number) => {
-            const icon = ICONS[i % ICONS.length];
-            const Icon = icon.icon;
-            return (
-              <div key={t._id} className="grid lg:grid-cols-[1fr_90px_70px_80px_140px] gap-3 px-5 py-4 items-center hover:bg-muted/30">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className={cn("h-10 w-10 rounded-lg grid place-items-center shrink-0", icon.bg)}
-                  >
-                    <Icon className={cn("h-5 w-5", icon.fg)} />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="font-semibold text-sm truncate">{t.title}</div>
-                      <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30 text-primary">
-                        {t.isPaid ? "Paid" : "Free"}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">{t.description ?? "Mock test"}</div>
-                  </div>
-                </div>
-                <div className="text-center"><div className="font-semibold text-sm">{t.totalQuestions}</div><div className="text-[10px] text-muted-foreground">Questions</div></div>
-                <div className="text-center"><div className="font-semibold text-sm">{t.totalMarks}</div><div className="text-[10px] text-muted-foreground">Marks</div></div>
-                <div className="text-center"><div className="font-semibold text-sm">{t.duration}</div><div className="text-[10px] text-muted-foreground">Mins</div></div>
-                <div className="flex items-center gap-2 justify-center">
-                  <Button size="sm" onClick={() => start(t._id)} disabled={starting === t._id}>
-                    {starting === t._id ? "Starting…" : "Start Test"}
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        </Card>
 
-        {filtered.length > 0 && (
-          <div className="px-5 py-4 border-t border-border flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {(page - 1) * PAGE_SIZE + 1} to {Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} tests
+        {/* Test series for the selected category, or tests inside the selected series */}
+        {!activeSeriesId ? (
+          <Card className="p-4 sm:p-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+              <h2 className="font-display font-bold text-lg">
+                {seriesInCategory.length} Test Series{activeCategoryName ? ` in ${activeCategoryName}` : ""}
+              </h2>
             </div>
-            <div className="flex items-center gap-1">
-              <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>‹</Button>
-              {Array.from({ length: Math.min(pages, 4) }).map((_, i) => (
-                <Button key={i} size="sm" variant={page === i + 1 ? "default" : "outline"} onClick={() => setPage(i + 1)} className="w-8">{i + 1}</Button>
-              ))}
-              {pages > 4 && <>
-                <span className="px-2 text-muted-foreground">…</span>
-                <Button size="sm" variant={page === pages ? "default" : "outline"} onClick={() => setPage(pages)} className="w-8">{pages}</Button>
-              </>}
-              <Button size="sm" variant="outline" disabled={page === pages} onClick={() => setPage(page + 1)}>›</Button>
-            </div>
-          </div>
+
+            {loadingSeries ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+              </div>
+            ) : seriesInCategory.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No test series available in this category yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {seriesInCategory.map((s) => {
+                  const logoUrl = s.image ? mediaService.resolveMediaUrl(s.image) : undefined;
+                  return (
+                    <button
+                      key={s._id}
+                      onClick={() => setActiveSeriesId(s._id)}
+                      className="group text-left rounded-lg border border-border p-3 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition"
+                    >
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <ExamIcon name={s.name ?? "?"} />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{s.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {tests.filter((t) => (typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries) === s._id).length} Tests
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        ) : (
+          <Card className="p-4 sm:p-5">
+            <Button variant="ghost" size="sm" className="-ml-2 mb-3" onClick={() => setActiveSeriesId(null)}>
+              <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Test Series
+            </Button>
+            <h2 className="font-display font-bold text-lg mb-4">
+              {activeSeries?.name ?? "Test Series"} — Mock Tests
+            </h2>
+
+            {loadingSeriesTests || loadingTests ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
+              </div>
+            ) : seriesTests.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No mock tests available in this series yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {seriesTests.map((t) => (
+                  <div key={t._id} className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow bg-card">
+                    <div className="flex items-start gap-3">
+                      {seriesLogoUrl ? (
+                        <img src={seriesLogoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 grid place-items-center shrink-0">
+                          <ClipboardList className="h-5 w-5 text-blue-600" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm leading-snug">{t.title}</div>
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">{t.description ?? "Mock test"}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        <span>{t.totalQuestions} Questions &nbsp;·&nbsp; {t.totalMarks} Marks</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>{t.duration} Minutes</span>
+                      </div>
+                    </div>
+                    <Button className="w-full" onClick={() => goToInstructions(t._id)}>
+                      Start Test →
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
@@ -247,7 +268,7 @@ function Stat({
     purple: "bg-purple-100 text-purple-600",
   };
   return (
-    <Card className="px-3 py-2.5 flex items-center gap-2.5 min-w-[160px]">
+    <Card className="px-3 py-2.5 flex items-center gap-2.5 min-w-0">
       <span className={cn("h-9 w-9 rounded-lg grid place-items-center shrink-0", toneMap[tone])}>
         <Icon className="h-4 w-4" />
       </span>

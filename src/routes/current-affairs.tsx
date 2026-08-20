@@ -1,172 +1,246 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Search, Bookmark, ChevronRight, Flame, TrendingUp, LogIn } from "lucide-react";
+import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Newspaper,
+  CalendarDays,
+  FolderOpen,
+  Users,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
+import { TopStoryCard } from "@/components/site/TopStoryCard";
+import { ArticleImage } from "@/components/site/ArticleImage";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import * as currentAffairsService from "@/services/currentAffairsService";
 import { unwrapList } from "@/lib/api-unwrap";
-import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/current-affairs")({
   head: () => ({
     meta: [
-      { title: "Current Affairs — SSC, Banking, UPSC | GovtPrep" },
+      { title: "Current Affairs — SSC, Banking, UPSC | Testopy" },
       { name: "description", content: "Stay updated with the latest current affairs for SSC, Banking, Railways, UPSC, State PSC, Defence and other government exams." },
-      { property: "og:title", content: "Latest Current Affairs — GovtPrep" },
-      { property: "og:description", content: "Daily news, monthly PDFs, quizzes and trending topics for government exam aspirants." },
+      { property: "og:title", content: "Latest Current Affairs — Testopy" },
+      { property: "og:description", content: "Daily news, categories and trending topics for government exam aspirants." },
     ],
   }),
-  component: CAPage,
+  component: CADashboard,
 });
 
-const TABS = ["All", "National", "International", "Economy", "Science & Tech", "Sports", "Awards", "Defence"];
+const CAT_TINT: Record<string, { bg: string; text: string }> = {
+  Polity: { bg: "bg-violet-100", text: "text-violet-700" },
+  Economy: { bg: "bg-amber-100", text: "text-amber-700" },
+  "Indian Economy": { bg: "bg-orange-100", text: "text-orange-700" },
+  "International Affairs": { bg: "bg-blue-100", text: "text-blue-700" },
+  International: { bg: "bg-blue-100", text: "text-blue-700" },
+  "Science & Tech": { bg: "bg-cyan-100", text: "text-cyan-700" },
+  Environment: { bg: "bg-emerald-100", text: "text-emerald-700" },
+  Sports: { bg: "bg-rose-100", text: "text-rose-700" },
+  Awards: { bg: "bg-pink-100", text: "text-pink-700" },
+  Reports: { bg: "bg-indigo-100", text: "text-indigo-700" },
+  National: { bg: "bg-orange-100", text: "text-orange-700" },
+};
 
-function CAPage() {
-  const { user } = useAuth();
-  const [tab, setTab] = useState("All");
-  const [q, setQ] = useState("");
+function tintFor(cat: string) {
+  return CAT_TINT[cat] ?? { bg: "bg-primary/10", text: "text-primary" };
+}
 
+function CADashboard() {
+  const [category, setCategory] = useState("All");
+  const [sort, setSort] = useState<"latest" | "oldest">("latest");
+  const [topIndex, setTopIndex] = useState(0);
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  const [showAllNews, setShowAllNews] = useState(false);
+
+  // Public endpoint as of 2026-07-28 — no auth needed, fetched for every visitor.
   const { data: caRes } = useQuery({
-    queryKey: ["current-affairs", tab, q],
-    queryFn: () => currentAffairsService.getCurrentAffairs({ category: tab === "All" ? undefined : tab, q: q || undefined, limit: 50 }),
-    enabled: !!user,
+    queryKey: ["public-current-affairs"],
+    queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 100 }),
   });
-  const articles = unwrapList<any>(caRes);
+  const ca = unwrapList<any>(caRes);
+  const bookmarkSet = new Set(bookmarkedIds);
 
-  const top = articles.slice(0, 5);
-  const rest = articles.slice(5);
+  const toggleBookmark = {
+    mutate: (id: string) => setBookmarkedIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id])),
+  };
+
+  // Backend `category` is free text, no fixed enum — derive the tab list
+  // from whatever's actually in the data instead of a hardcoded list.
+  const CATEGORIES = useMemo(() => ["All", ...Array.from(new Set(ca.map((a: any) => a.category)))], [ca]);
+
+  const filtered = useMemo(() => {
+    let list = ca;
+    if (category !== "All") list = list.filter((a: any) => a.category === category);
+    list = [...list].sort((a: any, b: any) => {
+      const diff = +new Date(b.date) - +new Date(a.date);
+      return sort === "latest" ? diff : -diff;
+    });
+    return list;
+  }, [ca, category, sort]);
+
+  // No `is_featured` field on the real model — take the most recent items instead.
+  const topStories = useMemo(() => ca.slice(0, 10), [ca]);
+
+  const latest = showAllNews ? filtered : filtered.slice(0, 6);
+
+  const stats = [
+    { value: `${ca.length}+`, label: "News Articles", icon: Newspaper, tint: "bg-blue-100 text-blue-600" },
+    { value: "30", label: "Days Covered", icon: CalendarDays, tint: "bg-emerald-100 text-emerald-600" },
+    { value: String(new Set(ca.map((a: any) => a.category)).size), label: "Topics", icon: FolderOpen, tint: "bg-amber-100 text-amber-600" },
+    { value: "85.7K+", label: "Learners Updated Today", icon: Users, tint: "bg-violet-100 text-violet-600" },
+  ];
+
+  // trending / streak computed here previously — unused now that the
+  // Trending Topics and Streak cards below are commented out.
+  const visibleTop = topStories.slice(topIndex, topIndex + 5);
 
   return (
     <SiteShell>
-      <section className="bg-hero-radial">
-        <div className="container mx-auto px-4 lg:px-6 pt-6 pb-14">
-          <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Current Affairs" }]} />
-          <div className="mt-6 grid lg:grid-cols-[1fr_360px] items-center gap-8">
+      <div className="container mx-auto px-4 lg:px-6 pt-6 pb-16">
+        <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Current Affairs" }]} />
+
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="mt-6 space-y-5">
+          {/* Header + Stats */}
+          <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
             <div>
-              <h1 className="text-3xl md:text-4xl font-display font-extrabold">Current Affairs</h1>
-              <p className="mt-2 text-muted-foreground max-w-xl">
-                Stay updated with the latest current affairs for SSC, Banking, Railway, UPSC, State PSC, Defence and other Government Exams.
-              </p>
-              <form className="mt-5 relative max-w-lg" onSubmit={(e) => e.preventDefault()}>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search current affairs…" className="pl-9 h-11 pr-24 bg-background" />
-                <Button size="sm" className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8">Search</Button>
-              </form>
-            </div>
-            <div className="hidden lg:flex items-center justify-center">
-              <div className="h-44 w-44 rounded-full bg-primary/10 grid place-items-center">
-                <span className="text-6xl">🌐</span>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-display font-extrabold">Current Affairs</h1>
+                <Newspaper className="h-5 w-5 text-primary" />
               </div>
+              <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                Stay updated with the latest current affairs for all government exams.
+              </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="container mx-auto px-4 lg:px-6 py-10">
-        <div className="flex flex-wrap gap-2 mb-6">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "px-4 py-2 rounded-full text-sm border transition",
-                tab === t
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background border-border hover:bg-muted"
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {!user ? (
-          <Card className="p-10 text-center max-w-lg mx-auto">
-            <LogIn className="h-8 w-8 text-primary mx-auto mb-3" />
-            <h3 className="font-display font-bold text-lg">Log in to see today's current affairs</h3>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">
-              Create a free account to read daily current affairs updates.
-            </p>
-            <Button asChild>
-              <Link to="/auth" search={{ mode: "login" } as never}>Login / Sign Up</Link>
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid lg:grid-cols-[1fr_320px] gap-8">
-            <div>
-              <h2 className="font-display font-bold text-xl mb-4">Today's Top News</h2>
-              <div className="space-y-4">
-                {top.map((a) => (
-                  <Card key={a._id} className="p-4 flex flex-col sm:flex-row gap-4 hover:shadow-elevate transition">
-                    <div className="sm:w-44 h-40 sm:h-32 rounded-lg bg-gradient-to-br from-primary/20 via-primary/5 to-secondary grid place-items-center text-3xl shrink-0 overflow-hidden">
-                      {a.image ? <img src={a.image} alt="" className="w-full h-full object-cover" /> : "📰"}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 xl:max-w-3xl xl:flex-1">
+              {stats.map((s) => (
+                <motion.div key={s.label} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                  <Card className="p-3 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+                    <div className={cn("h-11 w-11 rounded-xl grid place-items-center", s.tint)}>
+                      <s.icon className="h-5 w-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Badge className="bg-primary/15 text-primary border-transparent">{a.category}</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(a.date).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                      <h3 className="font-display font-bold text-lg leading-snug">{a.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.summary}</p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <button className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary"><Bookmark className="h-3.5 w-3.5" />Save</button>
-                        <Link to="/current-affairs/$id" params={{ id: a._id }} className="text-xs text-primary hover:underline">Read More →</Link>
-                      </div>
+                    <div className="min-w-0">
+                      <div className="font-display font-extrabold text-lg leading-tight">{s.value}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{s.label}</div>
                     </div>
                   </Card>
-                ))}
-                {top.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
-              </div>
-
-              <h2 className="font-display font-bold text-xl mt-10 mb-4">Latest Updates</h2>
-              <Card className="divide-y divide-border">
-                {rest.map((a) => (
-                  <Link key={a._id} to="/current-affairs/$id" params={{ id: a._id }} className="p-4 flex items-start gap-3 hover:bg-muted/40 transition">
-                    <Badge variant="outline" className="mt-0.5">{a.category}</Badge>
-                    <div className="flex-1">
-                      <div className="font-semibold">{a.title}</div>
-                      <div className="text-xs text-muted-foreground">{new Date(a.date).toLocaleDateString()}</div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </Link>
-                ))}
-                {rest.length === 0 && <div className="p-4 text-sm text-muted-foreground">No more updates.</div>}
-              </Card>
+                </motion.div>
+              ))}
             </div>
+          </div>
 
-            <aside className="space-y-6">
-              <Card className="p-5">
-                <div className="flex items-center gap-2 mb-2"><Flame className="h-5 w-5 text-warning" /><h3 className="font-display font-bold">Current Affairs Streak</h3></div>
-                <div className="text-3xl font-display font-extrabold mt-1">18 Days</div>
-                <p className="text-xs text-muted-foreground">Great going. Keep it up!</p>
-                <div className="mt-4 flex gap-1">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <span key={i} className="h-7 flex-1 rounded-md bg-success/20 grid place-items-center text-success-foreground text-[10px] font-semibold">{["M","T","W","T","F","S","S"][i]}</span>
+          {/* Category tabs */}
+          <Card className="p-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {CATEGORIES.map((c) => {
+                const active = category === c;
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                      active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Main grid */}
+          <div className="space-y-5 min-w-0">
+              {/* Top Stories */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display font-bold flex items-center gap-2">
+                    <span className="h-4 w-1 bg-primary rounded-full" /> Top Stories
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <Button size="icon" variant="outline" className="h-7 w-7" disabled={topIndex === 0} onClick={() => setTopIndex((i) => Math.max(0, i - 1))}>
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="outline" className="h-7 w-7" disabled={topIndex + 5 >= topStories.length} onClick={() => setTopIndex((i) => i + 1)}>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {visibleTop.map((a: any) => (
+                    <TopStoryCard
+                      key={a._id}
+                      article={a}
+                      tint={tintFor(a.category)}
+                      to="/current-affairs/$id"
+                      isBookmarked={bookmarkSet.has(a._id)}
+                      onToggleBookmark={(id) => toggleBookmark.mutate(id)}
+                    />
                   ))}
+                  {visibleTop.length === 0 && (
+                    <div className="col-span-full text-center text-sm text-muted-foreground py-10">No stories yet.</div>
+                  )}
                 </div>
               </Card>
-              <Card className="p-5">
-                <div className="flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-primary" /><h3 className="font-display font-bold">Trending Topics</h3></div>
-                <ul className="space-y-2 text-sm">
-                  {["General Awareness 2024", "Indian Economy", "ISRO Missions", "International Relations", "Climate Change"].map((t) => (
-                    <li key={t} className="flex items-center justify-between">
-                      <span>{t}</span>
-                      <span className="text-xs text-muted-foreground">128 articles</span>
-                    </li>
-                  ))}
-                </ul>
+
+              {/* Latest Updates */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display font-bold flex items-center gap-2">
+                    <span className="h-4 w-1 bg-primary rounded-full" /> Latest Updates
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Sort by:</span>
+                    <Select value={sort} onValueChange={(v: any) => setSort(v)}>
+                      <SelectTrigger className="h-7 w-32 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="latest">Latest First</SelectItem>
+                        <SelectItem value="oldest">Oldest First</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="divide-y divide-border">
+                  {latest.map((a: any) => {
+                    const t = tintFor(a.category);
+                    return (
+                      <motion.div key={a._id} whileHover={{ x: 2 }} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                        <ArticleImage image={a.image} alt={a.title} className="h-14 w-20 rounded-lg" />
+                        <Link to="/current-affairs/$id" params={{ id: a._id }} className="flex-1 min-w-0">
+                          <Badge className={cn("text-[10px] border-transparent mb-1", t.bg, t.text)}>{a.category}</Badge>
+                          <h4 className="text-sm font-semibold leading-snug hover:text-primary">{a.title}</h4>
+                          {a.summary && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.summary}</p>}
+                        </Link>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className="text-[11px] text-muted-foreground">{format(new Date(a.date), "dd MMM yyyy")}</span>
+                          <button onClick={() => toggleBookmark.mutate(a._id)} className="text-muted-foreground hover:text-primary">
+                            <Bookmark className={cn("h-4 w-4", bookmarkSet.has(a._id) && "fill-primary text-primary")} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  {latest.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-10">No updates yet.</div>
+                  )}
+                </div>
+                {filtered.length > latest.length && (
+                  <div className="text-center mt-3 pt-3 border-t border-border">
+                    <button onClick={() => setShowAllNews(true)} className="text-sm text-primary font-medium hover:underline">View All News</button>
+                  </div>
+                )}
               </Card>
-            </aside>
           </div>
-        )}
+        </motion.div>
       </div>
     </SiteShell>
   );

@@ -1,11 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FileText,
   CalendarDays,
@@ -18,6 +18,11 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import * as testService from "@/services/testService";
+import * as testSeriesService from "@/services/testSeriesService";
+import * as categoryService from "@/services/categoryService";
+import * as mediaService from "@/services/mediaService";
+import { unwrapList } from "@/lib/api-unwrap";
 
 export const Route = createFileRoute("/_authenticated/dashboard/previous-year-papers")({
   component: PYQPage,
@@ -34,7 +39,7 @@ const ICON_TINTS = [
   "bg-sky-50 text-sky-600",
 ];
 
-function formatDate(d: string | null) {
+function formatDate(d: string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
@@ -44,72 +49,139 @@ function formatCount(n: number) {
   return String(n);
 }
 
-// No backend endpoint exists yet for previous-year papers — this page stays on
-// static placeholder content until that resource is added to the API.
-const EXAMS_MIN = [
-  { id: "e1", name: "SSC CGL", slug: "ssc-cgl" },
-  { id: "e2", name: "IBPS PO", slug: "ibps-po" },
-];
-const PYQS_ALL = [
-  { id: "p1", exam_id: "e1", title: "SSC CGL Tier 1 2024", year: 2024, tier: "Tier 1", shift: "Shift 1", paper_date: "2024-09-09", questions_count: 100, marks: 200, duration_minutes: 60, attempts: 45210, test_id: null as string | null },
-  { id: "p2", exam_id: "e2", title: "IBPS PO Prelims 2023", year: 2023, tier: "Tier 1", shift: "Shift 2", paper_date: "2023-11-04", questions_count: 100, marks: 100, duration_minutes: 60, attempts: 32110, test_id: null as string | null },
-];
+// Pinned papers float to the top of the (already filtered) list and survive
+// a refresh — there's no backend field for this, so it's local-only,
+// namespaced to avoid clashing with any other app's localStorage keys.
+const PINNED_KEY = "gp_pinned_papers";
+
+function loadPinned(): string[] {
+  try {
+    const raw = localStorage.getItem(PINNED_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
 
 function PYQPage() {
-  const [exam, setExam] = useState<string>("all");
+  const navigate = useNavigate();
+  const [category, setCategory] = useState<string | null>(null);
+  const [testSeries, setTestSeries] = useState<string>("all");
   const [year, setYear] = useState<string>("all");
-  const [tier, setTier] = useState<string>("all");
-  const [shift, setShift] = useState<string>("all");
-  const [tab, setTab] = useState<string>("all");
   const [page, setPage] = useState(1);
-  const [bookmarks, setBookmarks] = useState<string[]>([]);
+  const [pinned, setPinned] = useState<string[]>(() => loadPinned());
 
-  const exams = EXAMS_MIN;
-  const pyqs = PYQS_ALL;
+  const { data: categoriesRes } = useQuery({
+    queryKey: ["pyq-categories"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const categories = unwrapList<any>(categoriesRes).filter((c: any) => c.isActive !== false);
+  // Default to SSC once categories load; falls back to the first real
+  // category if "SSC" isn't present rather than showing nothing.
+  const resolvedCategory = category
+    ?? categories.find((c) => String(c.name).trim().toLowerCase() === "ssc")?._id
+    ?? categories[0]?._id
+    ?? null;
 
-  const toggleBookmark = (pyqId: string) => {
-    setBookmarks((b) => (b.includes(pyqId) ? b.filter((id) => id !== pyqId) : [...b, pyqId]));
+  const { data: seriesRes } = useQuery({
+    queryKey: ["pyq-test-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
+  });
+  const allSeries = unwrapList<any>(seriesRes).filter((s: any) => s.isActive !== false);
+  const seriesById = useMemo(() => {
+    const map = new Map<string, any>();
+    allSeries.forEach((s) => map.set(s._id, s));
+    return map;
+  }, [allSeries]);
+  const seriesNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    allSeries.forEach((s) => map.set(s._id, s.name));
+    return map;
+  }, [allSeries]);
+  const seriesInCategory = useMemo(
+    () => allSeries.filter((s) => (s.category?._id ?? s.category) === resolvedCategory),
+    [allSeries, resolvedCategory],
+  );
+
+  const { data: testsRes, isLoading } = useQuery({
+    queryKey: ["pyq-tests"],
+    queryFn: () => testService.getTests({ paperType: "previous_year" }),
+  });
+  const pyqs = unwrapList<any>(testsRes);
+
+  const togglePin = (id: string) => {
+    setPinned((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [id, ...prev];
+      try {
+        localStorage.setItem(PINNED_KEY, JSON.stringify(next));
+      } catch {
+        // localStorage unavailable (e.g. private browsing) — non-critical
+      }
+      return next;
+    });
   };
 
+  const years = useMemo(() => {
+    const map = new Map<number, number>();
+    pyqs.forEach((p) => {
+      if (!p.examDate) return;
+      const y = new Date(p.examDate).getFullYear();
+      map.set(y, (map.get(y) ?? 0) + 1);
+    });
+    return [...map.entries()].sort((a, b) => b[0] - a[0]);
+  }, [pyqs]);
+
   const filtered = useMemo(() => {
-    return pyqs.filter((p) => {
-      if (exam !== "all" && p.exam_id !== exam) return false;
-      if (year !== "all" && String(p.year) !== year) return false;
-      if (tier !== "all" && (p.tier ?? "").toLowerCase() !== tier.toLowerCase()) return false;
-      if (shift !== "all" && (p.shift ?? "").toLowerCase() !== shift.toLowerCase()) return false;
-      if (tab !== "all" && (p.tier ?? "").toLowerCase() !== tab.toLowerCase()) return false;
+    const base = pyqs.filter((p) => {
+      const sId = p.testSeries?._id ?? p.testSeries;
+      const s = seriesById.get(sId);
+      const catId = s?.category?._id ?? s?.category;
+      if (resolvedCategory && catId !== resolvedCategory) return false;
+      if (testSeries !== "all" && sId !== testSeries) return false;
+      if (year !== "all" && p.examDate && String(new Date(p.examDate).getFullYear()) !== year) return false;
+      if (year !== "all" && !p.examDate) return false;
       return true;
     });
-  }, [pyqs, exam, year, tier, shift, tab]);
+    // Stable sort — pinned papers float above unpinned, most-recently-pinned
+    // first among pinned, unpinned keep their existing relative order.
+    return [...base].sort((a, b) => {
+      const ai = pinned.indexOf(a._id);
+      const bi = pinned.indexOf(b._id);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return 0;
+    });
+  }, [pyqs, seriesById, resolvedCategory, testSeries, year, pinned]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const years = useMemo(() => {
-    const map = new Map<number, number>();
-    pyqs.forEach((p) => map.set(p.year, (map.get(p.year) ?? 0) + 1));
-    return [...map.entries()].sort((a, b) => b[0] - a[0]);
-  }, [pyqs]);
-
   const popular = useMemo(
-    () => [...pyqs].sort((a, b) => (b.attempts ?? 0) - (a.attempts ?? 0)).slice(0, 3),
+    () => [...pyqs].sort((a, b) => (b.attemptsCount ?? 0) - (a.attemptsCount ?? 0)).slice(0, 3),
     [pyqs],
   );
 
-  const totalQuestions = pyqs.reduce((s, p) => s + (p.questions_count ?? 0), 0);
-  const totalAttempts = pyqs.reduce((s, p) => s + (p.attempts ?? 0), 0);
+  const totalQuestions = pyqs.reduce((s, p) => s + (p.totalQuestions ?? 0), 0);
+  const totalAttempts = pyqs.reduce((s, p) => s + (p.attemptsCount ?? 0), 0);
+  const latestYear = years.length ? years[0][0] : null;
 
   const stats = [
-    { value: `${pyqs.length || 150}+`, label: "PYQs Available", icon: FileText, tint: "bg-blue-50 text-blue-600" },
-    { value: `${years.length || 10}+`, label: "Years Covered", icon: CalendarDays, tint: "bg-emerald-50 text-emerald-600" },
-    { value: `${totalQuestions ? (totalQuestions >= 1000 ? Math.round(totalQuestions / 1000) + ",000" : totalQuestions) : "25,000"}+`, label: "Questions", icon: ClipboardList, tint: "bg-violet-50 text-violet-600" },
-    { value: `${totalAttempts ? formatCount(totalAttempts) : "85.7K"}+`, label: "Students Practicing", icon: Users, tint: "bg-orange-50 text-orange-600" },
+    { value: String(pyqs.length), label: "PYQs Available", icon: FileText, tint: "bg-blue-50 text-blue-600" },
+    { value: String(years.length), label: "Years Covered", icon: CalendarDays, tint: "bg-emerald-50 text-emerald-600" },
+    { value: formatCount(totalQuestions), label: "Questions", icon: ClipboardList, tint: "bg-violet-50 text-violet-600" },
+    { value: formatCount(totalAttempts), label: "Students Practicing", icon: Users, tint: "bg-orange-50 text-orange-600" },
   ];
 
   const resetFilters = () => {
-    setExam("all"); setYear("all"); setTier("all"); setShift("all"); setTab("all"); setPage(1);
+    setCategory(null);
+    setTestSeries("all");
+    setYear("all");
+    setPage(1);
   };
+
+  const start = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
   return (
     <div className="flex gap-6">
@@ -118,8 +190,8 @@ function PYQPage() {
         {/* Header + Stats */}
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
           <div>
-            <h1 className="text-2xl font-display font-extrabold flex items-center gap-2 text-foreground">
-              Previous Year Papers
+            <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
+              <span className="text-gradient-primary">Previous Year Papers</span>
               <FileText className="h-5 w-5 text-primary" />
             </h1>
             <p className="text-sm text-muted-foreground mt-1 max-w-md">
@@ -151,26 +223,13 @@ function PYQPage() {
 
         {/* Filters */}
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-            <Filter label="Select Exam" value={exam} onChange={(v) => { setExam(v); setPage(1); }}
-              options={[{ v: "all", l: "All Exams" }, ...exams.map((e) => ({ v: e.id, l: e.name }))]} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <Filter label="Select Category" value={resolvedCategory ?? ""} onChange={(v) => { setCategory(v); setTestSeries("all"); setPage(1); }}
+              options={categories.map((c) => ({ v: c._id, l: c.name }))} />
+            <Filter label="Select Test Series" value={testSeries} onChange={(v) => { setTestSeries(v); setPage(1); }}
+              options={[{ v: "all", l: "All Test Series" }, ...seriesInCategory.map((s) => ({ v: s._id, l: s.name }))]} />
             <Filter label="Select Year" value={year} onChange={(v) => { setYear(v); setPage(1); }}
               options={[{ v: "all", l: "All Years" }, ...years.map(([y]) => ({ v: String(y), l: String(y) }))]} />
-            <Filter label="Select Tier" value={tier} onChange={(v) => { setTier(v); setPage(1); }}
-              options={[
-                { v: "all", l: "All Tiers" },
-                { v: "tier 1", l: "Tier 1" },
-                { v: "tier 2", l: "Tier 2" },
-                { v: "tier 3", l: "Tier 3" },
-                { v: "tier 4", l: "Tier 4" },
-              ]} />
-            <Filter label="Select Shift" value={shift} onChange={(v) => { setShift(v); setPage(1); }}
-              options={[
-                { v: "all", l: "All Shifts" },
-                { v: "shift 1", l: "Shift 1" },
-                { v: "shift 2", l: "Shift 2" },
-                { v: "shift 3", l: "Shift 3" },
-              ]} />
             <Button variant="outline" onClick={resetFilters} className="text-primary border-primary/40 hover:bg-primary/5">
               <RotateCcw className="h-4 w-4 mr-2" />
               Reset Filters
@@ -178,31 +237,12 @@ function PYQPage() {
           </div>
         </Card>
 
-        {/* Tabs + Table */}
+        {/* Table */}
         <Card className="p-0 overflow-hidden">
-          <div className="px-5 pt-2">
-            <Tabs value={tab} onValueChange={(v) => { setTab(v); setPage(1); }}>
-              <TabsList className="bg-transparent p-0 h-auto gap-6 border-b border-border w-full justify-start rounded-none">
-                {[
-                  { v: "all", l: "All Papers" },
-                  { v: "tier 1", l: "Tier 1 Papers" },
-                  { v: "tier 2", l: "Tier 2 Papers" },
-                  { v: "tier 3", l: "Tier 3 Papers" },
-                  { v: "tier 4", l: "Tier 4 Papers" },
-                ].map((t) => (
-                  <TabsTrigger
-                    key={t.v}
-                    value={t.v}
-                    className="px-0 py-3 rounded-none bg-transparent text-muted-foreground data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent border-b-2 border-transparent data-[state=active]:border-primary font-medium"
-                  >
-                    {t.l}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+          <div className="px-5 py-4 border-b border-border">
+            <h2 className="font-display font-bold">All Papers ({filtered.length})</h2>
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -211,92 +251,105 @@ function PYQPage() {
                   <th className="px-3 py-3 font-medium text-center">Questions</th>
                   <th className="px-3 py-3 font-medium text-center">Marks</th>
                   <th className="px-3 py-3 font-medium text-center">Duration</th>
-                  <th className="px-3 py-3 font-medium text-center">Shift</th>
                   <th className="px-3 py-3 font-medium text-center">Attempts</th>
                   <th className="px-5 py-3 font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {paged.map((p, i) => {
+                {isLoading && (
+                  <tr><td colSpan={6} className="text-center text-sm text-muted-foreground py-12">Loading papers…</td></tr>
+                )}
+                {!isLoading && paged.map((p, i) => {
                   const tint = ICON_TINTS[i % ICON_TINTS.length];
-                  const bookmarked = bookmarks.includes(p.id);
-                  const isLatest = p.year === Math.max(...pyqs.map((x) => x.year));
+                  const isPinned = pinned.includes(p._id);
+                  const paperYear = p.examDate ? new Date(p.examDate).getFullYear() : null;
+                  const isLatest = latestYear !== null && paperYear === latestYear;
+                  const seriesId = p.testSeries?._id ?? p.testSeries;
+                  const seriesName = seriesNameById.get(seriesId);
+                  const seriesImage = seriesById.get(seriesId)?.image;
+                  const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
                   return (
-                    <tr key={p.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <tr key={p._id} className="border-t border-border hover:bg-muted/30 transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${tint}`}>
-                            <ClipboardList className="h-5 w-5" />
-                          </div>
+                          {logoUrl ? (
+                            <img src={logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0" />
+                          ) : (
+                            <div className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 ${tint}`}>
+                              <ClipboardList className="h-5 w-5" />
+                            </div>
+                          )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-foreground">{p.title}</span>
                               {isLatest && (
                                 <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-0 text-[10px] px-2 py-0">Latest</Badge>
                               )}
+                              {seriesName && (
+                                <Badge variant="outline" className="text-[10px] px-2 py-0">{seriesName}</Badge>
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                               <CalendarDays className="h-3 w-3" />
-                              {formatDate(p.paper_date)}
+                              {formatDate(p.examDate)}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-4 text-center">
-                        <div className="font-semibold">{p.questions_count ?? 0}</div>
+                        <div className="font-semibold">{p.totalQuestions ?? 0}</div>
                         <div className="text-[11px] text-muted-foreground">Questions</div>
                       </td>
                       <td className="px-3 py-4 text-center">
-                        <div className="font-semibold">{p.marks ?? 0}</div>
+                        <div className="font-semibold">{p.totalMarks ?? 0}</div>
                         <div className="text-[11px] text-muted-foreground">Marks</div>
                       </td>
                       <td className="px-3 py-4 text-center">
-                        <div className="font-semibold">{p.duration_minutes ?? 0}</div>
+                        <div className="font-semibold">{p.duration ?? 0}</div>
                         <div className="text-[11px] text-muted-foreground">Mins</div>
                       </td>
-                      <td className="px-3 py-4 text-center text-sm">{p.shift ?? "—"}</td>
-                      <td className="px-3 py-4 text-center font-medium">{formatCount(p.attempts ?? 0)}</td>
+                      <td className="px-3 py-4 text-center font-medium">{formatCount(p.attemptsCount ?? 0)}</td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          {p.test_id ? (
-                            <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                              <Link to="/test/$testId" params={{ testId: p.test_id }}>
-                                <Play className="h-3.5 w-3.5 mr-1" /> Start Test
-                              </Link>
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="outline" disabled>
-                              <Play className="h-3.5 w-3.5 mr-1" /> Start Test
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                            onClick={() => start(p._id)}
+                          >
+                            <Play className="h-3.5 w-3.5 mr-1" /> Start Test
+                          </Button>
                           <Button
                             size="icon"
                             variant="outline"
                             className="h-9 w-9"
-                            onClick={() => toggleBookmark(p.id)}
-                            aria-label="Bookmark"
+                            onClick={() => togglePin(p._id)}
+                            aria-label={isPinned ? "Unpin" : "Pin to top"}
+                            title={isPinned ? "Unpin" : "Pin to top"}
                           >
-                            <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-primary text-primary" : ""}`} />
+                            <Bookmark className={`h-4 w-4 ${isPinned ? "fill-primary text-primary" : ""}`} />
                           </Button>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
-                {paged.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-sm text-muted-foreground py-12">No papers match your filters.</td></tr>
+                {!isLoading && paged.length === 0 && (
+                  <tr><td colSpan={6} className="text-center text-sm text-muted-foreground py-12">No papers match your filters.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-t border-border">
-            <div className="text-xs text-muted-foreground">
-              Showing {filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1} to {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} papers
+          {filtered.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-t border-border">
+              <div className="text-xs text-muted-foreground">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1} to {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} papers
+              </div>
+              <Pagination page={currentPage} total={totalPages} onChange={setPage} />
             </div>
-            <Pagination page={currentPage} total={totalPages} onChange={setPage} />
-          </div>
+          )}
         </Card>
       </div>
 
@@ -308,7 +361,7 @@ function PYQPage() {
             <h3 className="font-semibold text-sm">Years Covered</h3>
           </div>
           <ul className="space-y-2">
-            {(years.length ? years : [2024,2023,2022,2021,2020,2019,2018,2017,2016,2015].map((y) => [y, 12] as [number, number])).slice(0, 10).map(([y, c]) => (
+            {years.slice(0, 10).map(([y, c]) => (
               <li key={y}>
                 <button
                   onClick={() => { setYear(String(y)); setPage(1); }}
@@ -319,8 +372,10 @@ function PYQPage() {
                 </button>
               </li>
             ))}
+            {years.length === 0 && (
+              <li className="text-xs text-muted-foreground">No papers yet.</li>
+            )}
           </ul>
-          <Button variant="outline" className="w-full mt-3 text-primary border-primary/40">View All Years</Button>
         </Card>
 
         <Card className="p-4">
@@ -329,17 +384,42 @@ function PYQPage() {
             <h3 className="font-semibold text-sm">Popular Papers</h3>
           </div>
           <ul className="space-y-3">
-            {(popular.length ? popular : []).map((p) => (
-              <li key={p.id} className="border-b border-border last:border-0 pb-3 last:pb-0">
-                <div className="text-sm font-medium leading-tight">{p.title} {p.shift && `(${p.shift})`}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{formatCount(p.attempts ?? 0)} Attempts</div>
-              </li>
-            ))}
+            {popular.map((p) => {
+              const seriesId = p.testSeries?._id ?? p.testSeries;
+              const seriesImage = seriesById.get(seriesId)?.image;
+              const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
+              return (
+                <li key={p._id} className="flex items-start justify-between gap-2 border-b border-border last:border-0 pb-3 last:pb-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="h-8 w-8 rounded-md object-cover shrink-0" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-md bg-orange-50 text-orange-600 grid place-items-center shrink-0">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium leading-tight truncate">{p.title}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{formatCount(p.attemptsCount ?? 0)} Attempts</div>
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7 shrink-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    onClick={() => start(p._id)}
+                    aria-label={`Start ${p.title}`}
+                    title="Start Test"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                  </Button>
+                </li>
+              );
+            })}
             {popular.length === 0 && (
               <li className="text-xs text-muted-foreground">No data yet.</li>
             )}
           </ul>
-          <Button variant="outline" className="w-full mt-3 text-primary border-primary/40">View All</Button>
         </Card>
       </aside>
     </div>

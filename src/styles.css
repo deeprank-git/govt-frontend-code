@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Josefin Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Josefin Sans", ui-sans-serif, system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -23,6 +23,9 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-soft: var(--primary-soft);
+  --color-footer-bg: var(--footer-bg);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-purple-foreground: var(--accent-purple-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -71,10 +74,21 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.04 260);
 
-  /* Primary: GovtPrep blue ~ #2563EB */
+  /* Primary: Testopy blue ~ #2563EB */
   --primary: oklch(0.55 0.22 260);
   --primary-foreground: oklch(0.99 0 0);
   --primary-soft: oklch(0.96 0.03 260);
+
+  /* One shade lighter than --primary, same hue — for large solid-fill sections
+     (footer, CTA banners) only. Never use for buttons/links/accents; those stay --primary
+     so the brand blue doesn't get diluted site-wide. Chosen so the Testopy logo's
+     blue/purple icon and dark wordmark stay legible directly on it, no backing panel needed. */
+  --footer-bg: oklch(0.62 0.16 260);
+
+  /* Minor accent: the violet the Testopy logo's gradient fades into (~#621BE4) —
+     used sparingly (gradient highlights, active-nav indicator), never as the dominant color. */
+  --accent-purple: oklch(0.55 0.22 290);
+  --accent-purple-foreground: oklch(0.99 0 0);
 
   --secondary: oklch(0.96 0.01 250);
   --secondary-foreground: oklch(0.22 0.04 260);
@@ -129,6 +143,9 @@
   --primary: oklch(0.7 0.18 260);
   --primary-foreground: oklch(0.16 0.03 260);
   --primary-soft: oklch(0.28 0.06 260);
+  --footer-bg: oklch(0.4 0.14 260);
+  --accent-purple: oklch(0.72 0.18 290);
+  --accent-purple-foreground: oklch(0.16 0.03 260);
   --secondary: oklch(0.26 0.03 260);
   --secondary-foreground: oklch(0.97 0.01 250);
   --muted: oklch(0.26 0.03 260);
@@ -169,7 +186,7 @@
 @layer utilities {
   .font-display { font-family: var(--font-display); }
   .text-gradient-primary {
-    background: linear-gradient(135deg, oklch(0.55 0.22 260), oklch(0.65 0.2 230));
+    background: linear-gradient(135deg, var(--primary), var(--accent-purple));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

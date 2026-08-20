@@ -114,7 +114,7 @@ function AlertsPage() {
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
-            Exam Alerts <Bell className="h-5 w-5 text-primary" />
+            <span className="text-gradient-primary">Exam Alerts</span> <Bell className="h-5 w-5 text-primary" />
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
             Get instant notifications for exam dates, registrations, admit cards, results and important updates.

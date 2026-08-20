@@ -5,21 +5,28 @@ export async function getMe() {
   return res.data;
 }
 
-// Backend User model currently only persists name/email/password. The extra
-// fields are accepted here so the frontend form can be built ahead of the
-// backend schema — the API silently ignores whatever it doesn't recognize.
+// PUT /users/me is multipart/form-data (see Testopy-Backend-Workflow-and-Status.md
+// §2) so a profile-picture file can ride along with the rest of the fields in
+// one request.
 export async function updateMe(data: {
   name?: string;
   email?: string;
-  password?: string;
+  mobile?: string;
   username?: string;
-  phone?: string;
   address?: string;
-  city?: string;
   country?: string;
-  picture?: string;
+  city?: string;
+  password?: string;
+  currentPassword?: string;
+  profilePicture?: File;
 }) {
-  const res = await axiosClient.put("/users/me", data);
+  const form = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") form.append(key, value);
+  });
+  const res = await axiosClient.put("/users/me", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return res.data;
 }
 
@@ -33,7 +40,7 @@ export async function getUserById(id: string) {
   return res.data;
 }
 
-export async function updateUserByAdmin(id: string, data: Partial<{ role: string; isActive: boolean; name: string; email: string }>) {
+export async function updateUserByAdmin(id: string, data: Partial<{ role: string; isActive: boolean; name: string; email: string; mobile: string }>) {
   const res = await axiosClient.patch(`/admin/users/${id}`, data);
   return res.data;
 }

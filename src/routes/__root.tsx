@@ -79,21 +79,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GovtPrep — Government Exam Preparation Platform" },
+      { title: "Testopy — Government Exam Preparation Platform" },
       {
         name: "description",
         content:
           "Free mock tests, previous year papers, current affairs and exam alerts for SSC, Banking, Railways, UPSC and more.",
       },
-      { name: "author", content: "GovtPrep" },
-      { property: "og:title", content: "GovtPrep — Government Exam Preparation Platform" },
+      { name: "author", content: "Testopy" },
+      { property: "og:title", content: "Testopy — Government Exam Preparation Platform" },
       {
         property: "og:description",
         content: "Your one-stop platform for government job exam preparation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "GovtPrep — Government Exam Preparation Platform" },
+      { name: "twitter:title", content: "Testopy — Government Exam Preparation Platform" },
       { name: "description", content: "Exam Success Hub is a comprehensive platform for government exam preparation." },
       { property: "og:description", content: "Exam Success Hub is a comprehensive platform for government exam preparation." },
       { name: "twitter:description", content: "Exam Success Hub is a comprehensive platform for government exam preparation." },
@@ -101,12 +101,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b6b2b5c3-6590-457d-94e8-198532541f0f/id-preview-bed46a99--69b705e5-4344-4b17-b74a-2332dd75a6bb.lovable.app-1782145074711.png" },
     ],
     links: [
+      { rel: "icon", href: "/docs/testopy-favico.png", type: "image/png" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap",
       },
     ],
   }),

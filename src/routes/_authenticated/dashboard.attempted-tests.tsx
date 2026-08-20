@@ -20,8 +20,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 import * as testAttemptService from "@/services/testAttemptService";
-import * as categoryService from "@/services/categoryService";
+import * as testSeriesService from "@/services/testSeriesService";
 import * as testService from "@/services/testService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/attempted-tests"
 });
 
 function AttemptedTests() {
-  const [category, setCategory] = useState("all");
+  const [testSeries, setTestSeries] = useState("all");
   const [range, setRange] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
   const pageSize = 8;
@@ -43,19 +44,19 @@ function AttemptedTests() {
   });
   const attempts = unwrapList<any>(attemptsRes);
 
-  const { data: categoriesRes } = useQuery({
+  const { data: seriesRes } = useQuery({
     queryKey: ["exam-options"],
-    queryFn: () => categoryService.getCategories(),
+    queryFn: () => testSeriesService.getTestSeries({ isActive: true }),
   });
-  const categories = unwrapList<any>(categoriesRes);
+  const series = unwrapList<any>(seriesRes);
 
   const { data: testsRes } = useQuery({
     queryKey: ["attended-tests-lookup"],
     queryFn: () => testService.getTests(),
   });
-  const testCategoryMap = useMemo(() => {
+  const testSeriesMap = useMemo(() => {
     const map = new Map<string, string>();
-    unwrapList<any>(testsRes).forEach((t) => map.set(t._id, t.category));
+    unwrapList<any>(testsRes).forEach((t) => map.set(t._id, t.testSeries));
     return map;
   }, [testsRes]);
 
@@ -81,7 +82,7 @@ function AttemptedTests() {
 
   const filtered = useMemo(() => {
     return attempts.filter((a) => {
-      if (category !== "all" && testCategoryMap.get(a.test?._id) !== category) return false;
+      if (testSeries !== "all" && testSeriesMap.get(a.test?._id) !== testSeries) return false;
       if (range?.from) {
         const d = new Date(a.startedAt);
         if (d < range.from) return false;
@@ -89,13 +90,13 @@ function AttemptedTests() {
       }
       return true;
     });
-  }, [attempts, category, range, testCategoryMap]);
+  }, [attempts, testSeries, range, testSeriesMap]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageItems = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const reset = () => {
-    setCategory("all");
+    setTestSeries("all");
     setRange(undefined);
   };
 
@@ -111,7 +112,7 @@ function AttemptedTests() {
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-display font-extrabold">Attended Tests</h1>
+            <h1 className="text-2xl font-display font-extrabold text-gradient-primary">Attended Tests</h1>
             <ClipboardList className="h-5 w-5 text-primary" />
           </div>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
@@ -139,12 +140,12 @@ function AttemptedTests() {
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
           <div>
-            <label className="text-xs text-muted-foreground">Select Category</label>
-            <Select value={category} onValueChange={(v) => { setCategory(v); setPage(1); }}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <label className="text-xs text-muted-foreground">Select Test Series</label>
+            <Select value={testSeries} onValueChange={(v) => { setTestSeries(v); setPage(1); }}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="All Test Series" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                <SelectItem value="all">All Test Series</SelectItem>
+                {series.map((s: any) => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -173,7 +174,7 @@ function AttemptedTests() {
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/30">
+        <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border bg-muted/30">
           <div className="col-span-4">Test Details</div>
           <div className="col-span-2">Score</div>
           <div className="col-span-2">Accuracy</div>
@@ -184,40 +185,62 @@ function AttemptedTests() {
         <div className="divide-y divide-border">
           {pageItems.map((a: any) => {
             const scorePct = a.test?.totalMarks ? Math.round((Number(a.score) / Number(a.test.totalMarks)) * 1000) / 10 : 0;
+            const seriesImage = a.test?.testSeries?.image;
+            const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
+            const logo = logoUrl ? (
+              <img src={logoUrl} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="h-10 w-10 rounded-lg grid place-items-center shrink-0 bg-primary/10 text-primary">
+                <FileText className="h-5 w-5" />
+              </div>
+            );
+            const action = a.status !== "in-progress" ? (
+              <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2 w-28 justify-center" asChild>
+                <Link to="/result/$attemptId" params={{ attemptId: a._id }}>View Analysis</Link>
+              </Button>
+            ) : (
+              <Button size="sm" className="h-8 px-2 w-28 justify-center" asChild>
+                <Link to="/test/$testId" params={{ testId: a.test?._id }}>Resume</Link>
+              </Button>
+            );
             return (
               <motion.div
                 key={a._id}
                 whileHover={{ backgroundColor: "hsl(var(--muted) / 0.4)" }}
-                className="grid grid-cols-12 gap-3 items-center px-4 py-3 text-sm"
+                className="px-4 py-3 text-sm"
               >
-                <div className="col-span-4 flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-lg grid place-items-center shrink-0 bg-primary/10 text-primary">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
+                {/* Mobile layout */}
+                <div className="flex items-center gap-3 md:hidden">
+                  {logo}
+                  <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">{a.test?.title ?? "Test"}</div>
-                    <div className="text-[11px] text-muted-foreground">{a.test?.totalMarks ?? 0} Marks</div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                      <span className="text-[11px] text-muted-foreground">{a.score}/{a.test?.totalMarks ?? 0} ({scorePct}%)</span>
+                      <span className="text-[11px] text-muted-foreground">{accuracyOf(a).toFixed(1)}% acc</span>
+                      <span className="text-[11px] text-muted-foreground">{format(new Date(a.submittedAt || a.startedAt), "dd MMM yyyy")}</span>
+                    </div>
                   </div>
+                  <div className="shrink-0">{action}</div>
                 </div>
-                <div className="col-span-2">
-                  <div className="font-semibold">{a.score}/{a.test?.totalMarks ?? 0}</div>
-                  <div className="text-[11px] text-emerald-600 font-medium">{scorePct}%</div>
-                </div>
-                <div className="col-span-2 font-medium">{accuracyOf(a).toFixed(1)}%</div>
-                <div className="col-span-2">
-                  <div className="font-medium">{format(new Date(a.submittedAt || a.startedAt), "dd MMM yyyy")}</div>
-                  <div className="text-[11px] text-muted-foreground">{format(new Date(a.submittedAt || a.startedAt), "hh:mm a")}</div>
-                </div>
-                <div className="col-span-2 flex items-center justify-end gap-1">
-                  {a.status !== "in-progress" ? (
-                    <Button size="sm" variant="ghost" className="text-primary hover:text-primary h-8 px-2" asChild>
-                      <Link to="/result/$attemptId" params={{ attemptId: a._id }}>View Analysis</Link>
-                    </Button>
-                  ) : (
-                    <Button size="sm" className="h-8 px-2" asChild>
-                      <Link to="/test/$testId" params={{ testId: a.test?._id }}>Resume</Link>
-                    </Button>
-                  )}
+                {/* Desktop layout */}
+                <div className="hidden md:grid grid-cols-12 gap-3 items-center">
+                  <div className="col-span-4 flex items-center gap-3 min-w-0">
+                    {logo}
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{a.test?.title ?? "Test"}</div>
+                      <div className="text-[11px] text-muted-foreground">{a.test?.totalMarks ?? 0} Marks</div>
+                    </div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="font-semibold">{a.score}/{a.test?.totalMarks ?? 0}</div>
+                    <div className="text-[11px] text-emerald-600 font-medium">{scorePct}%</div>
+                  </div>
+                  <div className="col-span-2 font-medium">{accuracyOf(a).toFixed(1)}%</div>
+                  <div className="col-span-2">
+                    <div className="font-medium">{format(new Date(a.submittedAt || a.startedAt), "dd MMM yyyy")}</div>
+                    <div className="text-[11px] text-muted-foreground">{format(new Date(a.submittedAt || a.startedAt), "hh:mm a")}</div>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-end gap-1">{action}</div>
                 </div>
               </motion.div>
             );

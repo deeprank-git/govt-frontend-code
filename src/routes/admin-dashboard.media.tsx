@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,15 @@ import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { AdminPager } from "@/components/admin/AdminPager";
 import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
-export const Route = createFileRoute("/admin-dashboard/media")({
-  component: MediaPage,
-});
+// Temporarily disabled - Media section temporarily hidden (2026-08-04).
+// Route intentionally left unregistered so /admin-dashboard/media is no
+// longer reachable; TanStack Router's codegen drops it from routeTree.gen.ts
+// automatically when this file has no `Route` export. Nothing else in this
+// file (component, mediaService calls, etc.) was touched ncomment below
+// to re-enable.
+// export const Route = createFileRoute("/admin-dashboard/media")({
+//   component: MediaPage,
+// });
 
 function MediaPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -60,7 +66,7 @@ function MediaPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-base font-semibold">Media</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Media</h2>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,15 @@ import { ConfirmDeleteDialog } from "@/components/admin/ConfirmDeleteDialog";
 import { AdminPager } from "@/components/admin/AdminPager";
 import { usePaginatedSearch } from "@/hooks/use-paginated-search";
 
-export const Route = createFileRoute("/admin-dashboard/pages")({
-  component: PagesPage,
-});
+// Temporarily disabled - Pages section temporarily hidden (2026-08-04).
+// Route intentionally left unregistered so /admin-dashboard/pages is no
+// longer reachable; TanStack Router's codegen drops it from routeTree.gen.ts
+// automatically when this file has no `Route` export. Nothing else in this
+// file (component, pageService calls, etc.) was touched ncomment below
+// to re-enable.
+// export const Route = createFileRoute("/admin-dashboard/pages")({
+//   component: PagesPage,
+// });
 
 const emptyForm = { slug: "", title: "", content: "", status: "draft" as "draft" | "published" };
 
@@ -75,7 +81,7 @@ function PagesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-base font-semibold">Pages</h2>
+        <h2 className="text-lg font-semibold text-gradient-primary">Pages</h2>
         <div className="flex items-center gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
@@ -98,13 +104,12 @@ function PagesPage() {
       </div>
       <Table>
         <TableHeader>
-          <TableRow><TableHead>Slug</TableHead><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Updated By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+          <TableRow><TableHead>Title</TableHead><TableHead>Status</TableHead><TableHead>Updated By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading && <LoadingRows colSpan={5} />}
+          {isLoading && <LoadingRows colSpan={4} />}
           {!isLoading && paginated.map((p) => (
             <TableRow key={p._id}>
-              <TableCell className="font-mono text-xs">{p.slug}</TableCell>
               <TableCell>{p.title}</TableCell>
               <TableCell>{p.status === "published" ? <Badge className="bg-success/15 text-success-foreground border-transparent">Published</Badge> : <Badge variant="outline">Draft</Badge>}</TableCell>
               <TableCell>{p.updatedBy?.name ?? "—"}</TableCell>
@@ -114,7 +119,7 @@ function PagesPage() {
               </TableCell>
             </TableRow>
           ))}
-          {!isLoading && pages.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No pages yet.</TableCell></TableRow>}
+          {!isLoading && pages.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">No pages yet.</TableCell></TableRow>}
         </TableBody>
       </Table>
       <AdminPager page={page} totalPages={totalPages} onPageChange={setPage} />

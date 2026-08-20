@@ -1,5 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import {
   Flame,
   ClipboardList,
@@ -15,22 +16,23 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import * as testService from "@/services/testService";
 import * as testAttemptService from "@/services/testAttemptService";
+import * as testSeriesService from "@/services/testSeriesService";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
 import { useAuth } from "@/hooks/use-auth";
+import { ArticleImage } from "@/components/site/ArticleImage";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Dashboard,
 });
 
-// No backend endpoint exists yet for PYQs, answer keys or exam alerts — these
+// No backend endpoint exists yet for answer keys or exam alerts — these two
 // widgets stay on static placeholder content until those resources are added
-// to the API. Current Affairs is now wired to the real backend below.
-const PYQS = [
-  { id: "p1", title: "SSC CGL Tier 1 2024", shift: "Shift 1", questions_count: 100, marks: 200, duration_minutes: 60 },
-  { id: "p2", title: "IBPS PO Prelims 2024", shift: "Shift 2", questions_count: 100, marks: 100, duration_minutes: 60 },
-];
+// to the API. Current Affairs and Previous Year Papers are wired to the real
+// backend below.
 const ANSWER_KEYS = [
   { id: "k1", title: "SSC CGL Tier 1 2024 Answer Key", released_on: new Date().toISOString() },
 ];
@@ -107,6 +109,7 @@ function Stat({ icon: Icon, value, label, sub, tone = "primary" }: { icon: any; 
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: attemptsRes } = useQuery({
     queryKey: ["my-attempts"],
@@ -119,6 +122,27 @@ function Dashboard() {
     queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 3 }),
   });
   const currentAffairs = unwrapList<any>(caRes);
+
+  const { data: pyqRes } = useQuery({
+    queryKey: ["dashboard-home-pyq"],
+    queryFn: () => testService.getTests({ paperType: "previous_year" }),
+  });
+  const previousYearPapers = unwrapList<any>(pyqRes)
+    .slice()
+    .sort((a, b) => new Date(b.examDate ?? 0).getTime() - new Date(a.examDate ?? 0).getTime())
+    .slice(0, 3);
+
+  const { data: seriesRes } = useQuery({
+    queryKey: ["dashboard-home-series"],
+    queryFn: () => testSeriesService.getTestSeries(),
+  });
+  const seriesById = useMemo(() => {
+    const map = new Map<string, any>();
+    unwrapList<any>(seriesRes).forEach((s) => map.set(s._id, s));
+    return map;
+  }, [seriesRes]);
+
+  const startPyq = (testId: string) => navigate({ to: "/test/$testId/instructions", params: { testId } });
 
   const completed = attempts.filter((a) => a.status === "completed" || a.status === "auto-submitted");
   const attempted = attempts.length;
@@ -148,7 +172,7 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl md:text-3xl font-display font-extrabold">
             Welcome back, {name}! 👋
           </h1>
@@ -193,8 +217,8 @@ function Dashboard() {
         <Stat icon={Target} value={`${accuracy}%`} label="Accuracy" tone="info" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5">
-        <Card className="p-5 lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">Recent Mock Tests</h3>
             <Link to="/dashboard/attempted-tests" className="text-xs text-primary hover:underline">
@@ -209,9 +233,15 @@ function Dashboard() {
             )}
             {attempts.slice(0, 4).map((a) => {
               const score = Math.round(pct(a));
+              const seriesImage = a.test?.testSeries?.image;
+              const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
               return (
                 <div key={a._id} className="flex items-start gap-3">
-                  <FileText className="h-4 w-4 text-primary mt-1" />
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="" className="h-6 w-6 rounded object-cover mt-0.5 shrink-0" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-primary mt-1 shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{a.test?.title ?? "Test"}</div>
                     <div className="text-xs text-muted-foreground">Attempted on {new Date(a.startedAt).toLocaleDateString()}</div>
@@ -229,6 +259,18 @@ function Dashboard() {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold">All India Rank</h3>
+          </div>
+          <div className="text-center py-4">
+            <Trophy className="h-10 w-10 text-warning mx-auto opacity-50" />
+            <div className="text-sm font-medium mt-2">Coming Soon</div>
+            <div className="text-xs text-muted-foreground mt-1">Leaderboard is under construction. Check back soon!</div>
+          </div>
+        </Card>
+        {/*
+        ORIGINAL ALL INDIA RANK CARD — uncomment to restore
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-bold">All India Rank</h3>
             <Link to="/dashboard/rank" className="text-xs text-primary hover:underline">
               View Details
             </Link>
@@ -238,37 +280,8 @@ function Dashboard() {
             <div className="text-xs text-muted-foreground mt-2">Take a test to see your rank on the leaderboard</div>
           </div>
         </Card>
+        */}
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold flex items-center gap-2">
-              <Newspaper className="h-4 w-4 text-primary" />
-              Daily Current Affairs
-            </h3>
-            <Link to="/dashboard/current-affairs" className="text-xs text-primary hover:underline">
-              View All
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {currentAffairs.map((a) => (
-              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex items-start gap-2.5 hover:bg-muted/40 -mx-1 px-1 py-0.5 rounded transition">
-                <Badge variant="outline" className="mt-0.5 text-[10px]">
-                  {a.category}
-                </Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium leading-snug line-clamp-2">{a.title}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {new Date(a.date).toLocaleDateString()}
-                  </div>
-                </div>
-              </Link>
-            ))}
-            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-5">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold flex items-center gap-2">
@@ -283,22 +296,72 @@ function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {PYQS.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {p.title} ({p.shift})
+            {previousYearPapers.length === 0 && (
+              <p className="text-sm text-muted-foreground">No previous year papers yet.</p>
+            )}
+            {previousYearPapers.map((p) => {
+              const seriesId = p.testSeries?._id ?? p.testSeries;
+              const seriesImage = seriesById.get(seriesId)?.image;
+              const logoUrl = seriesImage ? mediaService.resolveMediaUrl(seriesImage) : undefined;
+              return (
+                <div key={p._id} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="h-8 w-8 rounded-md object-cover shrink-0" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{p.title}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {p.totalQuestions ?? 0} Qs · {p.totalMarks ?? 0} Marks · {p.duration ?? 0} Min
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {p.questions_count} Qs · {p.marks} Marks · {p.duration_minutes} Min
+                  <Button size="sm" variant="outline" onClick={() => startPyq(p._id)}>
+                    Start Test
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="p-5 lg:col-span-3">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-bold flex items-center gap-2">
+              <Newspaper className="h-4 w-4 text-primary" />
+              Daily Current Affairs
+            </h3>
+            <Link to="/dashboard/current-affairs" className="text-xs text-primary hover:underline">
+              View All
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {currentAffairs.map((a) => (
+              <Link key={a._id} to="/dashboard/current-affairs/$id" params={{ id: a._id }} className="flex flex-col gap-2 hover:bg-muted/40 rounded-md p-1.5 transition">
+                <ArticleImage image={a.image} alt={a.title} className="w-full h-32 rounded-md object-cover" />
+                <div className="min-w-0">
+                  <Badge variant="outline" className="text-[10px]">
+                    {a.category}
+                  </Badge>
+                  <div className="text-sm font-medium leading-snug line-clamp-2 mt-0.5">{a.title}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {new Date(a.date).toLocaleDateString()}
                   </div>
                 </div>
-                <Button size="sm" variant="outline" disabled>Start Test</Button>
-              </div>
+              </Link>
             ))}
+            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground sm:col-span-3">No current affairs yet.</p>}
           </div>
         </Card>
 
+        {/* Answer Key and Exam Alerts are still fully static/mock-data — hidden
+            from the dashboard and sidebar until real backend support exists.
+            Commented out (not deleted) so they're easy to bring back later. */}
+        {/*
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-display font-bold flex items-center gap-2">
@@ -344,6 +407,7 @@ function Dashboard() {
             ))}
           </div>
         </Card>
+        */}
       </div>
     </div>
   );

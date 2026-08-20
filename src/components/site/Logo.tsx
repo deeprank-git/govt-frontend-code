@@ -1,22 +1,25 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function Logo({ compact = false }: { compact?: boolean }) {
+export function Logo({
+  size = "h-9",
+  boxClassName,
+  to = "/",
+}: {
+  /** Tailwind height utility for the logo image — sized per call site to fit its container. */
+  size?: string;
+  /** Extra classes for the bordered box (e.g. padding so a taller logo isn't cramped against the border). */
+  boxClassName?: string;
+  /** Where the logo links to. Public pages use "/"; in-app contexts (sidebar) should
+      link straight to "/dashboard" to skip the "/" -> "/dashboard/overview" redirect. */
+  to?: "/" | "/dashboard";
+}) {
   return (
-    <Link to="/" className="flex items-center gap-2.5 group">
-      <span className="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-foreground shadow-elevate">
-        <GraduationCap className="h-5 w-5" />
-      </span>
-      {!compact && (
-        <span className="flex flex-col leading-none">
-          <span className="font-display font-bold text-[1.15rem] tracking-tight text-foreground">
-            GovtPrep
-          </span>
-          <span className="text-[0.62rem] uppercase tracking-[0.16em] text-muted-foreground">
-            Prepare. Practice. Succeed.
-          </span>
-        </span>
-      )}
+    <Link
+      to={to}
+      className={cn("flex items-center justify-center group", boxClassName)}
+    >
+      <img src="/docs/testopy-logo.png" alt="Testopy" className={cn(size, "w-auto object-contain")} />
     </Link>
   );
 }

@@ -23,9 +23,9 @@ const NOTIFICATIONS = [
 export const Route = createFileRoute("/exam-info")({
   head: () => ({
     meta: [
-      { title: "Exam Info — Notifications, Pattern, Syllabus | GovtPrep" },
+      { title: "Exam Info — Notifications, Pattern, Syllabus | Testopy" },
       { name: "description", content: "All important info about government exams, notifications, syllabus, pattern and eligibility in one place." },
-      { property: "og:title", content: "Exam Info — GovtPrep" },
+      { property: "og:title", content: "Exam Info — Testopy" },
       { property: "og:description", content: "Find the latest exam notifications, syllabus and pattern details." },
     ],
   }),
@@ -67,7 +67,7 @@ function ExamInfoPage() {
                 <div className="font-display font-bold">{e.short_name ?? e.name}</div>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2 min-h-[2lh]">{e.conducting_body}</p>
                 <Button asChild variant="outline" size="sm" className="mt-3 w-full">
-                  <Link to="/exams/$slug" params={{ slug: e.slug }}>View Details →</Link>
+                  <Link to="/exams">View Details →</Link>
                 </Button>
               </Card>
             ))}

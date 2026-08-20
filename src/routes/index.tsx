@@ -1,8 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import * as currentAffairsService from "@/services/currentAffairsService";
+import * as categoryService from "@/services/categoryService";
+import * as testSeriesService from "@/services/testSeriesService";
+import * as testService from "@/services/testService";
+import * as mediaService from "@/services/mediaService";
 import { unwrapList } from "@/lib/api-unwrap";
+import { isPublishedVisible } from "@/lib/publish";
 import { useAuth } from "@/hooks/use-auth";
+import { getToken, getUser } from "@/lib/auth-store";
 import {
   ArrowRight,
   Users,
@@ -11,7 +18,6 @@ import {
   GraduationCap,
   Shield,
   Sparkles,
-  Calendar,
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,38 +26,30 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SiteShell } from "@/components/site/SiteShell";
 import { ExamIcon } from "@/components/site/ExamIcon";
+import { ArticleImage } from "@/components/site/ArticleImage";
+import { toast } from "sonner";
 import heroImg from "@/assets/hero-student.png";
 
-// No backend endpoint exists yet for exams/categories/current-affairs browsing
-// (see AGENTS.md) — the homepage stays on static placeholder content until
-// those resources are added to the API.
-const CATEGORIES = [
-  { id: "cat1", slug: "ssc", name: "SSC" },
-  { id: "cat2", slug: "banking", name: "Banking" },
-];
-const EXAMS = [
-  { id: "ex1", slug: "ssc-cgl", name: "SSC CGL", short_name: "SSC CGL", category_id: "cat1" },
-  { id: "ex2", slug: "ssc-chsl", name: "SSC CHSL", short_name: "SSC CHSL", category_id: "cat1" },
-  { id: "ex3", slug: "ibps-po", name: "IBPS PO", short_name: "IBPS PO", category_id: "cat2" },
-];
-const FREE_TESTS = [
-  { id: "t1", title: "SSC CGL Tier 1 Full Mock Test 01", total_questions: 100, duration_minutes: 60, attempt_count: 45210 },
-  { id: "t2", title: "IBPS PO Prelims Mock Test 01", total_questions: 100, duration_minutes: 60, attempt_count: 32110 },
-];
-const ALERTS = [
-  { id: "a1", title: "SSC CGL Tier 2 Admit Card Released", alert_date: new Date(Date.now() + 3 * 86400000).toISOString(), alert_type: "admit_card" },
-];
-
 export const Route = createFileRoute("/")({
+  // localStorage isn't available during SSR, so this check only runs
+  // client-side — same reasoning as _authenticated/route.tsx's ssr:false.
+  ssr: false,
+  beforeLoad: () => {
+    const token = getToken();
+    const user = getUser();
+    if (token && user) {
+      throw redirect({ to: "/dashboard/overview" });
+    }
+  },
   head: () => ({
     meta: [
-      { title: "GovtPrep — Your Journey to a Government Job Starts Here" },
+      { title: "Testopy — Your Journey to a Government Job Starts Here" },
       {
         name: "description",
         content:
           "Free mock tests, previous year papers, current affairs and exam alerts for SSC, Banking, Railways, UPSC and more.",
       },
-      { property: "og:title", content: "GovtPrep — Prepare. Practice. Succeed." },
+      { property: "og:title", content: "Testopy — Prepare. Practice. Succeed." },
       {
         property: "og:description",
         content: "10L+ aspirants prepare with our free mock tests, PYQ papers and analytics.",
@@ -61,6 +59,9 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+// These are marketing/trust-signal copy, not something the public API has a
+// source for (there's no public "platform totals" endpoint) — left as
+// static numbers rather than fabricating a fake API-backed figure.
 const STATS = [
   { value: "10L+", label: "Aspirants", icon: Users },
   { value: "50K+", label: "Mock Tests", icon: ClipboardList },
@@ -70,19 +71,73 @@ const STATS = [
   { value: "Safe & Secure", label: "No Hidden Charges", icon: Shield },
 ];
 
+// Category names are free text ("SSC", "Civil Services Exam", …) — append
+// "Exams" only if the name doesn't already read like one.
+function tabLabel(name: string) {
+  const trimmed = (name ?? "").trim();
+  return /exams?$/i.test(trimmed) ? trimmed : `${trimmed} Exams`;
+}
+
+// Total grid cells (3 cols x 4 rows). The last card-bearing slot is always
+// reserved for the "Explore all exams" cell, so at most MAX_POPULAR_SERIES - 1
+// test-series cards are shown before it.
+const MAX_POPULAR_SERIES = 12;
+
 function HomePage() {
   const { user } = useAuth();
-  const categories = CATEGORIES;
-  const exams = EXAMS;
-  const freeTests = FREE_TESTS;
-  const alerts = ALERTS;
+  const navigate = useNavigate();
+  const [activeCat, setActiveCat] = useState<string | null>(null);
+
+  // Both endpoints are public — no token sent, works for anonymous visitors.
+  const { data: categoriesRes } = useQuery({
+    queryKey: ["home-categories"],
+    queryFn: () => categoryService.getCategories(),
+  });
+  const categories = [...unwrapList<any>(categoriesRes)].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  // The backend already excludes inactive categories from this endpoint, so
+  // membership in this set is also how unpublished categories cascade to
+  // hide their test series below, with no extra category-level flag needed.
+  const activeCategoryIds = new Set(categories.map((c) => c._id));
+
+  const { data: seriesRes } = useQuery({
+    queryKey: ["home-series"],
+    queryFn: () => testSeriesService.getTestSeries({ isPublished: true, isActive: true }),
+  });
+  const series = unwrapList<any>(seriesRes)
+    .filter((s) => isPublishedVisible(s) && activeCategoryIds.has(s.category?._id ?? s.category))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const resolvedCat = activeCat ?? categories[0]?._id ?? null;
 
   const { data: caRes } = useQuery({
     queryKey: ["home-current-affairs"],
-    queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 2 }),
-    enabled: !!user,
+    queryFn: () => currentAffairsService.getCurrentAffairs({ limit: 4 }),
   });
   const currentAffairs = unwrapList<any>(caRes);
+
+  // GET /api/tests is public — the service/API has no isPaid query param, so
+  // "free" is filtered client-side; sorted by attempts to surface the most
+  // popular ones as "Top Free Mock Tests".
+  const { data: freeTestsRes } = useQuery({
+    queryKey: ["home-free-tests"],
+    queryFn: () => testService.getTests({ paperType: "mock", isPublished: true, isActive: true }),
+  });
+  const visibleSeriesIds = new Set(series.map((s) => s._id));
+  const freeTests = unwrapList<any>(freeTestsRes)
+    .filter((t) => isPublishedVisible(t) && !t.isPaid && visibleSeriesIds.has(typeof t.testSeries === "object" ? t.testSeries?._id : t.testSeries))
+    .sort((a, b) => (b.attemptsCount ?? 0) - (a.attemptsCount ?? 0))
+    .slice(0, 3);
+
+  // Checked from client-side auth state first — never calls
+  // GET /api/tests/:id or POST /api/test-attempts/start before this.
+  const startMockTest = (testId: string) => {
+    if (!user) {
+      toast.error("Login to access mock test");
+      navigate({ to: "/auth", search: { mode: "login", redirect: `/test/${testId}/instructions` } as never });
+      return;
+    }
+    navigate({ to: "/test/$testId/instructions", params: { testId } });
+  };
 
   return (
     <SiteShell>
@@ -92,7 +147,7 @@ function HomePage() {
           <div>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight text-foreground">
               Your Journey to a <br />
-              <span className="text-primary">Government Job</span> <br />
+              <span className="text-gradient-primary">Government Job</span> <br />
               Starts Here
             </h1>
             <p className="mt-5 text-base md:text-lg text-muted-foreground max-w-xl">
@@ -112,13 +167,13 @@ function HomePage() {
           </div>
 
           <div className="relative">
-            <div className="absolute inset-x-6 top-8 bottom-8 rounded-[2rem] bg-primary/10 -z-10" />
+            <div className="absolute inset-x-6 top-8 bottom-8 rounded-4xl bg-primary/10 -z-10" />
             <img
               src={heroImg}
               alt="Student preparing for government exams"
               width={1024}
               height={896}
-              className="relative w-full max-w-[560px] mx-auto"
+              className="relative w-full max-w-140 mx-auto"
             />
             <Card className="hidden md:flex absolute top-6 left-0 px-4 py-3 gap-3 items-center shadow-elevate">
               <div className="h-12 w-12 rounded-full bg-primary/10 grid place-items-center text-primary font-display font-bold">
@@ -160,103 +215,105 @@ function HomePage() {
       {/* POPULAR EXAMS */}
       <section className="container mx-auto px-4 lg:px-6 py-14">
         <div className="flex items-end justify-between mb-6">
-          <h2 className="text-2xl md:text-3xl font-display font-bold">Popular Exams</h2>
+          <h2 className="text-2xl md:text-3xl font-display font-bold">All Exams</h2>
           <Link to="/exams" className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
             View All Exams <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <Tabs defaultValue={categories[0]?.slug ?? "ssc"} className="w-full">
-          <TabsList className="bg-transparent p-0 h-auto flex flex-wrap gap-2 mb-6 justify-start">
-            {categories.map((c) => (
-              <TabsTrigger
-                key={c.slug}
-                value={c.slug}
-                className="rounded-full border border-border bg-background px-4 py-2 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
-              >
-                {c.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {categories.map((c) => {
-            const list = exams.filter((e) => e.category_id === c.id).slice(0, 8);
-            return (
-              <TabsContent key={c.slug} value={c.slug} className="m-0">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {list.length === 0 && (
-                    <Card className="p-6 col-span-full text-sm text-muted-foreground">
-                      No exams in this category yet.
-                    </Card>
-                  )}
-                  {list.map((e) => (
+        {categories.length === 0 ? (
+          <Card className="p-6 text-sm text-muted-foreground">No exam categories yet.</Card>
+        ) : (
+          <Tabs value={resolvedCat ?? undefined} onValueChange={setActiveCat} className="w-full">
+            <TabsList className="bg-transparent p-0 h-auto flex flex-wrap gap-2 mb-6 justify-start">
+              {categories.map((c) => (
+                <TabsTrigger
+                  key={c._id}
+                  value={c._id}
+                  className="rounded-full border border-border bg-background px-4 py-2 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
+                >
+                  {tabLabel(c.name)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {categories.map((c) => {
+              const realList = series.filter((s) => (s.category?._id ?? s.category) === c._id);
+              // Reserve the last grid cell for "Explore all exams" — it always follows
+              // immediately after the last card, whichever cell that happens to be.
+              const list = realList.slice(0, MAX_POPULAR_SERIES - 1);
+              return (
+                <TabsContent key={c._id} value={c._id} className="m-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-rows-4 gap-4">
+                    {list.length === 0 && (
+                      <Card className="p-6 col-span-full text-sm text-muted-foreground">
+                        No exams in this category yet.
+                      </Card>
+                    )}
+                    {list.map((s) => {
+                      const logoUrl = s.image ? mediaService.resolveMediaUrl(s.image) : undefined;
+                      return (
+                        <Link
+                          key={s._id}
+                          to="/exams/$id"
+                          params={{ id: s._id }}
+                          search={{
+                            name: s.name,
+                            category: c.name,
+                            image: s.image || undefined,
+                            description: s.description || undefined,
+                          }}
+                          className="group"
+                        >
+                          <Card className="p-3.5 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition">
+                            {logoUrl ? (
+                              <img src={logoUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <ExamIcon name={s.name ?? "?"} />
+                            )}
+                            <span className="font-medium flex-1 min-w-0 truncate">{s.name}</span>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </Card>
+                        </Link>
+                      );
+                    })}
                     <Link
-                      key={e.id}
-                      to="/exams/$slug"
-                      params={{ slug: e.slug }}
+                      to="/exams"
                       className="group"
                     >
-                      <Card className="p-3.5 flex items-center gap-3 hover:border-primary hover:shadow-elevate transition">
-                        <ExamIcon name={e.short_name ?? e.name} />
-                        <span className="font-medium flex-1">{e.short_name ?? e.name}</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                      <Card className="p-3.5 h-full flex items-center justify-center gap-2 border-dashed border-primary/40 bg-primary/5 text-primary font-medium hover:bg-primary/10 transition">
+                        Explore all exams <ArrowRight className="h-4 w-4" />
                       </Card>
                     </Link>
-                  ))}
-                  <Link
-                    to="/exams"
-                    className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3.5 flex items-center justify-center gap-2 text-primary font-medium hover:bg-primary/10 transition"
-                  >
-                    Explore all exams <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </TabsContent>
-            );
-          })}
-        </Tabs>
+                  </div>
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        )}
       </section>
 
-      {/* FREE MOCK + CURRENT AFFAIRS + UPCOMING */}
-      <section className="container mx-auto px-4 lg:px-6 pb-16 grid lg:grid-cols-3 gap-6">
+      {/* FREE MOCK + CURRENT AFFAIRS */}
+      <section className="container mx-auto px-4 lg:px-6 pb-16 grid lg:grid-cols-[2fr_1fr] gap-6">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display font-bold text-lg">Top Free Mock Tests</h3>
             <Link to="/exams" className="text-xs text-primary hover:underline">View All</Link>
           </div>
-          <div className="space-y-3">
-            {freeTests.map((t) => (
-              <div key={t.id} className="rounded-lg border border-border p-3">
-                <Badge variant="secondary" className="mb-2 bg-success/15 text-success-foreground">FREE</Badge>
-                <div className="font-semibold text-sm leading-snug">{t.title}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {t.total_questions} Questions · {t.duration_minutes} Mins
-                </div>
-                <div className="text-xs text-muted-foreground">{(t.attempt_count ?? 0).toLocaleString()} Attempts</div>
-                <Button size="sm" className="mt-3 w-full" asChild>
-                  <Link to="/dashboard/mock-tests">Start Test</Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-bold text-lg">Latest Current Affairs</h3>
-            <Link to="/current-affairs" className="text-xs text-primary hover:underline">View All</Link>
-          </div>
-          {!user ? (
-            <p className="text-sm text-muted-foreground">
-              <Link to="/auth" search={{ mode: "login" } as never} className="text-primary hover:underline">Log in</Link> to see today's current affairs.
-            </p>
+          {freeTests.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">No free mock tests available yet.</p>
           ) : (
-            <div className="space-y-3">
-              {currentAffairs.map((a) => (
-                <Link key={a._id} to="/current-affairs/$id" params={{ id: a._id }} className="block rounded-lg border border-border p-3 hover:border-primary transition">
-                  <Badge className="mb-2 bg-primary/15 text-primary border-transparent">{a.category}</Badge>
-                  <div className="font-semibold text-sm leading-snug">{a.title}</div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {freeTests.map((t) => (
+                <div key={t._id} className="rounded-lg border border-border p-3">
+                  <Badge variant="secondary" className="mb-2 bg-success/15 text-success-foreground">FREE</Badge>
+                  <div className="font-semibold text-sm leading-snug line-clamp-2">{t.title}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {new Date(a.date).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
+                    {t.totalQuestions ?? 0} Questions · {t.duration ?? 0} Mins
                   </div>
-                </Link>
+                  <div className="text-xs text-muted-foreground">{(t.attemptsCount ?? 0).toLocaleString()} Attempts</div>
+                  <Button size="sm" className="mt-3 w-full" onClick={() => startMockTest(t._id)}>
+                    Start Test
+                  </Button>
+                </div>
               ))}
             </div>
           )}
@@ -264,26 +321,29 @@ function HomePage() {
 
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-bold text-lg">Upcoming Exam Calendar</h3>
-            <Link to="/exam-info" className="text-xs text-primary hover:underline">View All</Link>
+            <h3 className="font-display font-bold text-lg">Latest Current Affairs</h3>
+            <Link to="/current-affairs" className="text-xs text-primary hover:underline">View All</Link>
           </div>
           <div className="space-y-3">
-            {alerts.map((a) => (
-              <div key={a.id} className="rounded-lg border border-border p-3 flex items-start gap-3">
-                <span className="h-9 w-9 grid place-items-center rounded-md bg-primary/10 text-primary shrink-0">
-                  <Calendar className="h-4 w-4" />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm leading-snug truncate">{a.title}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {a.alert_date ? new Date(a.alert_date).toLocaleDateString() : "Soon"}
+            {currentAffairs.map((a) => (
+              <Link
+                key={a._id}
+                to="/current-affairs/$id"
+                params={{ id: a._id }}
+                className="flex gap-3 rounded-lg border border-border p-2.5 hover:border-primary transition"
+              >
+                <ArticleImage image={a.image} alt={a.title} className="h-14 w-14 rounded-lg" />
+                <div className="min-w-0 flex-1">
+                  <Badge className="mb-1 bg-primary/15 text-primary border-transparent text-[10px]">{a.category}</Badge>
+                  <div className="font-semibold text-sm leading-snug line-clamp-2">{a.title}</div>
+                  {a.summary && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{a.summary}</p>}
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    {new Date(a.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                   </div>
                 </div>
-                <Badge variant="outline" className="bg-warning/15 border-warning/40 text-warning-foreground">
-                  {a.alert_type?.replace("_", " ")}
-                </Badge>
-              </div>
+              </Link>
             ))}
+            {currentAffairs.length === 0 && <p className="text-sm text-muted-foreground">No current affairs yet.</p>}
           </div>
         </Card>
       </section>

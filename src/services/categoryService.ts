@@ -10,12 +10,12 @@ export async function getCategoryById(id: string) {
   return res.data;
 }
 
-export async function createCategory(data: { name: string; description?: string; image?: string }) {
+export async function createCategory(data: { name: string; description?: string; image?: string; order?: number }) {
   const res = await axiosClient.post("/admin/categories", data);
   return res.data;
 }
 
-export async function updateCategory(id: string, data: Partial<{ name: string; description: string; image: string; isActive: boolean }>) {
+export async function updateCategory(id: string, data: Partial<{ name: string; description: string; image: string; isActive: boolean; order: number }>) {
   const res = await axiosClient.patch(`/admin/categories/${id}`, data);
   return res.data;
 }

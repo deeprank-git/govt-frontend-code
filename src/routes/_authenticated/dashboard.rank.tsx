@@ -1,4 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Trophy } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/dashboard/rank")({
+  component: RankPage,
+});
+
+function RankPage() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+      <Trophy className="h-16 w-16 text-warning opacity-50" />
+      <h1 className="text-3xl font-display font-extrabold">
+        <span className="text-gradient-primary">Leaderboard</span>
+      </h1>
+      <p className="text-muted-foreground text-lg font-medium">Coming Soon</p>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        The leaderboard feature is currently under construction. Check back soon to see how you rank among fellow aspirants!
+      </p>
+    </div>
+  );
+}
+
+/*
+ORIGINAL LEADERBOARD IMPLEMENTATION — uncomment to restore
+
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Trophy, Users, Medal } from "lucide-react";
@@ -43,7 +68,7 @@ function RankPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-display font-extrabold flex items-center gap-2">
-            Leaderboard <Trophy className="h-5 w-5 text-warning" />
+            <span className="text-gradient-primary">Leaderboard</span> <Trophy className="h-5 w-5 text-warning" />
           </h1>
           <p className="text-sm text-muted-foreground">See how you stand among everyone who has completed this test.</p>
         </div>
@@ -57,7 +82,7 @@ function RankPage() {
       </div>
 
       <Card className="p-4 grid md:grid-cols-2 gap-3 items-end">
-        <div>
+        <div className="min-w-0">
           <label className="text-xs text-muted-foreground">Select Test</label>
           <Select value={activeTestId} onValueChange={setTestId}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Select a test" /></SelectTrigger>
@@ -115,3 +140,4 @@ function RankPage() {
     </div>
   );
 }
+*/

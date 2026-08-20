@@ -32,10 +32,10 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s) => search.parse(s),
   head: () => ({
     meta: [
-      { title: "Login / Sign Up — GovtPrep" },
+      { title: "Login / Sign Up — Testopy" },
       {
         name: "description",
-        content: "Access your GovtPrep account to track your preparation and take mock tests.",
+        content: "Access your Testopy account to track your preparation and take mock tests.",
       },
     ],
   }),
@@ -48,7 +48,7 @@ function AuthPage() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: (redirect as never) ?? "/dashboard" });
+    if (!loading && user) navigate({ to: (redirect as never) ?? "/dashboard/overview" });
   }, [user, loading, redirect, navigate]);
 
   const isLogin = mode === "login";
@@ -186,59 +186,177 @@ function LoginForm() {
 }
 
 function ForgotPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [step, setStep] = useState<"email" | "otp" | "done">("email");
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleForgotPassword = async (email: string) => {
+  const reset = () => {
+    setStep("email");
+    setEmail("");
+    setOtp("");
+    setPassword("");
+    setConfirm("");
+  };
+
+  const close = () => {
+    onOpenChange(false);
+    reset();
+  };
+
+  const requestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSubmitting(true);
     try {
       await authService.requestPasswordReset({ email });
-      setEmail("");
-      onOpenChange(false);
-      toast.success("If that email is registered, a reset link has been sent.");
+      toast.success("If that email is registered, a code has been sent.");
+      setStep("otp");
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? "Error sending reset link");
+      toast.error(err?.response?.data?.message ?? "Error sending reset code");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submitOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleForgotPassword(email);
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("Passwords don't match");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await authService.resetPassword({ email, otp, newPassword: password });
+      setStep("done");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Invalid or expired code");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Reset your password</DialogTitle>
-          <DialogDescription>
-            Enter the email address associated with your account and we'll send you a link to reset
-            your password.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
-          <div>
-            <Label htmlFor="forgot-email">Email</Label>
-            <Input
-              id="forgot-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Sending…" : "Send Reset Link"}
-            </Button>
-          </DialogFooter>
-        </form>
+        {step === "email" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Reset your password</DialogTitle>
+              <DialogDescription>
+                Enter the email address associated with your account and we'll send you a one-time code
+                to reset your password.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={requestOtp} className="space-y-4">
+              <div>
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={close}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? "Sending…" : "Send Code"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </>
+        )}
+
+        {step === "otp" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Enter the code</DialogTitle>
+              <DialogDescription>
+                We sent a 6-digit code to {email}. It expires in 10 minutes.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={submitOtp} className="space-y-4">
+              <div>
+                <Label htmlFor="otp">OTP</Label>
+                <Input
+                  id="otp"
+                  inputMode="numeric"
+                  maxLength={6}
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="6-digit code"
+                />
+              </div>
+              <div>
+                <Label htmlFor="otp-new-password">New Password</Label>
+                <Input
+                  id="otp-new-password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                />
+              </div>
+              <div>
+                <Label htmlFor="otp-confirm-password">Confirm Password</Label>
+                <Input
+                  id="otp-confirm-password"
+                  type="password"
+                  required
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Re-enter new password"
+                />
+              </div>
+              <div className="text-right">
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={requestOtp as any}
+                  disabled={submitting}
+                >
+                  Resend code
+                </button>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setStep("email")}>
+                  Back
+                </Button>
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? "Resetting…" : "Reset Password"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </>
+        )}
+
+        {step === "done" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Password reset</DialogTitle>
+              <DialogDescription>
+                Your password has been updated. You can now log in with your new password.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button className="w-full" onClick={close}>
+                Back to Login
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -247,6 +365,7 @@ function ForgotPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [accept, setAccept] = useState(true);
@@ -259,10 +378,10 @@ function SignupForm() {
     if (!accept) return toast.error("Please accept the Terms");
     setLoading(true);
     try {
-      const res = await authService.register({ name: fullName, email, password });
+      const res = await authService.register({ name: fullName, email, mobile: mobile || undefined, password });
       setAuth(res.token, res.user);
       toast.success("Account created");
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard/overview" });
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Could not create account");
     } finally {
@@ -276,7 +395,7 @@ function SignupForm() {
       <p className="text-sm text-muted-foreground mt-1">Create an account to get started</p>
 
       <form onSubmit={submit} className="space-y-3 mt-6">
-        <div>
+        {/* <div>
           <Label htmlFor="fn">Full Name</Label>
           <Input
             id="fn"
@@ -285,7 +404,7 @@ function SignupForm() {
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Enter your full name"
           />
-        </div>
+        </div> */}
         <div>
           <Label htmlFor="em">Email Address</Label>
           <Input
@@ -295,6 +414,16 @@ function SignupForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email address"
+          />
+        </div>
+        <div>
+          <Label htmlFor="mobile">Mobile Number (optional)</Label>
+          <Input
+            id="mobile"
+            type="tel"
+            value={mobile}
+            onChange={(e) => setMobile(e.target.value)}
+            placeholder="Enter your mobile number"
           />
         </div>
         <div>
@@ -321,11 +450,11 @@ function SignupForm() {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={accept} onCheckedChange={(v) => setAccept(!!v)} />I agree to the{" "}
-          <a href="#" className="text-primary">
+          <a href="/pages/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Terms & Conditions
           </a>{" "}
           and{" "}
-          <a href="#" className="text-primary">
+          <a href="/pages/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
             Privacy Policy
           </a>
           .
